@@ -4,10 +4,11 @@ import {
   BestOfLegs,
   CompletedLeg,
   MatchPlayer,
+  MatchSide,
+  MatchType,
   PlayerStats,
   SavedMatchState,
   createSinglesSide,
-  matchSideToMatchPlayer,
 } from "@/lib/types";
 
 import { ScoreEntry } from "@/components/ScoreEntry";
@@ -30,13 +31,14 @@ export default function Home() {
   const [startingScore, setStartingScore] = useState<StartingScore>(501);
   const [finishRule, setFinishRule] = useState<FinishRule>("double_out");
   const [bestOfLegs, setBestOfLegs] = useState<BestOfLegs>(3);
+  const [matchType, setMatchType] = useState<MatchType>("singles");
 
   const [playerOneName, setPlayerOneName] = useState("Player 1");
   const [playerTwoName, setPlayerTwoName] = useState("Player 2");
 
-  const [players, setPlayers] = useState<MatchPlayer[]>([
-    { id: "player-1", name: "Player 1", score: 501, legsWon: 0 },
-    { id: "player-2", name: "Player 2", score: 501, legsWon: 0 },
+  const [players, setPlayers] = useState<MatchSide[]>([
+    createSinglesSide("side-1", "player-1", "Player 1", 501),
+    createSinglesSide("side-2", "player-2", "Player 2", 501),
   ]);
 
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
@@ -75,9 +77,10 @@ export default function Home() {
     setStartingScore(parsedMatch.startingScore);
     setFinishRule(parsedMatch.finishRule);
     setBestOfLegs(parsedMatch.bestOfLegs);
+    setMatchType(parsedMatch.matchType ?? "singles");
     setPlayerOneName(parsedMatch.playerOneName);
     setPlayerTwoName(parsedMatch.playerTwoName);
-    setPlayers(parsedMatch.players);
+    setPlayers(normalizeSavedPlayers(parsedMatch.players));
     setCurrentPlayerIndex(parsedMatch.currentPlayerIndex);
     setStartingPlayerIndex(parsedMatch.startingPlayerIndex);
     setCurrentLegNumber(parsedMatch.currentLegNumber);
@@ -96,6 +99,7 @@ useEffect(() => {
     startingScore,
     finishRule,
     bestOfLegs,
+    matchType,
     playerOneName,
     playerTwoName,
     players,
@@ -127,24 +131,42 @@ useEffect(() => {
   message,
 ]);
 
+  function normalizeSavedPlayers(savedPlayers: Array<MatchSide | MatchPlayer>): MatchSide[] {
+    return savedPlayers.map((savedPlayer, index) => {
+      if ("members" in savedPlayer && savedPlayer.members.length > 0) {
+        return savedPlayer;
+      }
+
+      return {
+        id: savedPlayer.id,
+        name: savedPlayer.name,
+        score: savedPlayer.score,
+        legsWon: savedPlayer.legsWon,
+        members: [
+          {
+            id: `player-${index + 1}`,
+            name: savedPlayer.name,
+          },
+        ],
+        currentMemberIndex: 0,
+      };
+    });
+  }
+
   function startNewGame() {
-    const sideOne = createSinglesSide(
-      "side-1",
-      "player-1",
-      playerOneName.trim() || "Player 1",
-      startingScore
-    );
-
-    const sideTwo = createSinglesSide(
-      "side-2",
-      "player-2",
-      playerTwoName.trim() || "Player 2",
-      startingScore
-    );
-
-    const newPlayers: MatchPlayer[] = [
-      matchSideToMatchPlayer(sideOne),
-      matchSideToMatchPlayer(sideTwo),
+    const newPlayers: MatchSide[] = [
+      createSinglesSide(
+        "side-1",
+        "player-1",
+        playerOneName.trim() || "Player 1",
+        startingScore
+      ),
+      createSinglesSide(
+        "side-2",
+        "player-2",
+        playerTwoName.trim() || "Player 2",
+        startingScore
+      ),
     ];
 
     setPlayers(newPlayers);
@@ -164,24 +186,15 @@ useEffect(() => {
   function clearSavedMatch() {
   localStorage.removeItem(savedMatchKey);
 
-      const resetPlayers: MatchPlayer[] = [
-        {
-          id: "player-1",
-          name: "Player 1",
-          score: 501,
-          legsWon: 0,
-        },
-        {
-          id: "player-2",
-          name: "Player 2",
-          score: 501,
-          legsWon: 0,
-        },
-      ];
+    const resetPlayers: MatchSide[] = [
+      createSinglesSide("side-1", "player-1", "Player 1", 501),
+      createSinglesSide("side-2", "player-2", "Player 2", 501),
+    ];
 
       setStartingScore(501);
       setFinishRule("double_out");
       setBestOfLegs(3);
+      setMatchType("singles");
       setPlayerOneName("Player 1");
       setPlayerTwoName("Player 2");
       setPlayers(resetPlayers);
@@ -416,7 +429,7 @@ function setQuickScore(score: number) {
     setMessage(`${resetPlayers[nextStartingPlayerIndex].name} to throw`);
   }
 
-  function getOpponentLegs(playerList: MatchPlayer[], winnerPlayerId: string) {
+   function getOpponentLegs(playerList: MatchSide[], winnerPlayerId: string) {
     const opponent = playerList.find((player) => player.id !== winnerPlayerId);
     return opponent?.legsWon ?? 0;
   }
@@ -562,11 +575,13 @@ function getMatchWinnerName(): string | null {
           startingScore={startingScore}
           finishRule={finishRule}
           bestOfLegs={bestOfLegs}
+          matchType={matchType}
           setPlayerOneName={setPlayerOneName}
           setPlayerTwoName={setPlayerTwoName}
           setStartingScore={setStartingScore}
           setFinishRule={setFinishRule}
           setBestOfLegs={setBestOfLegs}
+          setMatchType={setMatchType}
           startNewGame={startNewGame}
           clearSavedMatch={clearSavedMatch}
         />
