@@ -15,6 +15,7 @@ export type Turn = {
   scoreEntered: number;
   scoreBefore: number;
   scoreAfter: number;
+  dartsThrown: 1 | 2 | 3;
   isBust: boolean;
   isCheckout: boolean;
   finishRule: FinishRule;
@@ -71,6 +72,7 @@ export function scoreTurn(
     scoreEntered,
     scoreBefore: player.score,
     scoreAfter,
+    dartsThrown: 3,
     isBust,
     isCheckout,
     finishRule,

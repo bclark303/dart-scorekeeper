@@ -73,6 +73,8 @@ export default function Home() {
     null
   );
 
+  const [pendingDartsUsedTurn, setPendingDartsUsedTurn] =  useState<Turn | null>(null);
+
   const legsNeededToWin = Math.ceil(bestOfLegs / 2);
 
   const quickScores = [26, 41, 45, 60, 81, 85, 100, 121, 140, 180];
@@ -180,6 +182,7 @@ useEffect(() => {
     setIsLegComplete(false);
     setIsMatchComplete(false);
     setPendingCheckoutTurn(null);
+    setPendingDartsUsedTurn(null);
     setMessage(`${newPlayers[0].name} to throw`);
   }
 
@@ -216,6 +219,7 @@ useEffect(() => {
       setIsLegComplete(false);
       setIsMatchComplete(false);
       setPendingCheckoutTurn(null);
+      setPendingDartsUsedTurn(null);
       setMessage("Saved match cleared. Player 1 to throw.");
 }
 
@@ -247,88 +251,77 @@ function setQuickScore(score: number) {
   setScoreInput(String(score));
 }
 
-  function submitScore() {
-    if (isMatchComplete) {
-      setMessage("The match is complete. Start/reset the game to play again.");
-      return;
-    }
-
-    if (isLegComplete) {
-      setMessage("The leg is complete. Start the next leg.");
-      return;
-    }
-
-    if (pendingCheckoutTurn) {
-      setMessage("Confirm the checkout before entering another score.");
-      return;
-    }
-
-    const validationError = validateTurnScore(scoreInput);
-
-    if (validationError) {
-      setMessage(validationError);
-      return;
-    }
-
-    const currentPlayer = players[currentPlayerIndex];
-    const scoreEntered = Number(scoreInput);
-    const result = scoreTurn(currentPlayer, scoreEntered, finishRule);
-
-    setScoreInput("");
-
-    if (result.needsDoubleOutConfirmation) {
-      setPendingCheckoutTurn(result.turn);
-      setMessage(result.message);
-      return;
-    }
-
-    setTurnHistory((previousHistory) => [result.turn, ...previousHistory]);
-
-    if (!result.turn.isBust) {
-      const updatedPlayers = [...players];
-      updatedPlayers[currentPlayerIndex] = {
-        ...updatedPlayers[currentPlayerIndex],
-        score: result.updatedPlayer.score,
-      };
-      setPlayers(updatedPlayers);
-    }
-
-    if (result.isLegComplete) {
-  finishLeg(result.turn.playerId, result.turn);
-  return;
-    }
-
-    const nextPlayerIndex = getNextPlayerIndex();
-    setCurrentPlayerIndex(nextPlayerIndex);
-
-    const nextPlayerName = players[nextPlayerIndex].name;
-    setMessage(`${result.message} ${nextPlayerName} to throw.`);
+ function submitScore() {
+  if (isMatchComplete) {
+    setMessage("The match is complete. Start/reset the game to play again.");
+    return;
   }
 
+  if (isLegComplete) {
+    setMessage("The leg is complete. Start the next leg.");
+    return;
+  }
+
+  if (pendingCheckoutTurn || pendingDartsUsedTurn) {
+    setMessage("Finish the checkout prompt before entering another score.");
+    return;
+  }
+
+  const validationError = validateTurnScore(scoreInput);
+
+  if (validationError) {
+    setMessage(validationError);
+    return;
+  }
+
+  const currentPlayer = players[currentPlayerIndex];
+  const scoreEntered = Number(scoreInput);
+  const result = scoreTurn(currentPlayer, scoreEntered, finishRule);
+
+  setScoreInput("");
+
+  if (result.needsDoubleOutConfirmation) {
+    setPendingCheckoutTurn(result.turn);
+    setMessage(result.message);
+    return;
+  }
+
+  if (result.isLegComplete) {
+    setPendingDartsUsedTurn(result.turn);
+    setMessage(
+      `${result.turn.playerName} checked out. How many darts were used?`
+    );
+    return;
+  }
+
+  setTurnHistory((previousHistory) => [result.turn, ...previousHistory]);
+
+  if (!result.turn.isBust) {
+    const updatedPlayers = [...players];
+    updatedPlayers[currentPlayerIndex] = {
+      ...updatedPlayers[currentPlayerIndex],
+      score: result.updatedPlayer.score,
+    };
+    setPlayers(updatedPlayers);
+  }
+
+  const nextPlayerIndex = getNextPlayerIndex();
+  setCurrentPlayerIndex(nextPlayerIndex);
+
+  const nextPlayerName = players[nextPlayerIndex].name;
+  setMessage(`${result.message} ${nextPlayerName} to throw.`);
+}
   function confirmDoubleOut(wasDouble: boolean) {
     if (!pendingCheckoutTurn) {
       return;
     }
 
     if (wasDouble) {
-      const updatedPlayers = players.map((player) => {
-        if (player.id !== pendingCheckoutTurn.playerId) {
-          return player;
-        }
-
-        return {
-          ...player,
-          score: 0,
-        };
-      });
-
-      setPlayers(updatedPlayers);
-      setTurnHistory((previousHistory) => [
-        pendingCheckoutTurn,
-        ...previousHistory,
-      ]);
+      setPendingDartsUsedTurn(pendingCheckoutTurn);
+      setMessage(
+        `${pendingCheckoutTurn.playerName} checked out. How many darts were used?`
+      );
       setPendingCheckoutTurn(null);
-      finishLeg(pendingCheckoutTurn.playerId, pendingCheckoutTurn);
       return;
     }
 
@@ -347,6 +340,33 @@ function setQuickScore(score: number) {
       `${pendingCheckoutTurn.playerName} busts! ${players[nextPlayerIndex].name} to throw.`
     );
     setPendingCheckoutTurn(null);
+  }
+
+  function confirmCheckoutDartsUsed(dartsUsed: 1 | 2 | 3) {
+  if (!pendingDartsUsedTurn) {
+    return;
+  }
+
+  const completedTurn: Turn = {
+    ...pendingDartsUsedTurn,
+    dartsThrown: dartsUsed,
+  };
+
+  const updatedPlayers = players.map((player) => {
+    if (player.id !== completedTurn.playerId) {
+      return player;
+    }
+
+    return {
+      ...player,
+      score: 0,
+    };
+  });
+
+  setPlayers(updatedPlayers);
+  setTurnHistory((previousHistory) => [completedTurn, ...previousHistory]);
+  setPendingDartsUsedTurn(null);
+  finishLeg(completedTurn.playerId, completedTurn);
   }
 
   function finishLeg(winnerPlayerId: string, winningTurn?: Turn) {
@@ -427,10 +447,18 @@ function setQuickScore(score: number) {
   }
 
   function getAllMatchTurns(): Turn[] {
-  const completedLegTurns = completedLegs.flatMap((leg) => leg.turns);
+    const completedLegTurns = completedLegs.flatMap((leg) => leg.turns);
 
-  return [...turnHistory, ...completedLegTurns];
-}
+    const currentLegIsAlreadySaved = completedLegs.some(
+      (leg) => leg.legNumber === currentLegNumber
+    );
+
+    if (currentLegIsAlreadySaved) {
+      return completedLegTurns;
+    }
+
+    return [...turnHistory, ...completedLegTurns];
+  }
 
 function getPlayerStats(playerId: string): PlayerStats {
   const allTurns = getAllMatchTurns();
@@ -443,7 +471,9 @@ function getPlayerStats(playerId: string): PlayerStats {
     return total + turn.scoreEntered;
   }, 0);
 
-  const dartsThrown = playerTurns.length * 3;
+  const dartsThrown = playerTurns.reduce((total, turn) => {
+  return total + turn.dartsThrown;
+  }, 0);
 
   const threeDartAverage =
     dartsThrown === 0 ? 0 : (pointsScored / dartsThrown) * 3;
@@ -470,6 +500,13 @@ function getMatchWinnerName(): string | null {
   }
 
  function undoLastTurn() {
+  if (pendingDartsUsedTurn) {
+    setPendingDartsUsedTurn(null);
+    setScoreInput("");
+    setMessage(`Cancelled ${pendingDartsUsedTurn.playerName}'s checkout.`);
+    return;
+  }
+
   if (pendingCheckoutTurn) {
     setPendingCheckoutTurn(null);
     setScoreInput("");
@@ -683,7 +720,36 @@ function getMatchWinnerName(): string | null {
             </button>
           )}
 
-          {pendingCheckoutTurn ? (
+          {pendingDartsUsedTurn ? (
+            <div className="rounded-2xl bg-slate-800 border border-slate-700 p-4 mb-4">
+              <div className="text-lg font-semibold mb-4">
+                How many darts were used to finish?
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <button
+                  onClick={() => confirmCheckoutDartsUsed(1)}
+                  className="rounded-xl bg-green-600 hover:bg-green-500 p-4 text-xl font-bold"
+                >
+                  1 Dart
+                </button>
+
+                <button
+                  onClick={() => confirmCheckoutDartsUsed(2)}
+                  className="rounded-xl bg-green-600 hover:bg-green-500 p-4 text-xl font-bold"
+                >
+                  2 Darts
+                </button>
+
+                <button
+                  onClick={() => confirmCheckoutDartsUsed(3)}
+                  className="rounded-xl bg-green-600 hover:bg-green-500 p-4 text-xl font-bold"
+                >
+                  3 Darts
+                </button>
+              </div>
+            </div>
+          ) : pendingCheckoutTurn ? (
             <div className="rounded-2xl bg-slate-800 border border-slate-700 p-4 mb-4">
               <div className="text-lg font-semibold mb-4">
                 Confirm double-out checkout
@@ -805,7 +871,7 @@ function getMatchWinnerName(): string | null {
                     {turn.isCheckout ? " — CHECKOUT" : ""}
                   </div>
                   <div className="text-slate-300">
-                    {turn.scoreBefore} → {turn.scoreAfter}
+                    {turn.scoreBefore} → {turn.scoreAfter} | Darts: {turn.dartsThrown}
                   </div>
                 </div>
               ))}
