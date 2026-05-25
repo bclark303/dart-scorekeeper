@@ -394,8 +394,16 @@ useEffect(() => {
     return opponent?.legsWon ?? 0;
   }
 
-  function getPlayerStats(playerId: string): PlayerStats {
-  const playerTurns = turnHistory.filter(
+  function getAllMatchTurns(): Turn[] {
+  const completedLegTurns = completedLegs.flatMap((leg) => leg.turns);
+
+  return [...turnHistory, ...completedLegTurns];
+}
+
+function getPlayerStats(playerId: string): PlayerStats {
+  const allTurns = getAllMatchTurns();
+
+  const playerTurns = allTurns.filter(
     (turn) => turn.playerId === playerId && !turn.isBust
   );
 
@@ -413,6 +421,16 @@ useEffect(() => {
     dartsThrown,
     threeDartAverage,
   };
+}
+
+function getMatchScoreText(): string {
+  return players.map((player) => `${player.name}: ${player.legsWon}`).join(" | ");
+}
+
+function getMatchWinnerName(): string | null {
+  const winner = players.find((player) => player.legsWon >= legsNeededToWin);
+
+  return winner?.name ?? null;
 }
 
   function getNextPlayerIndex() {
@@ -743,6 +761,67 @@ useEffect(() => {
             </div>
           )}
         </section>
+        <section className="mt-8 rounded-2xl bg-slate-900 border border-slate-700 p-6">
+  <h2 className="text-2xl font-bold mb-4">Match Summary</h2>
+
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div className="rounded-xl bg-slate-800 border border-slate-700 p-4">
+      <div className="text-slate-400">Status</div>
+      <div className="text-xl font-bold">
+        {isMatchComplete ? "Complete" : isLegComplete ? "Between legs" : "In progress"}
+      </div>
+    </div>
+
+    <div className="rounded-xl bg-slate-800 border border-slate-700 p-4">
+      <div className="text-slate-400">Match Score</div>
+      <div className="text-xl font-bold">{getMatchScoreText()}</div>
+    </div>
+
+    <div className="rounded-xl bg-slate-800 border border-slate-700 p-4">
+      <div className="text-slate-400">Current Leg</div>
+      <div className="text-xl font-bold">{currentLegNumber}</div>
+    </div>
+
+    <div className="rounded-xl bg-slate-800 border border-slate-700 p-4">
+      <div className="text-slate-400">Winner</div>
+      <div className="text-xl font-bold">
+        {getMatchWinnerName() ?? "Not decided"}
+      </div>
+    </div>
+  </div>
+
+  <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+    {players.map((player) => {
+      const stats = getPlayerStats(player.id);
+
+      return (
+        <div
+          key={player.id}
+          className="rounded-xl bg-slate-800 border border-slate-700 p-4"
+        >
+          <div className="text-xl font-bold mb-2">{player.name}</div>
+          <div className="text-slate-300">
+            Legs won: <span className="font-bold text-white">{player.legsWon}</span>
+          </div>
+          <div className="text-slate-300">
+            Match average:{" "}
+            <span className="font-bold text-white">
+              {stats.threeDartAverage.toFixed(1)}
+            </span>
+          </div>
+          <div className="text-slate-300">
+            Points scored:{" "}
+            <span className="font-bold text-white">{stats.pointsScored}</span>
+          </div>
+          <div className="text-slate-300">
+            Darts counted:{" "}
+            <span className="font-bold text-white">{stats.dartsThrown}</span>
+          </div>
+        </div>
+      );
+    })}
+  </div>
+</section>
       </div>
     </main>
   );
