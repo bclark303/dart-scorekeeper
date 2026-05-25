@@ -6,7 +6,10 @@ import {
   MatchPlayer,
   PlayerStats,
   SavedMatchState,
+  createSinglesSide,
+  matchSideToMatchPlayer,
 } from "@/lib/types";
+
 import { ScoreEntry } from "@/components/ScoreEntry";
 import { GameSetup } from "@/components/GameSetup";
 import { MatchSummary } from "@/components/MatchSummary";
@@ -125,19 +128,23 @@ useEffect(() => {
 ]);
 
   function startNewGame() {
+    const sideOne = createSinglesSide(
+      "side-1",
+      "player-1",
+      playerOneName.trim() || "Player 1",
+      startingScore
+    );
+
+    const sideTwo = createSinglesSide(
+      "side-2",
+      "player-2",
+      playerTwoName.trim() || "Player 2",
+      startingScore
+    );
+
     const newPlayers: MatchPlayer[] = [
-      {
-        id: "player-1",
-        name: playerOneName.trim() || "Player 1",
-        score: startingScore,
-        legsWon: 0,
-      },
-      {
-        id: "player-2",
-        name: playerTwoName.trim() || "Player 2",
-        score: startingScore,
-        legsWon: 0,
-      },
+      matchSideToMatchPlayer(sideOne),
+      matchSideToMatchPlayer(sideTwo),
     ];
 
     setPlayers(newPlayers);
