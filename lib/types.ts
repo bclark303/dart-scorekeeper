@@ -79,11 +79,3 @@ export function createSinglesSide(
   };
 }
 
-export function matchSideToMatchPlayer(side: MatchSide): MatchPlayer {
-  return {
-    id: side.id,
-    name: side.name,
-    score: side.score,
-    legsWon: side.legsWon,
-  };
-}

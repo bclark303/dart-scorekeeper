@@ -1,8 +1,8 @@
 import { FinishRule, getCheckoutSuggestion } from "@/lib/scoring";
-import { MatchPlayer, PlayerStats } from "@/lib/types";
+import { MatchSide, PlayerStats } from "@/lib/types";
 
 type PlayerCardProps = {
-  player: MatchPlayer;
+  player: MatchSide;
   isCurrentPlayer: boolean;
   isLegComplete: boolean;
   isMatchComplete: boolean;

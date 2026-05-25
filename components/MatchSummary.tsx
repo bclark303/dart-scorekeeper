@@ -1,7 +1,8 @@
-import { MatchPlayer, PlayerStats } from "@/lib/types";
+import { MatchSide, PlayerStats } from "@/lib/types";
+
 
 type MatchSummaryProps = {
-  players: MatchPlayer[];
+  players: MatchSide[];
   isMatchComplete: boolean;
   isLegComplete: boolean;
   currentLegNumber: number;
