@@ -1,5 +1,6 @@
 "use client";
 
+import { CompletedLegs } from "@/components/CompletedLegs";
 import { TurnHistory } from "@/components/TurnHistory";
 import { PlayerCard } from "@/components/PlayerCard";
 import { useEffect, useState } from "react";
@@ -843,30 +844,8 @@ function getMatchWinnerName(): string | null {
 
         <TurnHistory turns={turnHistory} />
 
-        <section className="mt-8 rounded-2xl bg-slate-900 border border-slate-700 p-6">
-          <h2 className="text-2xl font-bold mb-4">Completed Legs</h2>
+        <CompletedLegs completedLegs={completedLegs} />
 
-          {completedLegs.length === 0 ? (
-            <p className="text-slate-400">No completed legs yet.</p>
-          ) : (
-            <div className="space-y-4">
-              {completedLegs.map((leg) => (
-                <div
-                  key={leg.legNumber}
-                  className="rounded-xl bg-slate-800 border border-slate-700 p-4"
-                >
-                  <div className="text-lg font-bold">
-                    Leg {leg.legNumber}: {leg.winnerName} won
-                  </div>
-
-                  <div className="text-slate-300">
-                    Turns thrown: {leg.turns.length}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
         <section className="mt-8 rounded-2xl bg-slate-900 border border-slate-700 p-6">
   <h2 className="text-2xl font-bold mb-4">Match Summary</h2>
 
