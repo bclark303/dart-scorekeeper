@@ -75,6 +75,10 @@ export default function Home() {
 
   const legsNeededToWin = Math.ceil(bestOfLegs / 2);
 
+  const quickScores = [26, 41, 45, 60, 81, 85, 100, 121, 140, 180];
+
+  const keypadButtons = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "C", "0", "⌫"];
+
   const savedMatchKey = "dart-scorekeeper-current-match";
 
   useEffect(() => {
@@ -213,6 +217,34 @@ useEffect(() => {
       setIsMatchComplete(false);
       setPendingCheckoutTurn(null);
       setMessage("Saved match cleared. Player 1 to throw.");
+}
+
+function appendScoreDigit(digit: string) {
+  if (isLegComplete || isMatchComplete || pendingCheckoutTurn) {
+    return;
+  }
+
+  setScoreInput((currentInput) => {
+    const nextInput = `${currentInput}${digit}`;
+
+    if (nextInput.length > 3) {
+      return currentInput;
+    }
+
+    return nextInput;
+  });
+}
+
+function backspaceScoreInput() {
+  setScoreInput((currentInput) => currentInput.slice(0, -1));
+}
+
+function setQuickScore(score: number) {
+  if (isLegComplete || isMatchComplete || pendingCheckoutTurn) {
+    return;
+  }
+
+  setScoreInput(String(score));
 }
 
   function submitScore() {
@@ -693,6 +725,49 @@ function getMatchWinnerName(): string | null {
                   inputMode="numeric"
                   autoFocus
                 />
+                <div className="mb-4">
+                  <div className="mb-2 text-slate-300">Quick scores</div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                    {quickScores.map((score) => (
+                      <button
+                        key={score}
+                        onClick={() => setQuickScore(score)}
+                        className="rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 p-4 text-xl font-bold"
+                      >
+                        {score}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <div className="mb-2 text-slate-300">Keypad</div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    {keypadButtons.map((button) => (
+                      <button
+                        key={button}
+                        onClick={() => {
+                          if (button === "C") {
+                            setScoreInput("");
+                            return;
+                          }
+
+                          if (button === "⌫") {
+                            backspaceScoreInput();
+                            return;
+                          }
+
+                          appendScoreDigit(button);
+                        }}
+                        className="rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 p-5 text-2xl font-bold"
+                      >
+                        {button}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
                 <button
                   onClick={submitScore}
