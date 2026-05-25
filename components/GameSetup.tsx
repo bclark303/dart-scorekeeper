@@ -1,5 +1,5 @@
 import { FinishRule, StartingScore } from "@/lib/scoring";
-import { BestOfLegs } from "@/lib/types";
+import { BestOfLegs, MatchType } from "@/lib/types";
 
 type GameSetupProps = {
   playerOneName: string;
@@ -7,11 +7,13 @@ type GameSetupProps = {
   startingScore: StartingScore;
   finishRule: FinishRule;
   bestOfLegs: BestOfLegs;
+  matchType: MatchType;
   setPlayerOneName: (name: string) => void;
   setPlayerTwoName: (name: string) => void;
   setStartingScore: (score: StartingScore) => void;
   setFinishRule: (finishRule: FinishRule) => void;
   setBestOfLegs: (bestOfLegs: BestOfLegs) => void;
+  setMatchType: (matchType: MatchType) => void;
   startNewGame: () => void;
   clearSavedMatch: () => void;
 };
@@ -22,11 +24,13 @@ export function GameSetup({
   startingScore,
   finishRule,
   bestOfLegs,
+  matchType,
   setPlayerOneName,
   setPlayerTwoName,
   setStartingScore,
   setFinishRule,
   setBestOfLegs,
+  setMatchType,
   startNewGame,
   clearSavedMatch,
 }: GameSetupProps) {
@@ -34,7 +38,20 @@ export function GameSetup({
     <section className="rounded-2xl bg-slate-900 border border-slate-700 p-6 mb-8">
       <h2 className="text-2xl font-bold mb-4">Game Setup</h2>
 
-      <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-6 gap-4 mb-4">
+        <label className="block">
+            <span className="block text-slate-300 mb-2">Type</span>
+            <select
+                className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
+                value={matchType}
+                onChange={(event) => setMatchType(event.target.value as MatchType)}
+            >
+                <option value="singles">Singles</option>
+                <option value="doubles" disabled>
+                Doubles soon
+                </option>
+            </select>
+            </label>
         <label className="block">
           <span className="block text-slate-300 mb-2">Player 1</span>
           <input

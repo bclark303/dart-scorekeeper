@@ -2,6 +2,8 @@ import { FinishRule, Player, StartingScore, Turn } from "@/lib/scoring";
 
 export type BestOfLegs = 1 | 3 | 5 | 7 | 9;
 
+export type MatchType = "singles" | "doubles";
+
 export type MatchPlayer = Player & {
   legsWon: number;
 };
@@ -42,6 +44,7 @@ export type SavedMatchState = {
   startingScore: StartingScore;
   finishRule: FinishRule;
   bestOfLegs: BestOfLegs;
+  matchType: MatchType;
   playerOneName: string;
   playerTwoName: string;
   players: MatchPlayer[];
