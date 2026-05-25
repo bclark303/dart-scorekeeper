@@ -1,19 +1,5 @@
-import { FinishRule, Player, getCheckoutSuggestion } from "@/lib/scoring";
-
-type MatchPlayer = Player & {
-  legsWon: number;
-};
-
-type PlayerStats = {
-  pointsScored: number;
-  dartsThrown: number;
-  threeDartAverage: number;
-  highestCheckout: number;
-  count180s: number;
-  count140Plus: number;
-  count100Plus: number;
-  busts: number;
-};
+import { FinishRule, getCheckoutSuggestion } from "@/lib/scoring";
+import { MatchPlayer, PlayerStats } from "@/lib/types";
 
 type PlayerCardProps = {
   player: MatchPlayer;

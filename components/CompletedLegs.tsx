@@ -1,11 +1,4 @@
-import { Turn } from "@/lib/scoring";
-
-type CompletedLeg = {
-  legNumber: number;
-  winnerId: string;
-  winnerName: string;
-  turns: Turn[];
-};
+import { CompletedLeg } from "@/lib/types";
 
 type CompletedLegsProps = {
   completedLegs: CompletedLeg[];

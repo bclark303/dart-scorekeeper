@@ -1,6 +1,5 @@
 import { FinishRule, StartingScore } from "@/lib/scoring";
-
-type BestOfLegs = 1 | 3 | 5 | 7 | 9;
+import { BestOfLegs } from "@/lib/types";
 
 type GameSetupProps = {
   playerOneName: string;
