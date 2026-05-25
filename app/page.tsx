@@ -1,12 +1,12 @@
 "use client";
 
+import { PlayerCard } from "@/components/PlayerCard";
 import { useEffect, useState } from "react";
 import {
   FinishRule,
   Player,
   StartingScore,
   Turn,
-  getCheckoutSuggestion,
   scoreTurn,
   validateTurnScore,
 } from "@/lib/scoring";
@@ -152,14 +152,6 @@ useEffect(() => {
   isMatchComplete,
   message,
 ]);
-
-  function getPlayerCheckoutText(player: MatchPlayer): string | null {
-  if (finishRule !== "double_out") {
-    return null;
-  }
-
-  return getCheckoutSuggestion(player.score);
-}
 
   function startNewGame() {
     const newPlayers: MatchPlayer[] = [
@@ -691,54 +683,15 @@ function getMatchWinnerName(): string | null {
 
         <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
           {players.map((player, index) => (
-            <div
+            <PlayerCard
               key={player.id}
-              className={`rounded-2xl p-6 border ${
-                index === currentPlayerIndex && !isLegComplete && !isMatchComplete
-                  ? "border-green-400 bg-slate-800"
-                  : "border-slate-700 bg-slate-900"
-              }`}
-            >
-              <h2 className="text-2xl font-semibold mb-2">{player.name}</h2>
-              <div className="text-6xl font-bold">{player.score}</div>
-              <div className="mt-4 grid grid-cols-1 gap-2 text-xl">
-                <div>
-                  Legs won: <span className="font-bold">{player.legsWon}</span>
-                </div>
-
-                <div>
-                  Avg:{" "}
-                  <span className="font-bold">
-                    {getPlayerStats(player.id).threeDartAverage.toFixed(1)}
-                  </span>
-                </div>
-
-                <div className="text-base text-slate-400">
-                  Points: {getPlayerStats(player.id).pointsScored} | Darts:{" "}
-                  {getPlayerStats(player.id).dartsThrown}
-                </div>
-
-                <div className="text-base text-slate-400">
-                  100+: {getPlayerStats(player.id).count100Plus} | 140+:{" "}
-                  {getPlayerStats(player.id).count140Plus} | 180s:{" "}
-                  {getPlayerStats(player.id).count180s}
-                </div>
-
-                {getPlayerCheckoutText(player) && (
-                  <div className="mt-3 rounded-xl border border-green-500/40 bg-green-950/40 p-3">
-                    <div className="text-sm text-green-300">Checkout</div>
-                    <div className="text-xl font-bold text-green-100">
-                      {getPlayerCheckoutText(player)}
-                    </div>
-                  </div>
-                )}
-              </div>
-              {index === currentPlayerIndex && !isLegComplete && !isMatchComplete && (
-                <div className="mt-4 text-green-300 font-semibold">
-                  Current throw
-                </div>
-              )}
-            </div>
+              player={player}
+              isCurrentPlayer={index === currentPlayerIndex}
+              isLegComplete={isLegComplete}
+              isMatchComplete={isMatchComplete}
+              finishRule={finishRule}
+              stats={getPlayerStats(player.id)}
+            />
           ))}
         </section>
 
