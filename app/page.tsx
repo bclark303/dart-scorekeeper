@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   FinishRule,
   Player,
@@ -16,6 +16,7 @@ type MatchPlayer = Player & {
 };
 
 type BestOfLegs = 1 | 3 | 5 | 7 | 9;
+
 type PlayerStats = {
   pointsScored: number;
   dartsThrown: number;
@@ -27,6 +28,23 @@ type CompletedLeg = {
   winnerId: string;
   winnerName: string;
   turns: Turn[];
+};
+
+type SavedMatchState = {
+  startingScore: StartingScore;
+  finishRule: FinishRule;
+  bestOfLegs: BestOfLegs;
+  playerOneName: string;
+  playerTwoName: string;
+  players: MatchPlayer[];
+  currentPlayerIndex: number;
+  startingPlayerIndex: number;
+  currentLegNumber: number;
+  turnHistory: Turn[];
+  completedLegs: CompletedLeg[];
+  isLegComplete: boolean;
+  isMatchComplete: boolean;
+  message: string;
 };
 
 export default function Home() {
@@ -56,6 +74,73 @@ export default function Home() {
   );
 
   const legsNeededToWin = Math.ceil(bestOfLegs / 2);
+
+  const savedMatchKey = "dart-scorekeeper-current-match";
+
+  useEffect(() => {
+  const savedMatch = localStorage.getItem(savedMatchKey);
+
+  if (!savedMatch) {
+    return;
+  }
+
+  try {
+    const parsedMatch = JSON.parse(savedMatch) as SavedMatchState;
+
+    setStartingScore(parsedMatch.startingScore);
+    setFinishRule(parsedMatch.finishRule);
+    setBestOfLegs(parsedMatch.bestOfLegs);
+    setPlayerOneName(parsedMatch.playerOneName);
+    setPlayerTwoName(parsedMatch.playerTwoName);
+    setPlayers(parsedMatch.players);
+    setCurrentPlayerIndex(parsedMatch.currentPlayerIndex);
+    setStartingPlayerIndex(parsedMatch.startingPlayerIndex);
+    setCurrentLegNumber(parsedMatch.currentLegNumber);
+    setTurnHistory(parsedMatch.turnHistory);
+    setCompletedLegs(parsedMatch.completedLegs);
+    setIsLegComplete(parsedMatch.isLegComplete);
+    setIsMatchComplete(parsedMatch.isMatchComplete);
+    setMessage(parsedMatch.message);
+  } catch {
+    localStorage.removeItem(savedMatchKey);
+  }
+}, []);
+
+useEffect(() => {
+  const matchState: SavedMatchState = {
+    startingScore,
+    finishRule,
+    bestOfLegs,
+    playerOneName,
+    playerTwoName,
+    players,
+    currentPlayerIndex,
+    startingPlayerIndex,
+    currentLegNumber,
+    turnHistory,
+    completedLegs,
+    isLegComplete,
+    isMatchComplete,
+    message,
+  };
+
+  localStorage.setItem(savedMatchKey, JSON.stringify(matchState));
+}, [
+  startingScore,
+  finishRule,
+  bestOfLegs,
+  playerOneName,
+  playerTwoName,
+  players,
+  currentPlayerIndex,
+  startingPlayerIndex,
+  currentLegNumber,
+  turnHistory,
+  completedLegs,
+  isLegComplete,
+  isMatchComplete,
+  message,
+]);
 
   function getPlayerCheckoutText(player: MatchPlayer): string | null {
   if (finishRule !== "double_out") {
@@ -93,6 +178,42 @@ export default function Home() {
     setPendingCheckoutTurn(null);
     setMessage(`${newPlayers[0].name} to throw`);
   }
+
+  function clearSavedMatch() {
+  localStorage.removeItem(savedMatchKey);
+
+      const resetPlayers: MatchPlayer[] = [
+        {
+          id: "player-1",
+          name: "Player 1",
+          score: 501,
+          legsWon: 0,
+        },
+        {
+          id: "player-2",
+          name: "Player 2",
+          score: 501,
+          legsWon: 0,
+        },
+      ];
+
+      setStartingScore(501);
+      setFinishRule("double_out");
+      setBestOfLegs(3);
+      setPlayerOneName("Player 1");
+      setPlayerTwoName("Player 2");
+      setPlayers(resetPlayers);
+      setCurrentPlayerIndex(0);
+      setStartingPlayerIndex(0);
+      setCurrentLegNumber(1);
+      setScoreInput("");
+      setTurnHistory([]);
+      setCompletedLegs([]);
+      setIsLegComplete(false);
+      setIsMatchComplete(false);
+      setPendingCheckoutTurn(null);
+      setMessage("Saved match cleared. Player 1 to throw.");
+}
 
   function submitScore() {
     if (isMatchComplete) {
@@ -419,12 +540,21 @@ export default function Home() {
             </label>
           </div>
 
-          <button
-            onClick={startNewGame}
-            className="rounded-xl bg-blue-600 hover:bg-blue-500 px-6 py-3 text-lg font-bold"
-          >
-            Start / Reset Match
-          </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <button
+              onClick={startNewGame}
+              className="rounded-xl bg-blue-600 hover:bg-blue-500 px-6 py-3 text-lg font-bold"
+            >
+              Start / Reset Match
+            </button>
+
+            <button
+              onClick={clearSavedMatch}
+              className="rounded-xl bg-slate-700 hover:bg-slate-600 px-6 py-3 text-lg font-bold"
+            >
+              Clear Saved Match
+            </button>
+          </div>
         </section>
 
         <section className="rounded-2xl bg-slate-900 border border-slate-700 p-4 mb-8">
