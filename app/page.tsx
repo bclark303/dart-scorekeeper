@@ -21,6 +21,11 @@ type PlayerStats = {
   pointsScored: number;
   dartsThrown: number;
   threeDartAverage: number;
+  highestCheckout: number;
+  count180s: number;
+  count140Plus: number;
+  count100Plus: number;
+  busts: number;
 };
 
 type CompletedLeg = {
@@ -463,25 +468,48 @@ function setQuickScore(score: number) {
 function getPlayerStats(playerId: string): PlayerStats {
   const allTurns = getAllMatchTurns();
 
-  const playerTurns = allTurns.filter(
-    (turn) => turn.playerId === playerId && !turn.isBust
-  );
+  const playerTurns = allTurns.filter((turn) => turn.playerId === playerId);
 
-  const pointsScored = playerTurns.reduce((total, turn) => {
+  const scoringTurns = playerTurns.filter((turn) => !turn.isBust);
+
+  const pointsScored = scoringTurns.reduce((total, turn) => {
     return total + turn.scoreEntered;
   }, 0);
 
-  const dartsThrown = playerTurns.reduce((total, turn) => {
-  return total + turn.dartsThrown;
+  const dartsThrown = scoringTurns.reduce((total, turn) => {
+    return total + turn.dartsThrown;
   }, 0);
 
   const threeDartAverage =
     dartsThrown === 0 ? 0 : (pointsScored / dartsThrown) * 3;
 
+  const checkoutTurns = scoringTurns.filter((turn) => turn.isCheckout);
+
+  const highestCheckout = checkoutTurns.reduce((highest, turn) => {
+    return Math.max(highest, turn.scoreEntered);
+  }, 0);
+
+  const count180s = scoringTurns.filter((turn) => turn.scoreEntered === 180).length;
+
+  const count140Plus = scoringTurns.filter(
+    (turn) => turn.scoreEntered >= 140
+  ).length;
+
+  const count100Plus = scoringTurns.filter(
+    (turn) => turn.scoreEntered >= 100
+  ).length;
+
+  const busts = playerTurns.filter((turn) => turn.isBust).length;
+
   return {
     pointsScored,
     dartsThrown,
     threeDartAverage,
+    highestCheckout,
+    count180s,
+    count140Plus,
+    count100Plus,
+    busts,
   };
 }
 
@@ -688,6 +716,12 @@ function getMatchWinnerName(): string | null {
                 <div className="text-base text-slate-400">
                   Points: {getPlayerStats(player.id).pointsScored} | Darts:{" "}
                   {getPlayerStats(player.id).dartsThrown}
+                </div>
+
+                <div className="text-base text-slate-400">
+                  100+: {getPlayerStats(player.id).count100Plus} | 140+:{" "}
+                  {getPlayerStats(player.id).count140Plus} | 180s:{" "}
+                  {getPlayerStats(player.id).count180s}
                 </div>
 
                 {getPlayerCheckoutText(player) && (
@@ -957,6 +991,26 @@ function getMatchWinnerName(): string | null {
           <div className="text-slate-300">
             Darts counted:{" "}
             <span className="font-bold text-white">{stats.dartsThrown}</span>
+          </div>
+          <div className="text-slate-300">
+            Highest checkout:{" "}
+            <span className="font-bold text-white">
+              {stats.highestCheckout > 0 ? stats.highestCheckout : "—"}
+            </span>
+          </div>
+          <div className="text-slate-300">
+            100+ scores:{" "}
+            <span className="font-bold text-white">{stats.count100Plus}</span>
+          </div>
+          <div className="text-slate-300">
+            140+ scores:{" "}
+            <span className="font-bold text-white">{stats.count140Plus}</span>
+          </div>
+          <div className="text-slate-300">
+            180s: <span className="font-bold text-white">{stats.count180s}</span>
+          </div>
+          <div className="text-slate-300">
+            Busts: <span className="font-bold text-white">{stats.busts}</span>
           </div>
         </div>
       );
