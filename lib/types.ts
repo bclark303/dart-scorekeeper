@@ -6,6 +6,20 @@ export type MatchPlayer = Player & {
   legsWon: number;
 };
 
+export type TeamMember = {
+  id: string;
+  name: string;
+};
+
+export type MatchSide = {
+  id: string;
+  name: string;
+  score: number;
+  legsWon: number;
+  members: TeamMember[];
+  currentMemberIndex: number;
+};
+
 export type PlayerStats = {
   pointsScored: number;
   dartsThrown: number;
@@ -40,3 +54,33 @@ export type SavedMatchState = {
   isMatchComplete: boolean;
   message: string;
 };
+
+export function createSinglesSide(
+  sideId: string,
+  playerId: string,
+  name: string,
+  startingScore: number
+): MatchSide {
+  return {
+    id: sideId,
+    name,
+    score: startingScore,
+    legsWon: 0,
+    members: [
+      {
+        id: playerId,
+        name,
+      },
+    ],
+    currentMemberIndex: 0,
+  };
+}
+
+export function matchSideToMatchPlayer(side: MatchSide): MatchPlayer {
+  return {
+    id: side.id,
+    name: side.name,
+    score: side.score,
+    legsWon: side.legsWon,
+  };
+}
