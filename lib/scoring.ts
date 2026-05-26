@@ -14,6 +14,7 @@ export type Turn = {
   playerName: string;
   throwerId?: string;
   throwerName?: string;
+  isDummy?: boolean;
   scoreEntered: number;
   scoreBefore: number;
   scoreAfter: number;

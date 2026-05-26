@@ -446,6 +446,17 @@ useEffect(() => {
     return side.members[side.currentMemberIndex]?.name ?? side.name;
   }
 
+  function getCurrentThrower(side: MatchSide) {
+    return side.members[side.currentMemberIndex];
+  }
+
+  function isCurrentThrowerDummy() {
+    const currentSide = sides[currentSideIndex];
+    const currentThrower = getCurrentThrower(currentSide);
+
+    return currentThrower?.isDummy === true;
+  }
+
   function appendScoreDigit(digit: string) {
     if (isLegComplete || isMatchComplete || pendingCheckoutTurn) {
       return;
@@ -555,6 +566,63 @@ useEffect(() => {
       `${resultWithThrower.message} ${nextThrowerName} (${nextPlayerName}) to throw.`
     );
   }
+
+  function submitDummyScore() {
+  if (!isCurrentThrowerDummy()) {
+    return;
+  }
+
+  if (isMatchComplete || isLegComplete || pendingCheckoutTurn || pendingDartsUsedTurn) {
+    return;
+  }
+
+  const currentSide = sides[currentSideIndex];
+  const currentThrower = getCurrentThrower(currentSide);
+
+  if (!currentThrower) {
+    return;
+  }
+
+  const result = scoreTurn(currentSide, dummyScore, finishRule);
+
+  const dummyTurn: Turn = {
+    ...result.turn,
+    throwerId: currentThrower.id,
+    throwerName: currentThrower.name,
+    isDummy: true,
+  };
+
+  setTurnHistory((previousHistory) => [dummyTurn, ...previousHistory]);
+
+  if (!dummyTurn.isBust) {
+    const updatedSides = [...sides];
+    updatedSides[currentSideIndex] = {
+      ...updatedSides[currentSideIndex],
+      score: result.updatedPlayer.score,
+      currentMemberIndex: getNextMemberIndex(updatedSides[currentSideIndex]),
+    };
+
+    setSides(updatedSides);
+  } else {
+    advanceCurrentSideMember();
+  }
+
+  if (result.isLegComplete) {
+    setPendingDartsUsedTurn(dummyTurn);
+    setMessage(`${currentThrower.name} checked out. How many darts were used?`);
+    return;
+  }
+
+  const nextSideIndex = getNextSideIndex();
+  setcurrentSideIndex(nextSideIndex);
+
+  const nextSide = sides[nextSideIndex];
+  const nextThrowerName = getCurrentThrowerName(nextSide);
+
+  setMessage(
+    `${currentThrower.name} dummy score ${dummyScore}. ${nextThrowerName} (${nextSide.name}) to throw.`
+  );
+}
 
   function getNextMemberIndex(side: MatchSide): number {
     if (side.members.length <= 1) {
@@ -1001,6 +1069,9 @@ function getMatchWinnerName(): string | null {
       replayMatch={handleReplayMatch}
       newGameSetup={handleNewGameSetup}
       viewFinishedGame={handleViewFinishedGame}
+      isCurrentThrowerDummy={isCurrentThrowerDummy()}
+      dummyScore={dummyScore}
+      submitDummyScore={submitDummyScore}
     />
   </>
 )}

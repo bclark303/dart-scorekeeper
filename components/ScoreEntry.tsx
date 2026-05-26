@@ -21,6 +21,9 @@ type ScoreEntryProps = {
   replayMatch: () => void;
   newGameSetup: () => void;
   viewFinishedGame: () => void;
+  isCurrentThrowerDummy: boolean;
+  dummyScore: number;
+  submitDummyScore: () => void;
 };
 
 export function ScoreEntry({
@@ -44,6 +47,9 @@ export function ScoreEntry({
   replayMatch,
   newGameSetup,
   viewFinishedGame,
+  isCurrentThrowerDummy,
+  dummyScore,
+  submitDummyScore,
 }: ScoreEntryProps) {
   return (
     <section className="rounded-2xl bg-slate-900 border border-slate-700 p-6 mb-8">
@@ -142,73 +148,91 @@ export function ScoreEntry({
         !isLegComplete &&
         !isMatchComplete && (
           <>
-            <label className="block mb-2 text-slate-300">
-              Score this turn
-            </label>
+            {isCurrentThrowerDummy ? (
+                <div className="rounded-2xl bg-slate-800 border border-slate-700 p-4">
+                    <div className="text-lg font-bold mb-2">Dummy player turn</div>
 
-            <input
-              className="w-full rounded-xl bg-slate-800 border border-slate-600 p-4 text-3xl mb-4"
-              value={scoreInput}
-              onChange={(event) => setScoreInput(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  submitScore();
-                }
-              }}
-              inputMode="numeric"
-              autoFocus
-            />
+                    <p className="text-slate-300 mb-4">
+                    This slot will automatically score{" "}
+                    <span className="font-bold text-white">{dummyScore}</span>.
+                    </p>
 
-            <div className="mb-4">
-              <div className="mb-2 text-slate-300">Quick scores</div>
+                    <button
+                    onClick={submitDummyScore}
+                    className="w-full rounded-xl bg-purple-600 hover:bg-purple-500 p-4 text-xl font-bold"
+                    >
+                    Apply Dummy Score
+                    </button>
+                </div>
+                ) : (
+                <>
+                    <label className="block mb-2 text-slate-300">Score this turn</label>
 
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                {quickScores.map((score) => (
-                  <button
-                    key={score}
-                    onClick={() => setQuickScore(score)}
-                    className="rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 p-4 text-xl font-bold"
-                  >
-                    {score}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="mb-4">
-              <div className="mb-2 text-slate-300">Keypad</div>
-
-              <div className="grid grid-cols-3 gap-3">
-                {keypadButtons.map((button) => (
-                  <button
-                    key={button}
-                    onClick={() => {
-                      if (button === "C") {
-                        setScoreInput("");
-                        return;
-                      }
-
-                      if (button === "⌫") {
-                        backspaceScoreInput();
-                        return;
-                      }
-
-                      appendScoreDigit(button);
+                    <input
+                    className="w-full rounded-xl bg-slate-800 border border-slate-600 p-4 text-3xl mb-4"
+                    value={scoreInput}
+                    onChange={(event) => setScoreInput(event.target.value)}
+                    onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                        submitScore();
+                        }
                     }}
-                    className="rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 p-5 text-2xl font-bold"
-                  >
-                    {button}
-                  </button>
-                ))}
-              </div>
-            </div>
+                    inputMode="numeric"
+                    autoFocus
+                    />
 
-            <button
-              onClick={submitScore}
-              className="w-full rounded-xl bg-green-600 hover:bg-green-500 p-4 text-xl font-bold"
-            >
-              Enter Score
-            </button>
+                    <div className="mb-4">
+                    <div className="mb-2 text-slate-300">Quick scores</div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                        {quickScores.map((score) => (
+                        <button
+                            key={score}
+                            onClick={() => setQuickScore(score)}
+                            className="rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 p-4 text-xl font-bold"
+                        >
+                            {score}
+                        </button>
+                        ))}
+                    </div>
+                    </div>
+
+                    <div className="mb-4">
+                    <div className="mb-2 text-slate-300">Keypad</div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                        {keypadButtons.map((button) => (
+                        <button
+                            key={button}
+                            onClick={() => {
+                            if (button === "C") {
+                                setScoreInput("");
+                                return;
+                            }
+
+                            if (button === "⌫") {
+                                backspaceScoreInput();
+                                return;
+                            }
+
+                            appendScoreDigit(button);
+                            }}
+                            className="rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 p-5 text-2xl font-bold"
+                        >
+                            {button}
+                        </button>
+                        ))}
+                    </div>
+                    </div>
+
+                    <button
+                    onClick={submitScore}
+                    className="w-full rounded-xl bg-green-600 hover:bg-green-500 p-4 text-xl font-bold"
+                    >
+                    Enter Score
+                    </button>
+                </>
+                )}
           </>
         )
       )}

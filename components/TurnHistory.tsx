@@ -22,6 +22,7 @@ export function TurnHistory({ turns }: TurnHistoryProps) {
                 {turn.throwerName ?? turn.playerName} scored {turn.scoreEntered}
                 {turn.isBust ? " — BUST" : ""}
                 {turn.isCheckout ? " — CHECKOUT" : ""}
+                {turn.isDummy ? " — DUMMY" : ""}
                 {turn.throwerName && turn.throwerName !== turn.playerName
                     ? ` for ${turn.playerName}`
                     : ""}

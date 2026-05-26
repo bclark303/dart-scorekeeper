@@ -107,6 +107,7 @@ export function CompletedLegs({ completedLegs }: CompletedLegsProps) {
                               {turn.scoreEntered}
                               {turn.isBust ? " — BUST" : ""}
                               {turn.isCheckout ? " — CHECKOUT" : ""}
+                              {turn.isDummy ? " — DUMMY" : ""}
                               {turn.throwerName &&
                               turn.throwerName !== turn.playerName
                                 ? ` for ${turn.playerName}`
