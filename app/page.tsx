@@ -8,8 +8,7 @@ import {
   MatchType,
   PlayerStats,
   SavedMatchState,
-  createDoublesSide,
-  createSinglesSide,
+  createTeamSide,
 } from "@/lib/types";
 
 import { ScoreEntry } from "@/components/ScoreEntry";
@@ -44,8 +43,8 @@ export default function Home() {
   const [teamTwoPlayerTwoName, setTeamTwoPlayerTwoName] = useState("Player 2B");
 
   const [sides, setSides] = useState<MatchSide[]>([
-    createSinglesSide("side-1", "player-1", "Player 1", 501),
-    createSinglesSide("side-2", "player-2", "Player 2", 501),
+    createTeamSide("side-1", "Player 1", ["Player 1"], 501),
+    createTeamSide("side-2", "Player 2", ["Player 2"], 501),
   ]);
 
   const [currentSideIndex, setcurrentSideIndex] = useState(0);
@@ -205,44 +204,44 @@ useEffect(() => {
   }
 
   function startNewGame() {
-    const newsides: MatchSide[] =
-      matchType === "doubles"
-        ? [
-            createDoublesSide(
-              "side-1",
-              teamOneName.trim() || "Team 1",
-              "player-1a",
-              playerOneName.trim() || "Player 1A",
-              "player-1b",
-              teamOnePlayerTwoName.trim() || "Player 1B",
-              startingScore
-            ),
-            createDoublesSide(
-              "side-2",
-              teamTwoName.trim() || "Team 2",
-              "player-2a",
-              playerTwoName.trim() || "Player 2A",
-              "player-2b",
-              teamTwoPlayerTwoName.trim() || "Player 2B",
-              startingScore
-            ),
-          ]
-        : [
-            createSinglesSide(
-              "side-1",
-              "player-1",
-              playerOneName.trim() || "Player 1",
-              startingScore
-            ),
-            createSinglesSide(
-              "side-2",
-              "player-2",
-              playerTwoName.trim() || "Player 2",
-              startingScore
-            ),
-          ];
+const newSides: MatchSide[] =
+  matchType === "doubles"
+    ? [
+        createTeamSide(
+          "side-1",
+          teamOneName.trim() || "Team 1",
+          [
+            playerOneName.trim() || "Player 1A",
+            teamOnePlayerTwoName.trim() || "Player 1B",
+          ],
+          startingScore
+        ),
+        createTeamSide(
+          "side-2",
+          teamTwoName.trim() || "Team 2",
+          [
+            playerTwoName.trim() || "Player 2A",
+            teamTwoPlayerTwoName.trim() || "Player 2B",
+          ],
+          startingScore
+        ),
+      ]
+    : [
+        createTeamSide(
+          "side-1",
+          playerOneName.trim() || "Player 1",
+          [playerOneName.trim() || "Player 1"],
+          startingScore
+        ),
+        createTeamSide(
+          "side-2",
+          playerTwoName.trim() || "Player 2",
+          [playerTwoName.trim() || "Player 2"],
+          startingScore
+        ),
+      ];
 
-    setSides(newsides);
+    setSides(newSides);
     setcurrentSideIndex(0);
     setstartingSideIndex(0);
     setCurrentLegNumber(1);
@@ -257,7 +256,7 @@ useEffect(() => {
     setIsMatchComplete(false);
     setPendingCheckoutTurn(null);
     setPendingDartsUsedTurn(null);
-    setMessage(`${newsides[0].name} to throw`);
+    setMessage(`${newSides[0].name} to throw`);
   }
 
   function handleStartNewGame() {
@@ -297,8 +296,8 @@ useEffect(() => {
   localStorage.removeItem(savedMatchKey);
 
     const resetSides: MatchSide[] = [
-      createSinglesSide("side-1", "player-1", "Player 1", 501),
-      createSinglesSide("side-2", "player-2", "Player 2", 501),
+      createTeamSide("side-1", "Player 1", ["Player 1"], 501),
+      createTeamSide("side-2", "Player 2", ["Player 2"], 501),
     ];
 
       setStartingScore(501);

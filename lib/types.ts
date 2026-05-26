@@ -66,6 +66,39 @@ export type SavedMatchState = {
   message: string;
 };
 
+export function createTeamSide(
+  sideId: string,
+  sideName: string,
+  memberNames: string[],
+  startingScore: number
+): MatchSide {
+  const cleanedMemberNames = memberNames
+    .map((name) => name.trim())
+    .filter((name) => name.length > 0);
+
+  const members =
+    cleanedMemberNames.length > 0
+      ? cleanedMemberNames.map((name, index) => ({
+          id: `${sideId}-member-${index + 1}`,
+          name,
+        }))
+      : [
+          {
+            id: `${sideId}-member-1`,
+            name: sideName,
+          },
+        ];
+
+  return {
+    id: sideId,
+    name: sideName,
+    score: startingScore,
+    legsWon: 0,
+    members,
+    currentMemberIndex: 0,
+  };
+}
+
 export function createSinglesSide(
   sideId: string,
   playerId: string,
