@@ -15,6 +15,7 @@ export type MatchPlayer = Player & {
 export type TeamMember = {
   id: string;
   name: string;
+  isDummy?: boolean;
 };
 
 export type MatchSide = {
@@ -92,11 +93,13 @@ export function createTeamSide(
       ? cleanedMemberNames.map((name, index) => ({
           id: `${sideId}-member-${index + 1}`,
           name,
+          isDummy: false,
         }))
       : [
           {
             id: `${sideId}-member-1`,
             name: sideName,
+            isDummy: false,
           },
         ];
 

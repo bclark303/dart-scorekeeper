@@ -33,7 +33,11 @@ export function PlayerCard({
 
         {player.members.length > 1 && (
           <div className="mb-3 text-slate-300">
-            <div>{player.members.map((member) => member.name).join(" / ")}</div>
+            <div>
+              {player.members
+                .map((member) => (member.isDummy ? `${member.name} (dummy)` : member.name))
+                .join(" / ")}
+            </div>
             <div className="mt-1 text-sm">
               Thrower:{" "}
               <span className="font-semibold text-white">

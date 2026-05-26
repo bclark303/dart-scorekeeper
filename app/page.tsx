@@ -299,6 +299,33 @@ useEffect(() => {
     });
   }
 
+  function addDummyMembersIfNeeded(
+    side: MatchSide,
+    targetSize: number
+  ): MatchSide {
+    if (side.members.length >= targetSize) {
+      return side;
+    }
+
+    const dummyMembers = Array.from(
+      { length: targetSize - side.members.length },
+      (_, index) => {
+        const dummyNumber = side.members.length + index + 1;
+
+        return {
+          id: `${side.id}-dummy-${dummyNumber}`,
+          name: `Missing Player ${dummyNumber}`,
+          isDummy: true,
+        };
+      }
+    );
+
+    return {
+      ...side,
+      members: [...side.members, ...dummyMembers],
+    };
+  }  
+
   function startNewGame() {
     const isSinglesMatch = sideOneSize === 1 && sideTwoSize === 1;
 
@@ -310,10 +337,16 @@ useEffect(() => {
       ? teamTwoMemberNames[0]?.trim() || "Player 2"
       : teamTwoName.trim() || "Team 2";
 
-    const newSides: MatchSide[] = [
+    let newSides: MatchSide[] = [
       createTeamSide("side-1", sideOneName, teamOneMemberNames, startingScore),
       createTeamSide("side-2", sideTwoName, teamTwoMemberNames, startingScore),
     ];
+
+    if (rotationMode === "dummy" && sideOneSize !== sideTwoSize) {
+      const targetSize = Math.max(sideOneSize, sideTwoSize);
+
+      newSides = newSides.map((side) => addDummyMembersIfNeeded(side, targetSize));
+    }
 
     setSides(newSides);
     setcurrentSideIndex(0);
