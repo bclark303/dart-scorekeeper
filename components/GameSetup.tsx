@@ -62,6 +62,12 @@ export function GameSetup({
   isResetConfirmationVisible,
   confirmResetMatch,
   cancelResetMatch,
+  teamSize,
+  teamOneMemberNames,
+  teamTwoMemberNames,
+  resizeTeamMembers,
+  setTeamOneMemberNames,
+  setTeamTwoMemberNames,
 }: GameSetupProps) {
 return (
   <section className="rounded-2xl bg-slate-900 border border-slate-700 p-6 mb-8">
@@ -72,14 +78,19 @@ return (
 
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <label className="block">
-          <span className="block text-slate-300 mb-2">Type</span>
+          <span className="block text-slate-300 mb-2">Team Size</span>
           <select
             className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
-            value={matchType}
-            onChange={(event) => setMatchType(event.target.value as MatchType)}
+            value={teamSize}
+            onChange={(event) =>
+              resizeTeamMembers(Number(event.target.value) as TeamSize)
+            }
           >
-            <option value="singles">Singles</option>
-            <option value="doubles">Doubles</option>
+            <option value={1}>Singles</option>
+            <option value={2}>Doubles</option>
+            <option value={3}>3 per team</option>
+            <option value={4}>4 per team</option>
+            <option value={5}>5 per team</option>
           </select>
         </label>
 
@@ -131,10 +142,34 @@ return (
 
     <div className="mb-8">
       <h3 className="text-lg font-bold mb-3 text-slate-200">
-        {matchType === "doubles" ? "Teams" : "Players"}
+        {teamSize === 1 ? "Players" : "Teams"}
       </h3>
 
-      {matchType === "doubles" ? (
+      {teamSize === 1 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <label className="block">
+            <span className="block text-slate-300 mb-2">Player 1</span>
+            <input
+              className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
+              value={teamOneMemberNames[0] ?? ""}
+              onChange={(event) =>
+                setTeamOneMemberNames([event.target.value])
+              }
+            />
+          </label>
+
+          <label className="block">
+            <span className="block text-slate-300 mb-2">Player 2</span>
+            <input
+              className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
+              value={teamTwoMemberNames[0] ?? ""}
+              onChange={(event) =>
+                setTeamTwoMemberNames([event.target.value])
+              }
+            />
+          </label>
+        </div>
+      ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="rounded-xl bg-slate-800 border border-slate-700 p-4">
             <h4 className="font-bold mb-3">Team 1</h4>
@@ -149,25 +184,22 @@ return (
                 />
               </label>
 
-              <label className="block">
-                <span className="block text-slate-300 mb-2">Player A</span>
-                <input
-                  className="w-full rounded-xl bg-slate-900 border border-slate-600 p-3"
-                  value={playerOneName}
-                  onChange={(event) => setPlayerOneName(event.target.value)}
-                />
-              </label>
-
-              <label className="block">
-                <span className="block text-slate-300 mb-2">Player B</span>
-                <input
-                  className="w-full rounded-xl bg-slate-900 border border-slate-600 p-3"
-                  value={teamOnePlayerTwoName}
-                  onChange={(event) =>
-                    setTeamOnePlayerTwoName(event.target.value)
-                  }
-                />
-              </label>
+              {teamOneMemberNames.map((memberName, index) => (
+                <label key={index} className="block">
+                  <span className="block text-slate-300 mb-2">
+                    Player {index + 1}
+                  </span>
+                  <input
+                    className="w-full rounded-xl bg-slate-900 border border-slate-600 p-3"
+                    value={memberName}
+                    onChange={(event) => {
+                      const updatedNames = [...teamOneMemberNames];
+                      updatedNames[index] = event.target.value;
+                      setTeamOneMemberNames(updatedNames);
+                    }}
+                  />
+                </label>
+              ))}
             </div>
           </div>
 
@@ -184,79 +216,56 @@ return (
                 />
               </label>
 
-              <label className="block">
-                <span className="block text-slate-300 mb-2">Player A</span>
-                <input
-                  className="w-full rounded-xl bg-slate-900 border border-slate-600 p-3"
-                  value={playerTwoName}
-                  onChange={(event) => setPlayerTwoName(event.target.value)}
-                />
-              </label>
-
-              <label className="block">
-                <span className="block text-slate-300 mb-2">Player B</span>
-                <input
-                  className="w-full rounded-xl bg-slate-900 border border-slate-600 p-3"
-                  value={teamTwoPlayerTwoName}
-                  onChange={(event) =>
-                    setTeamTwoPlayerTwoName(event.target.value)
-                  }
-                />
-              </label>
+              {teamTwoMemberNames.map((memberName, index) => (
+                <label key={index} className="block">
+                  <span className="block text-slate-300 mb-2">
+                    Player {index + 1}
+                  </span>
+                  <input
+                    className="w-full rounded-xl bg-slate-900 border border-slate-600 p-3"
+                    value={memberName}
+                    onChange={(event) => {
+                      const updatedNames = [...teamTwoMemberNames];
+                      updatedNames[index] = event.target.value;
+                      setTeamTwoMemberNames(updatedNames);
+                    }}
+                  />
+                </label>
+              ))}
             </div>
           </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <label className="block">
-            <span className="block text-slate-300 mb-2">Player 1</span>
-            <input
-              className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
-              value={playerOneName}
-              onChange={(event) => setPlayerOneName(event.target.value)}
-            />
-          </label>
-
-          <label className="block">
-            <span className="block text-slate-300 mb-2">Player 2</span>
-            <input
-              className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
-              value={playerTwoName}
-              onChange={(event) => setPlayerTwoName(event.target.value)}
-            />
-          </label>
         </div>
       )}
     </div>
 
     {isResetConfirmationVisible && (
-        <div className="mb-6 rounded-2xl border border-amber-500/50 bg-amber-950/30 p-5">
-            <div className="text-xl font-bold text-amber-200 mb-2">
-            Reset current match?
-            </div>
-
-            <p className="text-amber-100/90 mb-4">
-            This will clear the current scores, turns, legs, and match history. This
-            cannot be undone.
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <button
-                onClick={confirmResetMatch}
-                className="rounded-xl bg-red-600 hover:bg-red-500 px-6 py-3 text-lg font-bold"
-            >
-                Yes, Reset Match
-            </button>
-
-            <button
-                onClick={cancelResetMatch}
-                className="rounded-xl bg-slate-700 hover:bg-slate-600 px-6 py-3 text-lg font-bold"
-            >
-                Cancel
-            </button>
-            </div>
+      <div className="mb-6 rounded-2xl border border-amber-500/50 bg-amber-950/30 p-5">
+        <div className="text-xl font-bold text-amber-200 mb-2">
+          Reset current match?
         </div>
-        )}
+
+        <p className="text-amber-100/90 mb-4">
+          This will clear the current scores, turns, legs, and match history.
+          This cannot be undone.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <button
+            onClick={confirmResetMatch}
+            className="rounded-xl bg-red-600 hover:bg-red-500 px-6 py-3 text-lg font-bold"
+          >
+            Yes, Reset Match
+          </button>
+
+          <button
+            onClick={cancelResetMatch}
+            className="rounded-xl bg-slate-700 hover:bg-slate-600 px-6 py-3 text-lg font-bold"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    )}
 
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <button
