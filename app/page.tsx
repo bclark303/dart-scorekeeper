@@ -7,6 +7,7 @@ import {
   MatchSide,
   MatchType,
   PlayerStats,
+  RotationMode,
   SavedMatchState,
   TeamSize,
   createTeamSide,
@@ -38,6 +39,12 @@ export default function Home() {
   const [teamSize, setTeamSize] = useState<TeamSize>(1);
   const [sideOneSize, setSideOneSize] = useState<TeamSize>(1);
   const [sideTwoSize, setSideTwoSize] = useState<TeamSize>(1);
+
+  const [rotationMode, setRotationMode] =
+    useState<RotationMode>("independent");
+
+  const [dummyScore, setDummyScore] = useState(0);
+
   const [activeView, setActiveView] = useState<AppView>("score");
   const [playerOneName, setPlayerOneName] = useState("Player 1");
   const [playerTwoName, setPlayerTwoName] = useState("Player 2");
@@ -120,6 +127,9 @@ export default function Home() {
     setSideTwoSize(loadedSideTwoSize);
     setTeamSize(Math.max(loadedSideOneSize, loadedSideTwoSize) as TeamSize);
 
+    setRotationMode(parsedMatch.rotationMode ?? "independent");
+    setDummyScore(parsedMatch.dummyScore ?? 0);
+
     setPlayerOneName(parsedMatch.playerOneName);
     setPlayerTwoName(parsedMatch.playerTwoName);
     setTeamOneName(parsedMatch.teamOneName ?? "Team 1");
@@ -170,6 +180,8 @@ useEffect(() => {
     bestOfLegs,
     matchType,
     teamSize,
+    rotationMode,
+    dummyScore,
     sideOneSize,
     sideTwoSize,
     playerOneName,
@@ -199,6 +211,8 @@ useEffect(() => {
   bestOfLegs,
   matchType,
   teamSize,
+  rotationMode,
+  dummyScore,
   sideOneSize,
   sideTwoSize,
   playerOneName,
@@ -365,6 +379,8 @@ useEffect(() => {
       setBestOfLegs(3);
       setMatchType("singles");
       setTeamSize(1);
+      setRotationMode("independent");
+      setDummyScore(0);
       setSideOneSize(1);
       setSideTwoSize(1);
       setPlayerOneName("Player 1");
@@ -869,6 +885,10 @@ function getMatchWinnerName(): string | null {
           teamSize={teamSize}
           sideOneSize={sideOneSize}
           sideTwoSize={sideTwoSize}
+          rotationMode={rotationMode}
+          dummyScore={dummyScore}
+          setRotationMode={setRotationMode}
+          setDummyScore={setDummyScore}
           setPlayerOneName={setPlayerOneName}
           setPlayerTwoName={setPlayerTwoName}
           setTeamOneName={setTeamOneName}

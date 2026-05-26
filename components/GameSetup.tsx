@@ -1,5 +1,14 @@
-import { FinishRule, StartingScore } from "@/lib/scoring";
-import { BestOfLegs, MatchType, TeamSize } from "@/lib/types";
+import { 
+    FinishRule, 
+    StartingScore 
+} from "@/lib/scoring";
+
+import {
+  BestOfLegs,
+  MatchType,
+  RotationMode,
+  TeamSize,
+} from "@/lib/types";
 
 
 type GameSetupProps = {
@@ -37,6 +46,10 @@ type GameSetupProps = {
   resizeSideTwoMembers: (size: TeamSize) => void;
   setTeamOneMemberNames: (names: string[]) => void;
   setTeamTwoMemberNames: (names: string[]) => void;
+  rotationMode: RotationMode;
+  dummyScore: number;
+  setRotationMode: (rotationMode: RotationMode) => void;
+  setDummyScore: (dummyScore: number) => void;
 };
 
 export function GameSetup({
@@ -74,6 +87,10 @@ export function GameSetup({
   resizeSideTwoMembers,
   setTeamOneMemberNames,
   setTeamTwoMemberNames,
+  rotationMode,
+  dummyScore,
+  setRotationMode,
+  setDummyScore
 }: GameSetupProps) {
 return (
   <section className="rounded-2xl bg-slate-900 border border-slate-700 p-6 mb-8">
@@ -82,7 +99,7 @@ return (
     <div className="mb-8">
       <h3 className="text-lg font-bold mb-3 text-slate-200">Match</h3>
 
-      <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-5 lg:grid-cols-7 gap-4">
         <label className="block">
             <span className="block text-slate-300 mb-2">Team 1 Size</span>
             <select
@@ -116,6 +133,45 @@ return (
                 <option value={5}>5 players</option>
             </select>
             </label>
+
+            {sideOneSize !== sideTwoSize && (
+                <>
+                    <label className="block">
+                    <span className="block text-slate-300 mb-2">Rotation</span>
+                    <select
+                        className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
+                        value={rotationMode}
+                        onChange={(event) =>
+                        setRotationMode(event.target.value as RotationMode)
+                        }
+                    >
+                        <option value="independent">Independent</option>
+                        <option value="dummy">Use Dummy Score</option>
+                    </select>
+                    </label>
+
+                    {rotationMode === "dummy" && (
+                    <label className="block">
+                        <span className="block text-slate-300 mb-2">Dummy Score</span>
+                        <input
+                        className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
+                        value={dummyScore}
+                        onChange={(event) => {
+                            const nextScore = Number(event.target.value);
+
+                            if (Number.isNaN(nextScore)) {
+                            setDummyScore(0);
+                            return;
+                            }
+
+                            setDummyScore(nextScore);
+                        }}
+                        inputMode="numeric"
+                        />
+                    </label>
+                    )}
+                </>
+                )}
 
         <label className="block">
           <span className="block text-slate-300 mb-2">Game</span>

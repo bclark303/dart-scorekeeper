@@ -6,6 +6,8 @@ export type MatchType = "singles" | "doubles";
 
 export type TeamSize = 1 | 2 | 3 | 4 | 5;
 
+export type RotationMode = "independent" | "dummy";
+
 export type MatchPlayer = Player & {
   legsWon: number;
 };
@@ -50,6 +52,8 @@ export type SavedMatchState = {
   teamSize: TeamSize;
   sideOneSize: TeamSize;
   sideTwoSize: TeamSize;
+  rotationMode: RotationMode;
+  dummyScore: number;
   playerOneName: string;
   playerTwoName: string;
   teamOneName: string;
