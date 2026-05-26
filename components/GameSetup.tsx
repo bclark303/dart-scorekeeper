@@ -4,12 +4,16 @@ import { BestOfLegs, MatchType } from "@/lib/types";
 type GameSetupProps = {
   playerOneName: string;
   playerTwoName: string;
+  teamOnePlayerTwoName: string;
+  teamTwoPlayerTwoName: string;
   startingScore: StartingScore;
   finishRule: FinishRule;
   bestOfLegs: BestOfLegs;
   matchType: MatchType;
   setPlayerOneName: (name: string) => void;
   setPlayerTwoName: (name: string) => void;
+  setTeamOnePlayerTwoName: (name: string) => void;
+  setTeamTwoPlayerTwoName: (name: string) => void;
   setStartingScore: (score: StartingScore) => void;
   setFinishRule: (finishRule: FinishRule) => void;
   setBestOfLegs: (bestOfLegs: BestOfLegs) => void;
@@ -21,12 +25,16 @@ type GameSetupProps = {
 export function GameSetup({
   playerOneName,
   playerTwoName,
+  teamOnePlayerTwoName,
+  teamTwoPlayerTwoName,
   startingScore,
   finishRule,
   bestOfLegs,
   matchType,
   setPlayerOneName,
   setPlayerTwoName,
+  setTeamOnePlayerTwoName,
+  setTeamTwoPlayerTwoName,
   setStartingScore,
   setFinishRule,
   setBestOfLegs,
@@ -47,9 +55,7 @@ export function GameSetup({
                 onChange={(event) => setMatchType(event.target.value as MatchType)}
             >
                 <option value="singles">Singles</option>
-                <option value="doubles" disabled>
-                Doubles soon
-                </option>
+                <option value="doubles">Doubles</option>
             </select>
             </label>
         <label className="block">
@@ -69,6 +75,28 @@ export function GameSetup({
             onChange={(event) => setPlayerTwoName(event.target.value)}
           />
         </label>
+        
+          {matchType === "doubles" && (
+            <>
+                <label className="block">
+                <span className="block text-slate-300 mb-2">Team 1 Player B</span>
+                <input
+                    className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
+                    value={teamOnePlayerTwoName}
+                    onChange={(event) => setTeamOnePlayerTwoName(event.target.value)}
+                />
+                </label>
+
+                <label className="block">
+                <span className="block text-slate-300 mb-2">Team 2 Player B</span>
+                <input
+                    className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
+                    value={teamTwoPlayerTwoName}
+                    onChange={(event) => setTeamTwoPlayerTwoName(event.target.value)}
+                />
+                </label>
+            </>
+            )}
 
         <label className="block">
           <span className="block text-slate-300 mb-2">Game</span>

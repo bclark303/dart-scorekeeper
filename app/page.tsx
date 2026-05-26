@@ -8,6 +8,7 @@ import {
   MatchType,
   PlayerStats,
   SavedMatchState,
+  createDoublesSide,
   createSinglesSide,
 } from "@/lib/types";
 
@@ -35,6 +36,8 @@ export default function Home() {
 
   const [playerOneName, setPlayerOneName] = useState("Player 1");
   const [playerTwoName, setPlayerTwoName] = useState("Player 2");
+  const [teamOnePlayerTwoName, setTeamOnePlayerTwoName] = useState("Player 1B");
+  const [teamTwoPlayerTwoName, setTeamTwoPlayerTwoName] = useState("Player 2B");
 
   const [players, setPlayers] = useState<MatchSide[]>([
     createSinglesSide("side-1", "player-1", "Player 1", 501),
@@ -80,6 +83,8 @@ export default function Home() {
     setMatchType(parsedMatch.matchType ?? "singles");
     setPlayerOneName(parsedMatch.playerOneName);
     setPlayerTwoName(parsedMatch.playerTwoName);
+    setTeamOnePlayerTwoName(parsedMatch.teamOnePlayerTwoName ?? "Player 1B");
+    setTeamTwoPlayerTwoName(parsedMatch.teamTwoPlayerTwoName ?? "Player 2B");
     setPlayers(normalizeSavedPlayers(parsedMatch.players));
     setCurrentPlayerIndex(parsedMatch.currentPlayerIndex);
     setStartingPlayerIndex(parsedMatch.startingPlayerIndex);
@@ -102,6 +107,8 @@ useEffect(() => {
     matchType,
     playerOneName,
     playerTwoName,
+    teamOnePlayerTwoName,
+    teamTwoPlayerTwoName,
     players,
     currentPlayerIndex,
     startingPlayerIndex,
@@ -120,6 +127,8 @@ useEffect(() => {
   bestOfLegs,
   playerOneName,
   playerTwoName,
+  teamOnePlayerTwoName,
+  teamTwoPlayerTwoName,
   players,
   currentPlayerIndex,
   startingPlayerIndex,
@@ -154,20 +163,42 @@ useEffect(() => {
   }
 
   function startNewGame() {
-    const newPlayers: MatchSide[] = [
-      createSinglesSide(
-        "side-1",
-        "player-1",
-        playerOneName.trim() || "Player 1",
-        startingScore
-      ),
-      createSinglesSide(
-        "side-2",
-        "player-2",
-        playerTwoName.trim() || "Player 2",
-        startingScore
-      ),
-    ];
+    const newPlayers: MatchSide[] =
+      matchType === "doubles"
+        ? [
+            createDoublesSide(
+              "side-1",
+              "Team 1",
+              "player-1a",
+              playerOneName.trim() || "Player 1A",
+              "player-1b",
+              teamOnePlayerTwoName.trim() || "Player 1B",
+              startingScore
+            ),
+            createDoublesSide(
+              "side-2",
+              "Team 2",
+              "player-2a",
+              playerTwoName.trim() || "Player 2A",
+              "player-2b",
+              teamTwoPlayerTwoName.trim() || "Player 2B",
+              startingScore
+            ),
+          ]
+        : [
+            createSinglesSide(
+              "side-1",
+              "player-1",
+              playerOneName.trim() || "Player 1",
+              startingScore
+            ),
+            createSinglesSide(
+              "side-2",
+              "player-2",
+              playerTwoName.trim() || "Player 2",
+              startingScore
+            ),
+          ];
 
     setPlayers(newPlayers);
     setCurrentPlayerIndex(0);
@@ -197,6 +228,8 @@ useEffect(() => {
       setMatchType("singles");
       setPlayerOneName("Player 1");
       setPlayerTwoName("Player 2");
+      setTeamOnePlayerTwoName("Player 1B");
+      setTeamTwoPlayerTwoName("Player 2B");
       setPlayers(resetPlayers);
       setCurrentPlayerIndex(0);
       setStartingPlayerIndex(0);
@@ -572,12 +605,16 @@ function getMatchWinnerName(): string | null {
        <GameSetup
           playerOneName={playerOneName}
           playerTwoName={playerTwoName}
+          teamOnePlayerTwoName={teamOnePlayerTwoName}
+          teamTwoPlayerTwoName={teamTwoPlayerTwoName}
           startingScore={startingScore}
           finishRule={finishRule}
           bestOfLegs={bestOfLegs}
           matchType={matchType}
           setPlayerOneName={setPlayerOneName}
           setPlayerTwoName={setPlayerTwoName}
+          setTeamOnePlayerTwoName={setTeamOnePlayerTwoName}
+          setTeamTwoPlayerTwoName={setTeamTwoPlayerTwoName}
           setStartingScore={setStartingScore}
           setFinishRule={setFinishRule}
           setBestOfLegs={setBestOfLegs}

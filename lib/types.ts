@@ -47,6 +47,8 @@ export type SavedMatchState = {
   matchType: MatchType;
   playerOneName: string;
   playerTwoName: string;
+  teamOnePlayerTwoName: string;
+  teamTwoPlayerTwoName: string;
   players: MatchSide[];
   currentPlayerIndex: number;
   startingPlayerIndex: number;
@@ -78,4 +80,30 @@ export function createSinglesSide(
     currentMemberIndex: 0,
   };
 }
-
+export function createDoublesSide(
+  sideId: string,
+  teamName: string,
+  playerOneId: string,
+  playerOneName: string,
+  playerTwoId: string,
+  playerTwoName: string,
+  startingScore: number
+): MatchSide {
+  return {
+    id: sideId,
+    name: teamName,
+    score: startingScore,
+    legsWon: 0,
+    members: [
+      {
+        id: playerOneId,
+        name: playerOneName,
+      },
+      {
+        id: playerTwoId,
+        name: playerTwoName,
+      },
+    ],
+    currentMemberIndex: 0,
+  };
+}
