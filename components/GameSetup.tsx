@@ -1,5 +1,6 @@
 import { FinishRule, StartingScore } from "@/lib/scoring";
-import { BestOfLegs, MatchType } from "@/lib/types";
+import { BestOfLegs, MatchType, TeamSize } from "@/lib/types";
+
 
 type GameSetupProps = {
   playerOneName: string;
@@ -27,6 +28,12 @@ type GameSetupProps = {
   isResetConfirmationVisible: boolean;
   confirmResetMatch: () => void;
   cancelResetMatch: () => void;
+  teamSize: TeamSize;
+  teamOneMemberNames: string[];
+  teamTwoMemberNames: string[];
+  resizeTeamMembers: (size: TeamSize) => void;
+  setTeamOneMemberNames: (names: string[]) => void;
+  setTeamTwoMemberNames: (names: string[]) => void;
 };
 
 export function GameSetup({

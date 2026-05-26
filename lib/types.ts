@@ -4,6 +4,8 @@ export type BestOfLegs = 1 | 3 | 5 | 7 | 9;
 
 export type MatchType = "singles" | "doubles";
 
+export type TeamSize = 1 | 2 | 3 | 4 | 5;
+
 export type MatchPlayer = Player & {
   legsWon: number;
 };
@@ -45,12 +47,15 @@ export type SavedMatchState = {
   finishRule: FinishRule;
   bestOfLegs: BestOfLegs;
   matchType: MatchType;
+  teamSize: TeamSize;
   playerOneName: string;
   playerTwoName: string;
   teamOneName: string;
   teamTwoName: string;
   teamOnePlayerTwoName: string;
   teamTwoPlayerTwoName: string;
+  teamOneMemberNames?: string[];
+  teamTwoMemberNames?: string[];
   sides: MatchSide[];
   players?: MatchSide[];
   currentSideIndex: number;
