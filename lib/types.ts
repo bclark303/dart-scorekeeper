@@ -48,6 +48,8 @@ export type SavedMatchState = {
   bestOfLegs: BestOfLegs;
   matchType: MatchType;
   teamSize: TeamSize;
+  sideOneSize: TeamSize;
+  sideTwoSize: TeamSize;
   playerOneName: string;
   playerTwoName: string;
   teamOneName: string;

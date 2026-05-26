@@ -36,6 +36,8 @@ export default function Home() {
   const [bestOfLegs, setBestOfLegs] = useState<BestOfLegs>(3);
   const [matchType, setMatchType] = useState<MatchType>("singles");
   const [teamSize, setTeamSize] = useState<TeamSize>(1);
+  const [sideOneSize, setSideOneSize] = useState<TeamSize>(1);
+  const [sideTwoSize, setSideTwoSize] = useState<TeamSize>(1);
   const [activeView, setActiveView] = useState<AppView>("score");
   const [playerOneName, setPlayerOneName] = useState("Player 1");
   const [playerTwoName, setPlayerTwoName] = useState("Player 2");
@@ -103,7 +105,21 @@ export default function Home() {
     setFinishRule(parsedMatch.finishRule);
     setBestOfLegs(parsedMatch.bestOfLegs);
     setMatchType(parsedMatch.matchType ?? "singles");
-    setTeamSize(parsedMatch.teamSize ?? (parsedMatch.matchType === "doubles" ? 2 : 1));
+
+    const loadedSideOneSize =
+      parsedMatch.sideOneSize ??
+      parsedMatch.teamSize ??
+      (parsedMatch.matchType === "doubles" ? 2 : 1);
+
+    const loadedSideTwoSize =
+      parsedMatch.sideTwoSize ??
+      parsedMatch.teamSize ??
+      (parsedMatch.matchType === "doubles" ? 2 : 1);
+
+    setSideOneSize(loadedSideOneSize);
+    setSideTwoSize(loadedSideTwoSize);
+    setTeamSize(Math.max(loadedSideOneSize, loadedSideTwoSize) as TeamSize);
+
     setPlayerOneName(parsedMatch.playerOneName);
     setPlayerTwoName(parsedMatch.playerTwoName);
     setTeamOneName(parsedMatch.teamOneName ?? "Team 1");
@@ -112,20 +128,20 @@ export default function Home() {
     setTeamTwoPlayerTwoName(parsedMatch.teamTwoPlayerTwoName ?? "Player 2B");
 
     setTeamOneMemberNames(
-  parsedMatch.teamOneMemberNames ??
-    [
-      parsedMatch.playerOneName ?? "Player 1",
-      parsedMatch.teamOnePlayerTwoName ?? "Player 1B",
-    ].slice(0, parsedMatch.teamSize ?? (parsedMatch.matchType === "doubles" ? 2 : 1))
-);
+      parsedMatch.teamOneMemberNames ??
+        [
+          parsedMatch.playerOneName ?? "Player 1",
+          parsedMatch.teamOnePlayerTwoName ?? "Player 1B",
+        ].slice(0, loadedSideOneSize)
+    );
 
-setTeamTwoMemberNames(
-  parsedMatch.teamTwoMemberNames ??
-    [
-      parsedMatch.playerTwoName ?? "Player 2",
-      parsedMatch.teamTwoPlayerTwoName ?? "Player 2B",
-    ].slice(0, parsedMatch.teamSize ?? (parsedMatch.matchType === "doubles" ? 2 : 1))
-);
+    setTeamTwoMemberNames(
+      parsedMatch.teamTwoMemberNames ??
+        [
+          parsedMatch.playerTwoName ?? "Player 2",
+          parsedMatch.teamTwoPlayerTwoName ?? "Player 2B",
+        ].slice(0, loadedSideTwoSize)
+    );
 
     setSides(normalizeSavedSides(parsedMatch.sides ?? parsedMatch.players ?? []));
     setcurrentSideIndex(parsedMatch.currentSideIndex ?? parsedMatch.currentPlayerIndex ?? 0);
@@ -154,6 +170,8 @@ useEffect(() => {
     bestOfLegs,
     matchType,
     teamSize,
+    sideOneSize,
+    sideTwoSize,
     playerOneName,
     playerTwoName,
     teamOneName,
@@ -181,6 +199,8 @@ useEffect(() => {
   bestOfLegs,
   matchType,
   teamSize,
+  sideOneSize,
+  sideTwoSize,
   playerOneName,
   playerTwoName,
   teamOneName,
@@ -201,9 +221,8 @@ useEffect(() => {
   message,
 ]);
 
-  function resizeTeamMembers(size: TeamSize) {
-    setTeamSize(size);
-    setMatchType(size === 1 ? "singles" : "doubles");
+  function resizeSideOneMembers(size: TeamSize) {
+    setSideOneSize(size);
 
     setTeamOneMemberNames((currentNames) =>
       Array.from({ length: size }, (_, index) => {
@@ -211,11 +230,23 @@ useEffect(() => {
       })
     );
 
+    const newOverallTeamSize = Math.max(size, sideTwoSize);
+    setTeamSize(newOverallTeamSize as TeamSize);
+    setMatchType(newOverallTeamSize === 1 ? "singles" : "doubles");
+  }
+
+  function resizeSideTwoMembers(size: TeamSize) {
+    setSideTwoSize(size);
+
     setTeamTwoMemberNames((currentNames) =>
       Array.from({ length: size }, (_, index) => {
         return currentNames[index] ?? `Team 2 Player ${index + 1}`;
       })
     );
+
+    const newOverallTeamSize = Math.max(sideOneSize, size);
+    setTeamSize(newOverallTeamSize as TeamSize);
+    setMatchType(newOverallTeamSize === 1 ? "singles" : "doubles");
   }
 
   function hasMatchActivity() {
@@ -255,20 +286,20 @@ useEffect(() => {
   }
 
   function startNewGame() {
-const sideOneName =
-  teamSize === 1
-    ? teamOneMemberNames[0]?.trim() || "Player 1"
-    : teamOneName.trim() || "Team 1";
+    const isSinglesMatch = sideOneSize === 1 && sideTwoSize === 1;
 
-const sideTwoName =
-  teamSize === 1
-    ? teamTwoMemberNames[0]?.trim() || "Player 2"
-    : teamTwoName.trim() || "Team 2";
+    const sideOneName = isSinglesMatch
+      ? teamOneMemberNames[0]?.trim() || "Player 1"
+      : teamOneName.trim() || "Team 1";
 
-const newSides: MatchSide[] = [
-  createTeamSide("side-1", sideOneName, teamOneMemberNames, startingScore),
-  createTeamSide("side-2", sideTwoName, teamTwoMemberNames, startingScore),
-];
+    const sideTwoName = isSinglesMatch
+      ? teamTwoMemberNames[0]?.trim() || "Player 2"
+      : teamTwoName.trim() || "Team 2";
+
+    const newSides: MatchSide[] = [
+      createTeamSide("side-1", sideOneName, teamOneMemberNames, startingScore),
+      createTeamSide("side-2", sideTwoName, teamTwoMemberNames, startingScore),
+    ];
 
     setSides(newSides);
     setcurrentSideIndex(0);
@@ -334,6 +365,8 @@ const newSides: MatchSide[] = [
       setBestOfLegs(3);
       setMatchType("singles");
       setTeamSize(1);
+      setSideOneSize(1);
+      setSideTwoSize(1);
       setPlayerOneName("Player 1");
       setPlayerTwoName("Player 2");
       setTeamOneName("Team 1");
@@ -834,6 +867,8 @@ function getMatchWinnerName(): string | null {
           bestOfLegs={bestOfLegs}
           matchType={matchType}
           teamSize={teamSize}
+          sideOneSize={sideOneSize}
+          sideTwoSize={sideTwoSize}
           setPlayerOneName={setPlayerOneName}
           setPlayerTwoName={setPlayerTwoName}
           setTeamOneName={setTeamOneName}
@@ -842,7 +877,8 @@ function getMatchWinnerName(): string | null {
           setTeamTwoPlayerTwoName={setTeamTwoPlayerTwoName}
           teamOneMemberNames={teamOneMemberNames}
           teamTwoMemberNames={teamTwoMemberNames}
-          resizeTeamMembers={resizeTeamMembers}
+          resizeSideOneMembers={resizeSideOneMembers}
+          resizeSideTwoMembers={resizeSideTwoMembers}
           setTeamOneMemberNames={setTeamOneMemberNames}
           setTeamTwoMemberNames={setTeamTwoMemberNames}
           setStartingScore={setStartingScore}

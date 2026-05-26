@@ -29,9 +29,12 @@ type GameSetupProps = {
   confirmResetMatch: () => void;
   cancelResetMatch: () => void;
   teamSize: TeamSize;
+  sideOneSize: TeamSize;
+  sideTwoSize: TeamSize;
   teamOneMemberNames: string[];
   teamTwoMemberNames: string[];
-  resizeTeamMembers: (size: TeamSize) => void;
+  resizeSideOneMembers: (size: TeamSize) => void;
+  resizeSideTwoMembers: (size: TeamSize) => void;
   setTeamOneMemberNames: (names: string[]) => void;
   setTeamTwoMemberNames: (names: string[]) => void;
 };
@@ -65,7 +68,10 @@ export function GameSetup({
   teamSize,
   teamOneMemberNames,
   teamTwoMemberNames,
-  resizeTeamMembers,
+  sideOneSize,
+  sideTwoSize,
+  resizeSideOneMembers,
+  resizeSideTwoMembers,
   setTeamOneMemberNames,
   setTeamTwoMemberNames,
 }: GameSetupProps) {
@@ -76,23 +82,40 @@ return (
     <div className="mb-8">
       <h3 className="text-lg font-bold mb-3 text-slate-200">Match</h3>
 
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
         <label className="block">
-          <span className="block text-slate-300 mb-2">Team Size</span>
-          <select
-            className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
-            value={teamSize}
-            onChange={(event) =>
-              resizeTeamMembers(Number(event.target.value) as TeamSize)
-            }
-          >
-            <option value={1}>Singles</option>
-            <option value={2}>Doubles</option>
-            <option value={3}>3 per team</option>
-            <option value={4}>4 per team</option>
-            <option value={5}>5 per team</option>
-          </select>
-        </label>
+            <span className="block text-slate-300 mb-2">Team 1 Size</span>
+            <select
+                className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
+                value={sideOneSize}
+                onChange={(event) =>
+                resizeSideOneMembers(Number(event.target.value) as TeamSize)
+                }
+            >
+                <option value={1}>1 player</option>
+                <option value={2}>2 players</option>
+                <option value={3}>3 players</option>
+                <option value={4}>4 players</option>
+                <option value={5}>5 players</option>
+            </select>
+            </label>
+
+            <label className="block">
+            <span className="block text-slate-300 mb-2">Team 2 Size</span>
+            <select
+                className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
+                value={sideTwoSize}
+                onChange={(event) =>
+                resizeSideTwoMembers(Number(event.target.value) as TeamSize)
+                }
+            >
+                <option value={1}>1 player</option>
+                <option value={2}>2 players</option>
+                <option value={3}>3 players</option>
+                <option value={4}>4 players</option>
+                <option value={5}>5 players</option>
+            </select>
+            </label>
 
         <label className="block">
           <span className="block text-slate-300 mb-2">Game</span>
@@ -142,10 +165,10 @@ return (
 
     <div className="mb-8">
       <h3 className="text-lg font-bold mb-3 text-slate-200">
-        {teamSize === 1 ? "Players" : "Teams"}
+        {sideOneSize === 1 && sideTwoSize === 1 ? "Players" : "Teams"}
       </h3>
 
-      {teamSize === 1 ? (
+      {sideOneSize === 1 && sideTwoSize === 1 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <label className="block">
             <span className="block text-slate-300 mb-2">Player 1</span>
