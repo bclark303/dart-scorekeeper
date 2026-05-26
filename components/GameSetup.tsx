@@ -50,83 +50,25 @@ export function GameSetup({
   startNewGame,
   clearSavedMatch,
 }: GameSetupProps) {
-  return (
-    <section className="rounded-2xl bg-slate-900 border border-slate-700 p-6 mb-8">
-      <h2 className="text-2xl font-bold mb-4">Game Setup</h2>
+return (
+  <section className="rounded-2xl bg-slate-900 border border-slate-700 p-6 mb-8">
+    <h2 className="text-2xl font-bold mb-6">Game Setup</h2>
 
-      <div className="grid grid-cols-1 sm:grid-cols-6 gap-4 mb-4">
+    <div className="mb-8">
+      <h3 className="text-lg font-bold mb-3 text-slate-200">Match</h3>
+
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <label className="block">
-            <span className="block text-slate-300 mb-2">Type</span>
-            <select
-                className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
-                value={matchType}
-                onChange={(event) => setMatchType(event.target.value as MatchType)}
-            >
-                <option value="singles">Singles</option>
-                <option value="doubles">Doubles</option>
-            </select>
-            </label>
-        <label className="block">
-          <span className="block text-slate-300 mb-2">
-            {matchType === "doubles" ? "Team 1 Player A" : "Player 1"}
-          </span>
-          <input
+          <span className="block text-slate-300 mb-2">Type</span>
+          <select
             className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
-            value={playerOneName}
-            onChange={(event) => setPlayerOneName(event.target.value)}
-          />
+            value={matchType}
+            onChange={(event) => setMatchType(event.target.value as MatchType)}
+          >
+            <option value="singles">Singles</option>
+            <option value="doubles">Doubles</option>
+          </select>
         </label>
-
-        <label className="block">
-          <span className="block text-slate-300 mb-2">
-            {matchType === "doubles" ? "Team 2 Player A" : "Player 2"}
-          </span>
-          <input
-            className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
-            value={playerTwoName}
-            onChange={(event) => setPlayerTwoName(event.target.value)}
-          />
-        </label>
-        
-          {matchType === "doubles" && (
-            <>
-                <label className="block">
-                  <span className="block text-slate-300 mb-2">Team 1 Name</span>
-                  <input
-                    className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
-                    value={teamOneName}
-                    onChange={(event) => setTeamOneName(event.target.value)}
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="block text-slate-300 mb-2">Team 2 Name</span>
-                  <input
-                    className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
-                    value={teamTwoName}
-                    onChange={(event) => setTeamTwoName(event.target.value)}
-                  />
-                </label>
-
-                <label className="block">
-                <span className="block text-slate-300 mb-2">Team 1 Player B</span>
-                <input
-                    className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
-                    value={teamOnePlayerTwoName}
-                    onChange={(event) => setTeamOnePlayerTwoName(event.target.value)}
-                />
-                </label>
-
-                <label className="block">
-                <span className="block text-slate-300 mb-2">Team 2 Player B</span>
-                <input
-                    className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
-                    value={teamTwoPlayerTwoName}
-                    onChange={(event) => setTeamTwoPlayerTwoName(event.target.value)}
-                />
-                </label>
-            </>
-            )}
 
         <label className="block">
           <span className="block text-slate-300 mb-2">Game</span>
@@ -172,22 +114,123 @@ export function GameSetup({
           </select>
         </label>
       </div>
+    </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <button
-          onClick={startNewGame}
-          className="rounded-xl bg-blue-600 hover:bg-blue-500 px-6 py-3 text-lg font-bold"
-        >
-          Start / Reset Match
-        </button>
+    <div className="mb-8">
+      <h3 className="text-lg font-bold mb-3 text-slate-200">
+        {matchType === "doubles" ? "Teams" : "Players"}
+      </h3>
 
-        <button
-          onClick={clearSavedMatch}
-          className="rounded-xl bg-slate-700 hover:bg-slate-600 px-6 py-3 text-lg font-bold"
-        >
-          Clear Saved Match
-        </button>
-      </div>
-    </section>
-  );
+      {matchType === "doubles" ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="rounded-xl bg-slate-800 border border-slate-700 p-4">
+            <h4 className="font-bold mb-3">Team 1</h4>
+
+            <div className="grid grid-cols-1 gap-4">
+              <label className="block">
+                <span className="block text-slate-300 mb-2">Team Name</span>
+                <input
+                  className="w-full rounded-xl bg-slate-900 border border-slate-600 p-3"
+                  value={teamOneName}
+                  onChange={(event) => setTeamOneName(event.target.value)}
+                />
+              </label>
+
+              <label className="block">
+                <span className="block text-slate-300 mb-2">Player A</span>
+                <input
+                  className="w-full rounded-xl bg-slate-900 border border-slate-600 p-3"
+                  value={playerOneName}
+                  onChange={(event) => setPlayerOneName(event.target.value)}
+                />
+              </label>
+
+              <label className="block">
+                <span className="block text-slate-300 mb-2">Player B</span>
+                <input
+                  className="w-full rounded-xl bg-slate-900 border border-slate-600 p-3"
+                  value={teamOnePlayerTwoName}
+                  onChange={(event) =>
+                    setTeamOnePlayerTwoName(event.target.value)
+                  }
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className="rounded-xl bg-slate-800 border border-slate-700 p-4">
+            <h4 className="font-bold mb-3">Team 2</h4>
+
+            <div className="grid grid-cols-1 gap-4">
+              <label className="block">
+                <span className="block text-slate-300 mb-2">Team Name</span>
+                <input
+                  className="w-full rounded-xl bg-slate-900 border border-slate-600 p-3"
+                  value={teamTwoName}
+                  onChange={(event) => setTeamTwoName(event.target.value)}
+                />
+              </label>
+
+              <label className="block">
+                <span className="block text-slate-300 mb-2">Player A</span>
+                <input
+                  className="w-full rounded-xl bg-slate-900 border border-slate-600 p-3"
+                  value={playerTwoName}
+                  onChange={(event) => setPlayerTwoName(event.target.value)}
+                />
+              </label>
+
+              <label className="block">
+                <span className="block text-slate-300 mb-2">Player B</span>
+                <input
+                  className="w-full rounded-xl bg-slate-900 border border-slate-600 p-3"
+                  value={teamTwoPlayerTwoName}
+                  onChange={(event) =>
+                    setTeamTwoPlayerTwoName(event.target.value)
+                  }
+                />
+              </label>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <label className="block">
+            <span className="block text-slate-300 mb-2">Player 1</span>
+            <input
+              className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
+              value={playerOneName}
+              onChange={(event) => setPlayerOneName(event.target.value)}
+            />
+          </label>
+
+          <label className="block">
+            <span className="block text-slate-300 mb-2">Player 2</span>
+            <input
+              className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
+              value={playerTwoName}
+              onChange={(event) => setPlayerTwoName(event.target.value)}
+            />
+          </label>
+        </div>
+      )}
+    </div>
+
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <button
+        onClick={startNewGame}
+        className="rounded-xl bg-blue-600 hover:bg-blue-500 px-6 py-3 text-lg font-bold"
+      >
+        Start / Reset Match
+      </button>
+
+      <button
+        onClick={clearSavedMatch}
+        className="rounded-xl bg-slate-700 hover:bg-slate-600 px-6 py-3 text-lg font-bold"
+      >
+        Clear Saved Match
+      </button>
+    </div>
+  </section>
+);
 }
