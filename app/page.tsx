@@ -28,12 +28,14 @@ import {
   validateTurnScore,
 } from "@/lib/scoring";
 
+type AppView = "score" | "setup" | "stats" | "history";
+
 export default function Home() {
   const [startingScore, setStartingScore] = useState<StartingScore>(501);
   const [finishRule, setFinishRule] = useState<FinishRule>("double_out");
   const [bestOfLegs, setBestOfLegs] = useState<BestOfLegs>(3);
   const [matchType, setMatchType] = useState<MatchType>("singles");
-
+  const [activeView, setActiveView] = useState<AppView>("score");
   const [playerOneName, setPlayerOneName] = useState("Player 1");
   const [playerTwoName, setPlayerTwoName] = useState("Player 2");
   const [teamOneName, setTeamOneName] = useState("Team 1");
@@ -144,6 +146,7 @@ useEffect(() => {
   startingScore,
   finishRule,
   bestOfLegs,
+  matchType,
   playerOneName,
   playerTwoName,
   teamOneName,
@@ -161,6 +164,12 @@ useEffect(() => {
   isMatchComplete,
   message,
 ]);
+
+  function getTabClass(view: AppView) {
+    return activeView === view
+      ? "rounded-xl bg-blue-600 px-4 py-3 font-bold text-white"
+      : "rounded-xl bg-slate-800 hover:bg-slate-700 px-4 py-3 font-bold text-slate-300";
+  }
 
   function normalizeSavedPlayers(savedPlayers: Array<MatchSide | MatchPlayer>): MatchSide[] {
     return savedPlayers.map((savedPlayer, index) => {
@@ -717,9 +726,28 @@ function getMatchWinnerName(): string | null {
     <main className="min-h-screen bg-slate-950 text-white p-6">
       <div className="mx-auto max-w-4xl">
         <h1 className="text-4xl font-bold mb-2">Dart Scorekeeper</h1>
-        <p className="text-slate-300 mb-8">Basic X01 scorer</p>
+        <p className="text-slate-300 mb-6">Basic X01 scorer</p>
 
-       <GameSetup
+        <nav className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+          <button onClick={() => setActiveView("score")} className={getTabClass("score")}>
+            Score
+          </button>
+
+          <button onClick={() => setActiveView("setup")} className={getTabClass("setup")}>
+            Setup
+          </button>
+
+          <button onClick={() => setActiveView("stats")} className={getTabClass("stats")}>
+            Stats
+          </button>
+
+          <button onClick={() => setActiveView("history")} className={getTabClass("history")}>
+            History
+          </button>
+        </nav>
+
+      {activeView === "setup" && (
+        <GameSetup
           playerOneName={playerOneName}
           playerTwoName={playerTwoName}
           teamOneName={teamOneName}
@@ -743,54 +771,82 @@ function getMatchWinnerName(): string | null {
           startNewGame={startNewGame}
           clearSavedMatch={clearSavedMatch}
         />
+      )}
 
-        <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-          {players.map((player, index) => (
-            <PlayerCard
-              key={player.id}
-              player={player}
-              isCurrentPlayer={index === currentPlayerIndex}
-              isLegComplete={isLegComplete}
-              isMatchComplete={isMatchComplete}
-              finishRule={finishRule}
-              stats={getPlayerStats(player.id)}
-            />
-          ))}
-        </section>
 
-        <ScoreEntry
-          message={message}
-          scoreInput={scoreInput}
-          setScoreInput={setScoreInput}
-          submitScore={submitScore}
-          undoLastTurn={undoLastTurn}
-          startNextLeg={startNextLeg}
-          confirmDoubleOut={confirmDoubleOut}
-          confirmCheckoutDartsUsed={confirmCheckoutDartsUsed}
-          appendScoreDigit={appendScoreDigit}
-          backspaceScoreInput={backspaceScoreInput}
-          setQuickScore={setQuickScore}
-          pendingCheckoutTurn={pendingCheckoutTurn}
-          pendingDartsUsedTurn={pendingDartsUsedTurn}
+{activeView === "score" && (
+  <>
+    <section className="rounded-2xl bg-slate-900 border border-slate-700 p-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+        <div>
+          <div className="text-slate-400">Leg</div>
+          <div className="text-2xl font-bold">{currentLegNumber}</div>
+        </div>
+        <div>
+          <div className="text-slate-400">Format</div>
+          <div className="text-2xl font-bold">Best of {bestOfLegs}</div>
+        </div>
+        <div>
+          <div className="text-slate-400">To Win</div>
+          <div className="text-2xl font-bold">{legsNeededToWin} legs</div>
+        </div>
+      </div>
+    </section>
+
+    <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+      {players.map((player, index) => (
+        <PlayerCard
+          key={player.id}
+          player={player}
+          isCurrentPlayer={index === currentPlayerIndex}
           isLegComplete={isLegComplete}
           isMatchComplete={isMatchComplete}
-          quickScores={quickScores}
-          keypadButtons={keypadButtons}
+          finishRule={finishRule}
+          stats={getPlayerStats(player.id)}
         />
+      ))}
+    </section>
 
-        <TurnHistory turns={turnHistory} />
+    <ScoreEntry
+      message={message}
+      scoreInput={scoreInput}
+      setScoreInput={setScoreInput}
+      submitScore={submitScore}
+      undoLastTurn={undoLastTurn}
+      startNextLeg={startNextLeg}
+      confirmDoubleOut={confirmDoubleOut}
+      confirmCheckoutDartsUsed={confirmCheckoutDartsUsed}
+      appendScoreDigit={appendScoreDigit}
+      backspaceScoreInput={backspaceScoreInput}
+      setQuickScore={setQuickScore}
+      pendingCheckoutTurn={pendingCheckoutTurn}
+      pendingDartsUsedTurn={pendingDartsUsedTurn}
+      isLegComplete={isLegComplete}
+      isMatchComplete={isMatchComplete}
+      quickScores={quickScores}
+      keypadButtons={keypadButtons}
+    />
+  </>
+)}
 
-        <CompletedLegs completedLegs={completedLegs} />
+{activeView === "stats" && (
+  <MatchSummary
+    players={players}
+    isMatchComplete={isMatchComplete}
+    isLegComplete={isLegComplete}
+    currentLegNumber={currentLegNumber}
+    getMatchScoreText={getMatchScoreText}
+    getMatchWinnerName={getMatchWinnerName}
+    getPlayerStats={getPlayerStats}
+  />
+)}
 
-        <MatchSummary
-          players={players}
-          isMatchComplete={isMatchComplete}
-          isLegComplete={isLegComplete}
-          currentLegNumber={currentLegNumber}
-          getMatchScoreText={getMatchScoreText}
-          getMatchWinnerName={getMatchWinnerName}
-          getPlayerStats={getPlayerStats}
-        />
+{activeView === "history" && (
+  <>
+    <TurnHistory turns={turnHistory} />
+    <CompletedLegs completedLegs={completedLegs} />
+  </>
+)}
       </div>
     </main>
   );
