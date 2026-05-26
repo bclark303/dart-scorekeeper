@@ -165,6 +165,10 @@ useEffect(() => {
   message,
 ]);
 
+  function hasMatchActivity() {
+    return turnHistory.length > 0 || completedLegs.length > 0 || currentLegNumber > 1;
+  }
+
   function getTabClass(view: AppView) {
     return activeView === view
       ? "rounded-xl bg-blue-600 px-4 py-3 font-bold text-white"
@@ -247,6 +251,20 @@ useEffect(() => {
     setPendingCheckoutTurn(null);
     setPendingDartsUsedTurn(null);
     setMessage(`${newPlayers[0].name} to throw`);
+  }
+
+    function handleStartNewGame() {
+    if (hasMatchActivity()) {
+      const shouldReset = window.confirm(
+        "This will reset the current match and clear the current score. Continue?"
+      );
+
+      if (!shouldReset) {
+        return;
+      }
+    }
+
+    startNewGame();
   }
 
   function clearSavedMatch() {
@@ -768,7 +786,7 @@ function getMatchWinnerName(): string | null {
           setFinishRule={setFinishRule}
           setBestOfLegs={setBestOfLegs}
           setMatchType={setMatchType}
-          startNewGame={startNewGame}
+          startNewGame={handleStartNewGame}
           clearSavedMatch={clearSavedMatch}
         />
       )}
