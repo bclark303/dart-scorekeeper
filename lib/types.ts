@@ -51,9 +51,12 @@ export type SavedMatchState = {
   teamTwoName: string;
   teamOnePlayerTwoName: string;
   teamTwoPlayerTwoName: string;
-  players: MatchSide[];
-  currentPlayerIndex: number;
-  startingPlayerIndex: number;
+  sides: MatchSide[];
+  players?: MatchSide[];
+  currentSideIndex: number;
+  startingSideIndex: number;
+  currentPlayerIndex?: number;
+  startingPlayerIndex?: number;
   currentLegNumber: number;
   startingMemberIndexBySide: Record<string, number>;
   turnHistory: Turn[];
