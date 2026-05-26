@@ -36,6 +36,8 @@ export default function Home() {
 
   const [playerOneName, setPlayerOneName] = useState("Player 1");
   const [playerTwoName, setPlayerTwoName] = useState("Player 2");
+  const [teamOneName, setTeamOneName] = useState("Team 1");
+  const [teamTwoName, setTeamTwoName] = useState("Team 2");
   const [teamOnePlayerTwoName, setTeamOnePlayerTwoName] = useState("Player 1B");
   const [teamTwoPlayerTwoName, setTeamTwoPlayerTwoName] = useState("Player 2B");
 
@@ -89,6 +91,8 @@ export default function Home() {
     setMatchType(parsedMatch.matchType ?? "singles");
     setPlayerOneName(parsedMatch.playerOneName);
     setPlayerTwoName(parsedMatch.playerTwoName);
+    setTeamOneName(parsedMatch.teamOneName ?? "Team 1");
+    setTeamTwoName(parsedMatch.teamTwoName ?? "Team 2");
     setTeamOnePlayerTwoName(parsedMatch.teamOnePlayerTwoName ?? "Player 1B");
     setTeamTwoPlayerTwoName(parsedMatch.teamTwoPlayerTwoName ?? "Player 2B");
     setPlayers(normalizeSavedPlayers(parsedMatch.players));
@@ -119,6 +123,8 @@ useEffect(() => {
     matchType,
     playerOneName,
     playerTwoName,
+    teamOneName,
+    teamTwoName,
     teamOnePlayerTwoName,
     teamTwoPlayerTwoName,
     players,
@@ -140,6 +146,8 @@ useEffect(() => {
   bestOfLegs,
   playerOneName,
   playerTwoName,
+  teamOneName,
+  teamTwoName,
   teamOnePlayerTwoName,
   teamTwoPlayerTwoName,
   players,
@@ -182,7 +190,7 @@ useEffect(() => {
         ? [
             createDoublesSide(
               "side-1",
-              "Team 1",
+              teamOneName.trim() || "Team 1",
               "player-1a",
               playerOneName.trim() || "Player 1A",
               "player-1b",
@@ -191,7 +199,7 @@ useEffect(() => {
             ),
             createDoublesSide(
               "side-2",
-              "Team 2",
+              teamTwoName.trim() || "Team 2",
               "player-2a",
               playerTwoName.trim() || "Player 2A",
               "player-2b",
@@ -246,6 +254,8 @@ useEffect(() => {
       setMatchType("singles");
       setPlayerOneName("Player 1");
       setPlayerTwoName("Player 2");
+      setTeamOneName("Team 1");
+      setTeamTwoName("Team 2");
       setTeamOnePlayerTwoName("Player 1B");
       setTeamTwoPlayerTwoName("Player 2B");
       setPlayers(resetPlayers);
@@ -712,6 +722,8 @@ function getMatchWinnerName(): string | null {
        <GameSetup
           playerOneName={playerOneName}
           playerTwoName={playerTwoName}
+          teamOneName={teamOneName}
+          teamTwoName={teamTwoName}
           teamOnePlayerTwoName={teamOnePlayerTwoName}
           teamTwoPlayerTwoName={teamTwoPlayerTwoName}
           startingScore={startingScore}
@@ -720,6 +732,8 @@ function getMatchWinnerName(): string | null {
           matchType={matchType}
           setPlayerOneName={setPlayerOneName}
           setPlayerTwoName={setPlayerTwoName}
+          setTeamOneName={setTeamOneName}
+          setTeamTwoName={setTeamTwoName}
           setTeamOnePlayerTwoName={setTeamOnePlayerTwoName}
           setTeamTwoPlayerTwoName={setTeamTwoPlayerTwoName}
           setStartingScore={setStartingScore}

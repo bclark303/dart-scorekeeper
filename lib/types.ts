@@ -47,6 +47,8 @@ export type SavedMatchState = {
   matchType: MatchType;
   playerOneName: string;
   playerTwoName: string;
+  teamOneName: string;
+  teamTwoName: string;
   teamOnePlayerTwoName: string;
   teamTwoPlayerTwoName: string;
   players: MatchSide[];

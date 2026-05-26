@@ -4,6 +4,8 @@ import { BestOfLegs, MatchType } from "@/lib/types";
 type GameSetupProps = {
   playerOneName: string;
   playerTwoName: string;
+  teamOneName: string;
+  teamTwoName: string;
   teamOnePlayerTwoName: string;
   teamTwoPlayerTwoName: string;
   startingScore: StartingScore;
@@ -12,6 +14,8 @@ type GameSetupProps = {
   matchType: MatchType;
   setPlayerOneName: (name: string) => void;
   setPlayerTwoName: (name: string) => void;
+  setTeamOneName: (name: string) => void;
+  setTeamTwoName: (name: string) => void;
   setTeamOnePlayerTwoName: (name: string) => void;
   setTeamTwoPlayerTwoName: (name: string) => void;
   setStartingScore: (score: StartingScore) => void;
@@ -25,6 +29,8 @@ type GameSetupProps = {
 export function GameSetup({
   playerOneName,
   playerTwoName,
+  teamOneName,
+  teamTwoName,
   teamOnePlayerTwoName,
   teamTwoPlayerTwoName,
   startingScore,
@@ -33,6 +39,8 @@ export function GameSetup({
   matchType,
   setPlayerOneName,
   setPlayerTwoName,
+  setTeamOneName,
+  setTeamTwoName,
   setTeamOnePlayerTwoName,
   setTeamTwoPlayerTwoName,
   setStartingScore,
@@ -59,7 +67,9 @@ export function GameSetup({
             </select>
             </label>
         <label className="block">
-          <span className="block text-slate-300 mb-2">Player 1</span>
+          <span className="block text-slate-300 mb-2">
+            {matchType === "doubles" ? "Team 1 Player A" : "Player 1"}
+          </span>
           <input
             className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
             value={playerOneName}
@@ -68,7 +78,9 @@ export function GameSetup({
         </label>
 
         <label className="block">
-          <span className="block text-slate-300 mb-2">Player 2</span>
+          <span className="block text-slate-300 mb-2">
+            {matchType === "doubles" ? "Team 2 Player A" : "Player 2"}
+          </span>
           <input
             className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
             value={playerTwoName}
@@ -78,6 +90,24 @@ export function GameSetup({
         
           {matchType === "doubles" && (
             <>
+                <label className="block">
+                  <span className="block text-slate-300 mb-2">Team 1 Name</span>
+                  <input
+                    className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
+                    value={teamOneName}
+                    onChange={(event) => setTeamOneName(event.target.value)}
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="block text-slate-300 mb-2">Team 2 Name</span>
+                  <input
+                    className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
+                    value={teamTwoName}
+                    onChange={(event) => setTeamTwoName(event.target.value)}
+                  />
+                </label>
+
                 <label className="block">
                 <span className="block text-slate-300 mb-2">Team 1 Player B</span>
                 <input
