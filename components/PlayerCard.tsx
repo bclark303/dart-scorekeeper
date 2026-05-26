@@ -31,12 +31,17 @@ export function PlayerCard({
     >
       <h2 className="text-2xl font-semibold mb-2">{player.name}</h2>
 
-      {player.members.length > 1 && (
-        <div className="mb-3 text-slate-300">
-          {player.members.map((member) => member.name).join(" / ")}
-        </div>
-      )}
-
+        {player.members.length > 1 && (
+          <div className="mb-3 text-slate-300">
+            <div>{player.members.map((member) => member.name).join(" / ")}</div>
+            <div className="mt-1 text-sm">
+              Thrower:{" "}
+              <span className="font-semibold text-white">
+                {player.members[player.currentMemberIndex]?.name ?? player.name}
+              </span>
+            </div>
+          </div>
+        )}
       <div className="text-6xl font-bold">{player.score}</div>
 
       <div className="mt-4 grid grid-cols-1 gap-2 text-xl">

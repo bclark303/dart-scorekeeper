@@ -244,94 +244,144 @@ useEffect(() => {
       setMessage("Saved match cleared. Player 1 to throw.");
 }
 
-function appendScoreDigit(digit: string) {
-  if (isLegComplete || isMatchComplete || pendingCheckoutTurn) {
-    return;
+  function getCurrentThrowerName(side: MatchSide): string {
+    return side.members[side.currentMemberIndex]?.name ?? side.name;
   }
 
-  setScoreInput((currentInput) => {
-    const nextInput = `${currentInput}${digit}`;
-
-    if (nextInput.length > 3) {
-      return currentInput;
+  function appendScoreDigit(digit: string) {
+    if (isLegComplete || isMatchComplete || pendingCheckoutTurn) {
+      return;
     }
 
-    return nextInput;
-  });
-}
+    setScoreInput((currentInput) => {
+      const nextInput = `${currentInput}${digit}`;
 
-function backspaceScoreInput() {
-  setScoreInput((currentInput) => currentInput.slice(0, -1));
-}
+      if (nextInput.length > 3) {
+        return currentInput;
+      }
 
-function setQuickScore(score: number) {
-  if (isLegComplete || isMatchComplete || pendingCheckoutTurn) {
-    return;
+      return nextInput;
+    });
   }
 
-  setScoreInput(String(score));
-}
-
- function submitScore() {
-  if (isMatchComplete) {
-    setMessage("The match is complete. Start/reset the game to play again.");
-    return;
+  function backspaceScoreInput() {
+    setScoreInput((currentInput) => currentInput.slice(0, -1));
   }
 
-  if (isLegComplete) {
-    setMessage("The leg is complete. Start the next leg.");
-    return;
+  function setQuickScore(score: number) {
+    if (isLegComplete || isMatchComplete || pendingCheckoutTurn) {
+      return;
+    }
+
+    setScoreInput(String(score));
   }
 
-  if (pendingCheckoutTurn || pendingDartsUsedTurn) {
-    setMessage("Finish the checkout prompt before entering another score.");
-    return;
-  }
+  function submitScore() {
+    if (isMatchComplete) {
+      setMessage("The match is complete. Start/reset the game to play again.");
+      return;
+    }
 
-  const validationError = validateTurnScore(scoreInput);
+    if (isLegComplete) {
+      setMessage("The leg is complete. Start the next leg.");
+      return;
+    }
 
-  if (validationError) {
-    setMessage(validationError);
-    return;
-  }
+    if (pendingCheckoutTurn || pendingDartsUsedTurn) {
+      setMessage("Finish the checkout prompt before entering another score.");
+      return;
+    }
 
-  const currentPlayer = players[currentPlayerIndex];
-  const scoreEntered = Number(scoreInput);
-  const result = scoreTurn(currentPlayer, scoreEntered, finishRule);
+    const validationError = validateTurnScore(scoreInput);
 
-  setScoreInput("");
+    if (validationError) {
+      setMessage(validationError);
+      return;
+    }
 
-  if (result.needsDoubleOutConfirmation) {
-    setPendingCheckoutTurn(result.turn);
-    setMessage(result.message);
-    return;
-  }
+    const currentPlayer = players[currentPlayerIndex];
+    const scoreEntered = Number(scoreInput);
+    const result = scoreTurn(currentPlayer, scoreEntered, finishRule);
 
-  if (result.isLegComplete) {
-    setPendingDartsUsedTurn(result.turn);
-    setMessage(
-      `${result.turn.playerName} checked out. How many darts were used?`
-    );
-    return;
-  }
-
-  setTurnHistory((previousHistory) => [result.turn, ...previousHistory]);
-
-  if (!result.turn.isBust) {
-    const updatedPlayers = [...players];
-    updatedPlayers[currentPlayerIndex] = {
-      ...updatedPlayers[currentPlayerIndex],
-      score: result.updatedPlayer.score,
+    const turnWithThrower: Turn = {
+      ...result.turn,
+      throwerId: currentPlayer.members[currentPlayer.currentMemberIndex]?.id,
+      throwerName: getCurrentThrowerName(currentPlayer),
     };
-    setPlayers(updatedPlayers);
+
+    const resultWithThrower = {
+      ...result,
+      turn: turnWithThrower,
+    };
+
+    setScoreInput("");
+
+    if (resultWithThrower.needsDoubleOutConfirmation) {
+      setPendingCheckoutTurn(resultWithThrower.turn);
+      setMessage(resultWithThrower.message);
+      return;
+    }
+
+    if (resultWithThrower.isLegComplete) {
+      setPendingDartsUsedTurn(resultWithThrower.turn);
+      setMessage(
+        `${resultWithThrower.turn.throwerName ?? resultWithThrower.turn.playerName} checked out. How many darts were used?`
+      );
+      return;
+    }
+
+    setTurnHistory((previousHistory) => [
+      resultWithThrower.turn,
+      ...previousHistory,
+    ]);
+
+    if (!resultWithThrower.turn.isBust) {
+      const updatedPlayers = [...players];
+      updatedPlayers[currentPlayerIndex] = {
+        ...updatedPlayers[currentPlayerIndex],
+        score: resultWithThrower.updatedPlayer.score,
+        currentMemberIndex: getNextMemberIndex(updatedPlayers[currentPlayerIndex]),
+      };
+      setPlayers(updatedPlayers);
+    } else {
+      advanceCurrentSideMember();
+    }
+
+    const nextPlayerIndex = getNextPlayerIndex();
+    setCurrentPlayerIndex(nextPlayerIndex);
+
+    const nextPlayerName = players[nextPlayerIndex].name;
+    const nextThrowerName = getCurrentThrowerName(players[nextPlayerIndex]);
+
+    setMessage(
+      `${resultWithThrower.message} ${nextThrowerName} (${nextPlayerName}) to throw.`
+    );
   }
 
-  const nextPlayerIndex = getNextPlayerIndex();
-  setCurrentPlayerIndex(nextPlayerIndex);
+  function getNextMemberIndex(side: MatchSide): number {
+    if (side.members.length <= 1) {
+      return 0;
+    }
 
-  const nextPlayerName = players[nextPlayerIndex].name;
-  setMessage(`${result.message} ${nextPlayerName} to throw.`);
-}
+    return side.currentMemberIndex === side.members.length - 1
+      ? 0
+      : side.currentMemberIndex + 1;
+  }
+
+  function advanceCurrentSideMember() {
+    setPlayers((currentPlayers) => {
+      const updatedPlayers = [...currentPlayers];
+      const currentSide = updatedPlayers[currentPlayerIndex];
+
+      updatedPlayers[currentPlayerIndex] = {
+        ...currentSide,
+        currentMemberIndex: getNextMemberIndex(currentSide),
+      };
+
+      return updatedPlayers;
+    });
+  }
+
   function confirmDoubleOut(wasDouble: boolean) {
     if (!pendingCheckoutTurn) {
       return;
@@ -355,12 +405,16 @@ function setQuickScore(score: number) {
 
     setTurnHistory((previousHistory) => [bustTurn, ...previousHistory]);
 
-    const nextPlayerIndex = getNextPlayerIndex();
-    setCurrentPlayerIndex(nextPlayerIndex);
-    setMessage(
-      `${pendingCheckoutTurn.playerName} busts! ${players[nextPlayerIndex].name} to throw.`
-    );
-    setPendingCheckoutTurn(null);
+      advanceCurrentSideMember();
+
+      const nextPlayerIndex = getNextPlayerIndex();
+      const nextThrowerName = getCurrentThrowerName(players[nextPlayerIndex]);
+
+      setCurrentPlayerIndex(nextPlayerIndex);
+      setMessage(
+        `${pendingCheckoutTurn.throwerName ?? pendingCheckoutTurn.playerName} busts! ${nextThrowerName} (${players[nextPlayerIndex].name}) to throw.`
+      );
+      setPendingCheckoutTurn(null);
   }
 
   function confirmCheckoutDartsUsed(dartsUsed: 1 | 2 | 3) {
@@ -384,7 +438,19 @@ function setQuickScore(score: number) {
     };
   });
 
-  setPlayers(updatedPlayers);
+  setPlayers(
+    updatedPlayers.map((player) => {
+      if (player.id !== completedTurn.playerId) {
+        return player;
+      }
+
+      return {
+        ...player,
+        currentMemberIndex: getNextMemberIndex(player),
+      };
+    })
+  );
+
   setTurnHistory((previousHistory) => [completedTurn, ...previousHistory]);
   setPendingDartsUsedTurn(null);
   finishLeg(completedTurn.playerId, completedTurn);
@@ -449,6 +515,7 @@ function setQuickScore(score: number) {
     const resetPlayers = players.map((player) => ({
       ...player,
       score: startingScore,
+      currentMemberIndex: 0,
     }));
 
     setPlayers(resetPlayers);

@@ -12,6 +12,8 @@ export type Turn = {
   id: string;
   playerId: string;
   playerName: string;
+  throwerId?: string;
+  throwerName?: string;
   scoreEntered: number;
   scoreBefore: number;
   scoreAfter: number;

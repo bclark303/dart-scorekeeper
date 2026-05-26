@@ -19,9 +19,12 @@ export function TurnHistory({ turns }: TurnHistoryProps) {
               className="rounded-xl bg-slate-800 border border-slate-700 p-4"
             >
               <div className="font-semibold">
-                {turn.playerName} scored {turn.scoreEntered}
+                {turn.throwerName ?? turn.playerName} scored {turn.scoreEntered}
                 {turn.isBust ? " — BUST" : ""}
                 {turn.isCheckout ? " — CHECKOUT" : ""}
+                {turn.throwerName && turn.throwerName !== turn.playerName
+                    ? ` for ${turn.playerName}`
+                    : ""}
               </div>
 
               <div className="text-slate-300">
