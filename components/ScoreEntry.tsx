@@ -18,6 +18,9 @@ type ScoreEntryProps = {
   isMatchComplete: boolean;
   quickScores: number[];
   keypadButtons: string[];
+  replayMatch: () => void;
+  newGameSetup: () => void;
+  viewFinishedGame: () => void;
 };
 
 export function ScoreEntry({
@@ -38,10 +41,42 @@ export function ScoreEntry({
   isMatchComplete,
   quickScores,
   keypadButtons,
+  replayMatch,
+  newGameSetup,
+  viewFinishedGame,
 }: ScoreEntryProps) {
   return (
     <section className="rounded-2xl bg-slate-900 border border-slate-700 p-6 mb-8">
       <div className="text-xl mb-4">{message}</div>
+
+      {isMatchComplete && (
+        <div className="rounded-2xl bg-slate-800 border border-slate-700 p-4 mb-4">
+            <div className="text-lg font-bold mb-4">Match complete</div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <button
+                onClick={replayMatch}
+                className="rounded-xl bg-green-600 hover:bg-green-500 p-4 text-xl font-bold"
+            >
+                Replay Match
+            </button>
+
+            <button
+                onClick={newGameSetup}
+                className="rounded-xl bg-blue-600 hover:bg-blue-500 p-4 text-xl font-bold"
+            >
+                New Game / Setup
+            </button>
+
+            <button
+                onClick={viewFinishedGame}
+                className="rounded-xl bg-purple-600 hover:bg-purple-500 p-4 text-xl font-bold"
+            >
+                View Match History
+            </button>
+            </div>
+        </div>
+        )}
 
       {isLegComplete && !isMatchComplete && (
         <button

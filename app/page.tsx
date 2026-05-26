@@ -166,6 +166,10 @@ useEffect(() => {
 ]);
 
   function hasMatchActivity() {
+    if (isMatchComplete) {
+      return false;
+    }
+
     return turnHistory.length > 0 || completedLegs.length > 0 || currentLegNumber > 1;
   }
 
@@ -266,6 +270,19 @@ useEffect(() => {
 
     startNewGame();
   }
+
+    function handleReplayMatch() {
+    startNewGame();
+    setActiveView("score");
+    }
+
+    function handleNewGameSetup() {
+      setActiveView("setup");
+    }
+
+    function handleViewFinishedGame() {
+      setActiveView("history");
+    }
 
   function clearSavedMatch() {
   localStorage.removeItem(savedMatchKey);
@@ -843,6 +860,9 @@ function getMatchWinnerName(): string | null {
       isMatchComplete={isMatchComplete}
       quickScores={quickScores}
       keypadButtons={keypadButtons}
+      replayMatch={handleReplayMatch}
+      newGameSetup={handleNewGameSetup}
+      viewFinishedGame={handleViewFinishedGame}
     />
   </>
 )}
