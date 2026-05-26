@@ -47,6 +47,12 @@ export default function Home() {
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [startingPlayerIndex, setStartingPlayerIndex] = useState(0);
   const [currentLegNumber, setCurrentLegNumber] = useState(1);
+  const [startingMemberIndexBySide, setStartingMemberIndexBySide] = useState<
+    Record<string, number>
+  >({
+    "side-1": 0,
+    "side-2": 0,
+  });
   const [scoreInput, setScoreInput] = useState("");
   const [message, setMessage] = useState("Player 1 to throw");
   const [turnHistory, setTurnHistory] = useState<Turn[]>([]);
@@ -89,6 +95,12 @@ export default function Home() {
     setCurrentPlayerIndex(parsedMatch.currentPlayerIndex);
     setStartingPlayerIndex(parsedMatch.startingPlayerIndex);
     setCurrentLegNumber(parsedMatch.currentLegNumber);
+    setStartingMemberIndexBySide(
+      parsedMatch.startingMemberIndexBySide ?? {
+        "side-1": 0,
+        "side-2": 0,
+      }
+    );
     setTurnHistory(parsedMatch.turnHistory);
     setCompletedLegs(parsedMatch.completedLegs);
     setIsLegComplete(parsedMatch.isLegComplete);
@@ -113,6 +125,7 @@ useEffect(() => {
     currentPlayerIndex,
     startingPlayerIndex,
     currentLegNumber,
+    startingMemberIndexBySide,
     turnHistory,
     completedLegs,
     isLegComplete,
@@ -133,6 +146,7 @@ useEffect(() => {
   currentPlayerIndex,
   startingPlayerIndex,
   currentLegNumber,
+  startingMemberIndexBySide,
   turnHistory,
   completedLegs,
   isLegComplete,
@@ -204,6 +218,10 @@ useEffect(() => {
     setCurrentPlayerIndex(0);
     setStartingPlayerIndex(0);
     setCurrentLegNumber(1);
+    setStartingMemberIndexBySide({
+      "side-1": 0,
+      "side-2": 0,
+    });
     setScoreInput("");
     setTurnHistory([]);
     setCompletedLegs([]);
@@ -234,6 +252,10 @@ useEffect(() => {
       setCurrentPlayerIndex(0);
       setStartingPlayerIndex(0);
       setCurrentLegNumber(1);
+      setStartingMemberIndexBySide({
+        "side-1": 0,
+        "side-2": 0,
+      });
       setScoreInput("");
       setTurnHistory([]);
       setCompletedLegs([]);
@@ -511,14 +533,28 @@ useEffect(() => {
     }
 
     const nextStartingPlayerIndex = startingPlayerIndex === 0 ? 1 : 0;
+    const nextStartingSide = players[nextStartingPlayerIndex];
+
+    const nextStartingMemberIndexBySide = {
+      ...startingMemberIndexBySide,
+    };
+
+    if (nextStartingSide.members.length > 1) {
+      nextStartingMemberIndexBySide[nextStartingSide.id] = getNextMemberIndex({
+        ...nextStartingSide,
+        currentMemberIndex:
+          startingMemberIndexBySide[nextStartingSide.id] ?? 0,
+      });
+    }
 
     const resetPlayers = players.map((player) => ({
       ...player,
       score: startingScore,
-      currentMemberIndex: 0,
+      currentMemberIndex: nextStartingMemberIndexBySide[player.id] ?? 0,
     }));
 
     setPlayers(resetPlayers);
+    setStartingMemberIndexBySide(nextStartingMemberIndexBySide);
     setStartingPlayerIndex(nextStartingPlayerIndex);
     setCurrentPlayerIndex(nextStartingPlayerIndex);
     setCurrentLegNumber((previousLegNumber) => previousLegNumber + 1);
@@ -526,9 +562,13 @@ useEffect(() => {
     setScoreInput("");
     setIsLegComplete(false);
     setPendingCheckoutTurn(null);
-    setMessage(`${resetPlayers[nextStartingPlayerIndex].name} to throw`);
-  }
+    setPendingDartsUsedTurn(null);
 
+    const startingSide = resetPlayers[nextStartingPlayerIndex];
+    const startingThrower = getCurrentThrowerName(startingSide);
+
+    setMessage(`${startingThrower} (${startingSide.name}) to throw`);
+  }
    function getOpponentLegs(playerList: MatchSide[], winnerPlayerId: string) {
     const opponent = playerList.find((player) => player.id !== winnerPlayerId);
     return opponent?.legsWon ?? 0;

@@ -53,6 +53,7 @@ export type SavedMatchState = {
   currentPlayerIndex: number;
   startingPlayerIndex: number;
   currentLegNumber: number;
+  startingMemberIndexBySide: Record<string, number>;
   turnHistory: Turn[];
   completedLegs: CompletedLeg[];
   isLegComplete: boolean;
