@@ -24,6 +24,9 @@ type GameSetupProps = {
   setMatchType: (matchType: MatchType) => void;
   startNewGame: () => void;
   clearSavedMatch: () => void;
+  isResetConfirmationVisible: boolean;
+  confirmResetMatch: () => void;
+  cancelResetMatch: () => void;
 };
 
 export function GameSetup({
@@ -49,6 +52,9 @@ export function GameSetup({
   setMatchType,
   startNewGame,
   clearSavedMatch,
+  isResetConfirmationVisible,
+  confirmResetMatch,
+  cancelResetMatch,
 }: GameSetupProps) {
 return (
   <section className="rounded-2xl bg-slate-900 border border-slate-700 p-6 mb-8">
@@ -215,6 +221,35 @@ return (
         </div>
       )}
     </div>
+
+    {isResetConfirmationVisible && (
+        <div className="mb-6 rounded-2xl border border-amber-500/50 bg-amber-950/30 p-5">
+            <div className="text-xl font-bold text-amber-200 mb-2">
+            Reset current match?
+            </div>
+
+            <p className="text-amber-100/90 mb-4">
+            This will clear the current scores, turns, legs, and match history. This
+            cannot be undone.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <button
+                onClick={confirmResetMatch}
+                className="rounded-xl bg-red-600 hover:bg-red-500 px-6 py-3 text-lg font-bold"
+            >
+                Yes, Reset Match
+            </button>
+
+            <button
+                onClick={cancelResetMatch}
+                className="rounded-xl bg-slate-700 hover:bg-slate-600 px-6 py-3 text-lg font-bold"
+            >
+                Cancel
+            </button>
+            </div>
+        </div>
+        )}
 
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <button

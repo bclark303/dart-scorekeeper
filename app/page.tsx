@@ -77,6 +77,9 @@ export default function Home() {
 
   const savedMatchKey = "dart-scorekeeper-current-match";
 
+  const [isResetConfirmationVisible, setIsResetConfirmationVisible] =
+  useState(false);
+
   useEffect(() => {
   const savedMatch = localStorage.getItem(savedMatchKey);
 
@@ -259,17 +262,22 @@ useEffect(() => {
 
   function handleStartNewGame() {
     if (hasMatchActivity()) {
-      const shouldReset = window.confirm(
-        "This will reset the current match and clear the current score. Continue?"
-      );
-
-      if (!shouldReset) {
-        return;
-      }
+      setIsResetConfirmationVisible(true);
+      return;
     }
 
     startNewGame();
     setActiveView("score");
+  }
+
+  function confirmResetMatch() {
+    setIsResetConfirmationVisible(false);
+    startNewGame();
+    setActiveView("score");
+  }
+
+  function cancelResetMatch() {
+    setIsResetConfirmationVisible(false);
   }
 
     function handleReplayMatch() {
@@ -806,6 +814,9 @@ function getMatchWinnerName(): string | null {
           setMatchType={setMatchType}
           startNewGame={handleStartNewGame}
           clearSavedMatch={clearSavedMatch}
+          isResetConfirmationVisible={isResetConfirmationVisible}
+          confirmResetMatch={confirmResetMatch}
+          cancelResetMatch={cancelResetMatch}
         />
       )}
 
