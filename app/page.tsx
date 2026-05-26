@@ -257,7 +257,7 @@ useEffect(() => {
     setMessage(`${newPlayers[0].name} to throw`);
   }
 
-    function handleStartNewGame() {
+  function handleStartNewGame() {
     if (hasMatchActivity()) {
       const shouldReset = window.confirm(
         "This will reset the current match and clear the current score. Continue?"
@@ -269,6 +269,7 @@ useEffect(() => {
     }
 
     startNewGame();
+    setActiveView("score");
   }
 
     function handleReplayMatch() {
