@@ -1,13 +1,37 @@
+/**
+ * Core X01 scoring types and rules.
+ *
+ * This file should stay UI-free. It should not know anything about React,
+ * buttons, tabs, localStorage, or tournament screens.
+ *
+ * The goal is for page.tsx/components to ask this file:
+ * "Given this player/side and this score, what happens?"
+ */
+
 export type StartingScore = 301 | 501 | 701;
 
 export type FinishRule = "straight_out" | "double_out";
 
+/**
+ * This is the minimum shape needed by the scoring engine.
+ *
+ * Even though the app now uses MatchSide for singles/teams,
+ * MatchSide has these same fields, so it can be passed into scoreTurn().
+ */
 export type Player = {
   id: string;
   name: string;
   score: number;
 };
 
+/**
+ * One recorded turn.
+ *
+ * playerId/playerName currently refer to the side/team, not necessarily
+ * the individual thrower.
+ *
+ * throwerId/throwerName identify the actual team member who threw.
+ */
 export type Turn = {
   id: string;
   playerId: string;
@@ -24,6 +48,15 @@ export type Turn = {
   finishRule: FinishRule;
 };
 
+/**
+ * Result returned after trying to score a turn.
+ *
+ * The UI uses this to decide whether to:
+ * - save the turn
+ * - move to the next side
+ * - ask for double-out confirmation
+ * - finish the leg
+ */
 export type ScoreResult = {
   turn: Turn;
   updatedPlayer: Player;
@@ -32,6 +65,12 @@ export type ScoreResult = {
   message: string;
 };
 
+/**
+ * Validates typed total-score entry.
+ *
+ * This does not know anything about current score or bust rules.
+ * It only validates that the entered value is a possible 3-dart total.
+ */
 export function validateTurnScore(scoreInput: string): string | null {
   const score = Number(scoreInput);
 
@@ -54,13 +93,24 @@ export function validateTurnScore(scoreInput: string): string | null {
   return null;
 }
 
+/**
+ * Scores one total-score turn for X01.
+ *
+ * This currently supports total turn entry, not dart-by-dart entry.
+ * Because of that, double-out checkouts need UI confirmation later.
+ */
 export function scoreTurn(
   player: Player,
   scoreEntered: number,
-  finishRule: FinishRule,
+  finishRule: FinishRule
 ): ScoreResult {
   const calculatedScore = player.score - scoreEntered;
 
+  /**
+   * Double-out bust rule:
+   * - below zero is bust
+   * - landing on 1 is bust because you cannot finish from 1 with a double
+   */
   const isBust =
     calculatedScore < 0 ||
     (finishRule === "double_out" && calculatedScore === 1);
@@ -96,6 +146,12 @@ export function scoreTurn(
     };
   }
 
+  /**
+   * With total-score entry, the engine knows the score reached zero,
+   * but it does not know whether the final dart was actually a double.
+   *
+   * The UI asks for confirmation before declaring the leg complete.
+   */
   if (isCheckout && finishRule === "double_out") {
     return {
       turn,
