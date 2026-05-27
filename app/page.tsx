@@ -1112,6 +1112,7 @@ export default function Home() {
               currentSide={sides[currentSideIndex]}
               currentLegNumber={currentLegNumber}
               bestOfLegs={bestOfLegs}
+              legsNeededToWin={legsNeededToWin}
               startingScore={startingScore}
               finishRule={finishRule}
               isCurrentThrowerDummy={isCurrentThrowerDummy()}
@@ -1119,26 +1120,8 @@ export default function Home() {
               scoreLayout={scoreLayout}
               setScoreLayout={setScoreLayout}
             />
-            <section className="rounded-2xl bg-slate-900 border border-slate-700 p-4 mb-8">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-                <div>
-                  <div className="text-slate-400">Leg</div>
-                  <div className="text-2xl font-bold">{currentLegNumber}</div>
-                </div>
-                <div>
-                  <div className="text-slate-400">Format</div>
-                  <div className="text-2xl font-bold">Best of {bestOfLegs}</div>
-                </div>
-                <div>
-                  <div className="text-slate-400">To Win</div>
-                  <div className="text-2xl font-bold">
-                    {legsNeededToWin} legs
-                  </div>
-                </div>
-              </div>
-            </section>
 
-            <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+            <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               {sides.map((side, index) => (
                 <PlayerCard
                   key={side.id}

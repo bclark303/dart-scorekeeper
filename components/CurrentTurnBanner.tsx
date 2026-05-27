@@ -7,6 +7,7 @@ type CurrentTurnBannerProps = {
   currentSide: MatchSide;
   currentLegNumber: number;
   bestOfLegs: number;
+  legsNeededToWin: number;
   startingScore: number;
   finishRule: FinishRule;
   isCurrentThrowerDummy: boolean;
@@ -19,6 +20,7 @@ export function CurrentTurnBanner({
   currentSide,
   currentLegNumber,
   bestOfLegs,
+  legsNeededToWin,
   startingScore,
   finishRule,
   isCurrentThrowerDummy,
@@ -48,7 +50,7 @@ export function CurrentTurnBanner({
           <div className="text-slate-300 mt-1">
             {currentSide.members.length > 1 ? `${currentSide.name} • ` : ""}
             {startingScore} • {finishLabel} • Leg {currentLegNumber} • Best of{" "}
-            {bestOfLegs}
+            {bestOfLegs} • First to {legsNeededToWin}
           </div>
 
           {isCurrentThrowerDummy && (
