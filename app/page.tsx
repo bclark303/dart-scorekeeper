@@ -369,8 +369,8 @@ export default function Home() {
 
   function getTabClass(view: AppView) {
     return activeView === view
-      ? "rounded-xl bg-blue-600 px-4 py-3 font-bold text-white"
-      : "rounded-xl bg-slate-800 hover:bg-slate-700 px-4 py-3 font-bold text-slate-300";
+      ? "rounded-xl bg-[var(--color-primary)] px-4 py-3 font-bold text-white"
+      : "rounded-xl bg-[var(--color-panel-soft)] hover:bg-[var(--color-panel-border)] px-4 py-3 font-bold text-[var(--color-text-muted)]";
   }
 
   function addDummyMembersIfNeeded(
@@ -1036,6 +1036,9 @@ export default function Home() {
     setMessage(`Undid ${lastTurn.playerName}'s last turn.`);
   }
 
+  // Score view sections.
+  // These helpers let compact and full layouts reuse the same components
+  // in a different order without duplicating large JSX prop blocks.
   function renderScoreCards() {
     return (
       <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
@@ -1086,10 +1089,17 @@ export default function Home() {
     );
   }
   return (
-    <main className="min-h-screen bg-slate-950 text-white p-6">
+    <main className="min-h-screen bg-[var(--color-app-bg)] text-[var(--color-text-main)] p-6">
       <div className="mx-auto max-w-4xl">
-        <h1 className="text-4xl font-bold mb-2">Dart Scorekeeper</h1>
-        <p className="text-slate-300 mb-6">Basic X01 scorer</p>
+        <div className="mb-6">
+          <div className="text-sm uppercase tracking-wide text-[var(--color-text-muted)]">
+            Local Scoring App
+          </div>
+          <h1 className="text-4xl font-bold mb-2">Dart Scorekeeper</h1>
+          <p className="text-[var(--color-text-muted)]">
+            X01 scorer for singles, doubles, and team play
+          </p>
+        </div>
 
         <nav className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
           <button
