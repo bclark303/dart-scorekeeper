@@ -57,8 +57,7 @@ export default function Home() {
   // Uneven-team rotation settings.
   // Independent mode lets each side rotate through only its listed members.
   // Dummy mode pads the shorter side with automatic-score missing-player slots.
-  const [rotationMode, setRotationMode] =
-    useState<RotationMode>("independent");
+  const [rotationMode, setRotationMode] = useState<RotationMode>("independent");
 
   const [dummyScore, setDummyScore] = useState(0);
 
@@ -73,10 +72,8 @@ export default function Home() {
   const [playerTwoName, setPlayerTwoName] = useState("Player 2");
   const [teamOneName, setTeamOneName] = useState("Team 1");
   const [teamTwoName, setTeamTwoName] = useState("Team 2");
-  const [teamOnePlayerTwoName, setTeamOnePlayerTwoName] =
-    useState("Player 1B");
-  const [teamTwoPlayerTwoName, setTeamTwoPlayerTwoName] =
-    useState("Player 2B");
+  const [teamOnePlayerTwoName, setTeamOnePlayerTwoName] = useState("Player 1B");
+  const [teamTwoPlayerTwoName, setTeamTwoPlayerTwoName] = useState("Player 2B");
 
   // Current setup member names.
   // These arrays are now the main source for creating singles, doubles,
@@ -1038,6 +1035,56 @@ export default function Home() {
     setScoreInput("");
     setMessage(`Undid ${lastTurn.playerName}'s last turn.`);
   }
+
+  function renderScoreCards() {
+    return (
+      <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        {sides.map((side, index) => (
+          <PlayerCard
+            key={side.id}
+            player={side}
+            isCurrentPlayer={index === currentSideIndex}
+            isLegComplete={isLegComplete}
+            isMatchComplete={isMatchComplete}
+            finishRule={finishRule}
+            stats={getPlayerStats(side.id)}
+            compact={scoreLayout === "compact"}
+          />
+        ))}
+      </section>
+    );
+  }
+
+  function renderScoreEntry() {
+    return (
+      <ScoreEntry
+        message={message}
+        scoreInput={scoreInput}
+        compact={scoreLayout === "compact"}
+        setScoreInput={setScoreInput}
+        submitScore={submitScore}
+        undoLastTurn={undoLastTurn}
+        startNextLeg={startNextLeg}
+        confirmDoubleOut={confirmDoubleOut}
+        confirmCheckoutDartsUsed={confirmCheckoutDartsUsed}
+        appendScoreDigit={appendScoreDigit}
+        backspaceScoreInput={backspaceScoreInput}
+        setQuickScore={setQuickScore}
+        pendingCheckoutTurn={pendingCheckoutTurn}
+        pendingDartsUsedTurn={pendingDartsUsedTurn}
+        isLegComplete={isLegComplete}
+        isMatchComplete={isMatchComplete}
+        quickScores={quickScores}
+        keypadButtons={keypadButtons}
+        replayMatch={handleReplayMatch}
+        newGameSetup={handleNewGameSetup}
+        viewFinishedGame={handleViewFinishedGame}
+        isCurrentThrowerDummy={isCurrentThrowerDummy()}
+        dummyScore={dummyScore}
+        submitDummyScore={submitDummyScore}
+      />
+    );
+  }
   return (
     <main className="min-h-screen bg-slate-950 text-white p-6">
       <div className="mx-auto max-w-4xl">
@@ -1121,47 +1168,17 @@ export default function Home() {
               setScoreLayout={setScoreLayout}
             />
 
-            <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-              {sides.map((side, index) => (
-                <PlayerCard
-                  key={side.id}
-                  player={side}
-                  isCurrentPlayer={index === currentSideIndex}
-                  isLegComplete={isLegComplete}
-                  isMatchComplete={isMatchComplete}
-                  finishRule={finishRule}
-                  stats={getPlayerStats(side.id)}
-                  compact={scoreLayout === "compact"}
-                />
-              ))}
-            </section>
-
-            <ScoreEntry
-              message={message}
-              scoreInput={scoreInput}
-              compact={scoreLayout === "compact"}
-              setScoreInput={setScoreInput}
-              submitScore={submitScore}
-              undoLastTurn={undoLastTurn}
-              startNextLeg={startNextLeg}
-              confirmDoubleOut={confirmDoubleOut}
-              confirmCheckoutDartsUsed={confirmCheckoutDartsUsed}
-              appendScoreDigit={appendScoreDigit}
-              backspaceScoreInput={backspaceScoreInput}
-              setQuickScore={setQuickScore}
-              pendingCheckoutTurn={pendingCheckoutTurn}
-              pendingDartsUsedTurn={pendingDartsUsedTurn}
-              isLegComplete={isLegComplete}
-              isMatchComplete={isMatchComplete}
-              quickScores={quickScores}
-              keypadButtons={keypadButtons}
-              replayMatch={handleReplayMatch}
-              newGameSetup={handleNewGameSetup}
-              viewFinishedGame={handleViewFinishedGame}
-              isCurrentThrowerDummy={isCurrentThrowerDummy()}
-              dummyScore={dummyScore}
-              submitDummyScore={submitDummyScore}
-            />
+            {scoreLayout === "compact" ? (
+              <>
+                {renderScoreEntry()}
+                {renderScoreCards()}
+              </>
+            ) : (
+              <>
+                {renderScoreCards()}
+                {renderScoreEntry()}
+              </>
+            )}
           </>
         )}
 
