@@ -1058,6 +1058,7 @@ function getMatchWinnerName(): string | null {
           isMatchComplete={isMatchComplete}
           finishRule={finishRule}
           stats={getsidestats(side.id)}
+          compact={scoreLayout === "compact"}
         />
       ))}
     </section>
