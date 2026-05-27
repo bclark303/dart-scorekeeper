@@ -57,7 +57,7 @@ export function validateTurnScore(scoreInput: string): string | null {
 export function scoreTurn(
   player: Player,
   scoreEntered: number,
-  finishRule: FinishRule
+  finishRule: FinishRule,
 ): ScoreResult {
   const calculatedScore = player.score - scoreEntered;
 

@@ -23,7 +23,6 @@ import { useEffect, useState } from "react";
 import { CurrentTurnBanner } from "@/components/CurrentTurnBanner";
 import {
   FinishRule,
-  Player,
   StartingScore,
   Turn,
   scoreTurn,
@@ -43,8 +42,7 @@ export default function Home() {
   const [sideTwoSize, setSideTwoSize] = useState<TeamSize>(1);
   const [scoreLayout, setScoreLayout] = useState<ScoreLayout>("compact");
 
-  const [rotationMode, setRotationMode] =
-    useState<RotationMode>("independent");
+  const [rotationMode, setRotationMode] = useState<RotationMode>("independent");
 
   const [dummyScore, setDummyScore] = useState(0);
 
@@ -85,99 +83,177 @@ export default function Home() {
   const [isLegComplete, setIsLegComplete] = useState(false);
   const [isMatchComplete, setIsMatchComplete] = useState(false);
   const [pendingCheckoutTurn, setPendingCheckoutTurn] = useState<Turn | null>(
-    null
+    null,
   );
 
-  const [pendingDartsUsedTurn, setPendingDartsUsedTurn] =  useState<Turn | null>(null);
+  const [pendingDartsUsedTurn, setPendingDartsUsedTurn] = useState<Turn | null>(
+    null,
+  );
 
   const legsNeededToWin = Math.ceil(bestOfLegs / 2);
 
   const quickScores = [26, 41, 45, 60, 81, 85, 100, 121, 140, 180];
 
-  const keypadButtons = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "C", "0", "⌫"];
+  const keypadButtons = [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "C",
+    "0",
+    "⌫",
+  ];
+
+  function normalizeSavedSides(
+    savedSides: Array<MatchSide | MatchPlayer>,
+  ): MatchSide[] {
+    return savedSides.map((savedSide, index) => {
+      if ("members" in savedSide && savedSide.members.length > 0) {
+        return savedSide;
+      }
+
+      return {
+        id: savedSide.id,
+        name: savedSide.name,
+        score: savedSide.score,
+        legsWon: savedSide.legsWon,
+        members: [
+          {
+            id: `player-${index + 1}`,
+            name: savedSide.name,
+          },
+        ],
+        currentMemberIndex: 0,
+      };
+    });
+  }
 
   const savedMatchKey = "dart-scorekeeper-current-match";
 
   const [isResetConfirmationVisible, setIsResetConfirmationVisible] =
-  useState(false);
+    useState(false);
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    const savedMatch = localStorage.getItem(savedMatchKey);
+
+    if (!savedMatch) {
+      return;
+    }
+
+    try {
+      const parsedMatch = JSON.parse(savedMatch) as SavedMatchState;
+
+      setStartingScore(parsedMatch.startingScore);
+      setFinishRule(parsedMatch.finishRule);
+      setBestOfLegs(parsedMatch.bestOfLegs);
+      setMatchType(parsedMatch.matchType ?? "singles");
+
+      const loadedSideOneSize =
+        parsedMatch.sideOneSize ??
+        parsedMatch.teamSize ??
+        (parsedMatch.matchType === "doubles" ? 2 : 1);
+
+      const loadedSideTwoSize =
+        parsedMatch.sideTwoSize ??
+        parsedMatch.teamSize ??
+        (parsedMatch.matchType === "doubles" ? 2 : 1);
+
+      setSideOneSize(loadedSideOneSize);
+      setSideTwoSize(loadedSideTwoSize);
+      setTeamSize(Math.max(loadedSideOneSize, loadedSideTwoSize) as TeamSize);
+
+      setRotationMode(parsedMatch.rotationMode ?? "independent");
+      setDummyScore(parsedMatch.dummyScore ?? 0);
+
+      setPlayerOneName(parsedMatch.playerOneName);
+      setPlayerTwoName(parsedMatch.playerTwoName);
+      setTeamOneName(parsedMatch.teamOneName ?? "Team 1");
+      setTeamTwoName(parsedMatch.teamTwoName ?? "Team 2");
+      setTeamOnePlayerTwoName(parsedMatch.teamOnePlayerTwoName ?? "Player 1B");
+      setTeamTwoPlayerTwoName(parsedMatch.teamTwoPlayerTwoName ?? "Player 2B");
+
+      setTeamOneMemberNames(
+        parsedMatch.teamOneMemberNames ??
+          [
+            parsedMatch.playerOneName ?? "Player 1",
+            parsedMatch.teamOnePlayerTwoName ?? "Player 1B",
+          ].slice(0, loadedSideOneSize),
+      );
+
+      setTeamTwoMemberNames(
+        parsedMatch.teamTwoMemberNames ??
+          [
+            parsedMatch.playerTwoName ?? "Player 2",
+            parsedMatch.teamTwoPlayerTwoName ?? "Player 2B",
+          ].slice(0, loadedSideTwoSize),
+      );
+
+      setSides(
+        normalizeSavedSides(parsedMatch.sides ?? parsedMatch.players ?? []),
+      );
+      setcurrentSideIndex(
+        parsedMatch.currentSideIndex ?? parsedMatch.currentPlayerIndex ?? 0,
+      );
+      setstartingSideIndex(
+        parsedMatch.startingSideIndex ?? parsedMatch.startingPlayerIndex ?? 0,
+      );
+      setCurrentLegNumber(parsedMatch.currentLegNumber);
+      setStartingMemberIndexBySide(
+        parsedMatch.startingMemberIndexBySide ?? {
+          "side-1": 0,
+          "side-2": 0,
+        },
+      );
+      setTurnHistory(parsedMatch.turnHistory);
+      setCompletedLegs(parsedMatch.completedLegs);
+      setIsLegComplete(parsedMatch.isLegComplete);
+      setIsMatchComplete(parsedMatch.isMatchComplete);
+      setMessage(parsedMatch.message);
+    } catch {
+      localStorage.removeItem(savedMatchKey);
+    }
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
-  const savedMatch = localStorage.getItem(savedMatchKey);
+    const matchState: SavedMatchState = {
+      startingScore,
+      finishRule,
+      bestOfLegs,
+      matchType,
+      teamSize,
+      rotationMode,
+      dummyScore,
+      sideOneSize,
+      sideTwoSize,
+      playerOneName,
+      playerTwoName,
+      teamOneName,
+      teamTwoName,
+      teamOnePlayerTwoName,
+      teamTwoPlayerTwoName,
+      teamOneMemberNames,
+      teamTwoMemberNames,
+      sides,
+      currentSideIndex,
+      startingSideIndex,
+      currentLegNumber,
+      startingMemberIndexBySide,
+      turnHistory,
+      completedLegs,
+      isLegComplete,
+      isMatchComplete,
+      message,
+    };
 
-  if (!savedMatch) {
-    return;
-  }
-
-  try {
-    const parsedMatch = JSON.parse(savedMatch) as SavedMatchState;
-
-    setStartingScore(parsedMatch.startingScore);
-    setFinishRule(parsedMatch.finishRule);
-    setBestOfLegs(parsedMatch.bestOfLegs);
-    setMatchType(parsedMatch.matchType ?? "singles");
-
-    const loadedSideOneSize =
-      parsedMatch.sideOneSize ??
-      parsedMatch.teamSize ??
-      (parsedMatch.matchType === "doubles" ? 2 : 1);
-
-    const loadedSideTwoSize =
-      parsedMatch.sideTwoSize ??
-      parsedMatch.teamSize ??
-      (parsedMatch.matchType === "doubles" ? 2 : 1);
-
-    setSideOneSize(loadedSideOneSize);
-    setSideTwoSize(loadedSideTwoSize);
-    setTeamSize(Math.max(loadedSideOneSize, loadedSideTwoSize) as TeamSize);
-
-    setRotationMode(parsedMatch.rotationMode ?? "independent");
-    setDummyScore(parsedMatch.dummyScore ?? 0);
-
-    setPlayerOneName(parsedMatch.playerOneName);
-    setPlayerTwoName(parsedMatch.playerTwoName);
-    setTeamOneName(parsedMatch.teamOneName ?? "Team 1");
-    setTeamTwoName(parsedMatch.teamTwoName ?? "Team 2");
-    setTeamOnePlayerTwoName(parsedMatch.teamOnePlayerTwoName ?? "Player 1B");
-    setTeamTwoPlayerTwoName(parsedMatch.teamTwoPlayerTwoName ?? "Player 2B");
-
-    setTeamOneMemberNames(
-      parsedMatch.teamOneMemberNames ??
-        [
-          parsedMatch.playerOneName ?? "Player 1",
-          parsedMatch.teamOnePlayerTwoName ?? "Player 1B",
-        ].slice(0, loadedSideOneSize)
-    );
-
-    setTeamTwoMemberNames(
-      parsedMatch.teamTwoMemberNames ??
-        [
-          parsedMatch.playerTwoName ?? "Player 2",
-          parsedMatch.teamTwoPlayerTwoName ?? "Player 2B",
-        ].slice(0, loadedSideTwoSize)
-    );
-
-    setSides(normalizeSavedSides(parsedMatch.sides ?? parsedMatch.players ?? []));
-    setcurrentSideIndex(parsedMatch.currentSideIndex ?? parsedMatch.currentPlayerIndex ?? 0);
-    setstartingSideIndex(parsedMatch.startingSideIndex ?? parsedMatch.startingPlayerIndex ?? 0);
-    setCurrentLegNumber(parsedMatch.currentLegNumber);
-    setStartingMemberIndexBySide(
-      parsedMatch.startingMemberIndexBySide ?? {
-        "side-1": 0,
-        "side-2": 0,
-      }
-    );
-    setTurnHistory(parsedMatch.turnHistory);
-    setCompletedLegs(parsedMatch.completedLegs);
-    setIsLegComplete(parsedMatch.isLegComplete);
-    setIsMatchComplete(parsedMatch.isMatchComplete);
-    setMessage(parsedMatch.message);
-  } catch {
-    localStorage.removeItem(savedMatchKey);
-  }
-}, []);
-
-useEffect(() => {
-  const matchState: SavedMatchState = {
+    localStorage.setItem(savedMatchKey, JSON.stringify(matchState));
+  }, [
     startingScore,
     finishRule,
     bestOfLegs,
@@ -205,38 +281,7 @@ useEffect(() => {
     isLegComplete,
     isMatchComplete,
     message,
-  };
-
-  localStorage.setItem(savedMatchKey, JSON.stringify(matchState));
-}, [
-  startingScore,
-  finishRule,
-  bestOfLegs,
-  matchType,
-  teamSize,
-  rotationMode,
-  dummyScore,
-  sideOneSize,
-  sideTwoSize,
-  playerOneName,
-  playerTwoName,
-  teamOneName,
-  teamTwoName,
-  teamOnePlayerTwoName,
-  teamTwoPlayerTwoName,
-  teamOneMemberNames,
-  teamTwoMemberNames,
-  sides,
-  currentSideIndex,
-  startingSideIndex,
-  currentLegNumber,
-  startingMemberIndexBySide,
-  turnHistory,
-  completedLegs,
-  isLegComplete,
-  isMatchComplete,
-  message,
-]);
+  ]);
 
   function resizeSideOneMembers(size: TeamSize) {
     setSideOneSize(size);
@@ -244,7 +289,7 @@ useEffect(() => {
     setTeamOneMemberNames((currentNames) =>
       Array.from({ length: size }, (_, index) => {
         return currentNames[index] ?? `Team 1 Player ${index + 1}`;
-      })
+      }),
     );
 
     const newOverallTeamSize = Math.max(size, sideTwoSize);
@@ -258,7 +303,7 @@ useEffect(() => {
     setTeamTwoMemberNames((currentNames) =>
       Array.from({ length: size }, (_, index) => {
         return currentNames[index] ?? `Team 2 Player ${index + 1}`;
-      })
+      }),
     );
 
     const newOverallTeamSize = Math.max(sideOneSize, size);
@@ -271,7 +316,9 @@ useEffect(() => {
       return false;
     }
 
-    return turnHistory.length > 0 || completedLegs.length > 0 || currentLegNumber > 1;
+    return (
+      turnHistory.length > 0 || completedLegs.length > 0 || currentLegNumber > 1
+    );
   }
 
   function getTabClass(view: AppView) {
@@ -280,31 +327,9 @@ useEffect(() => {
       : "rounded-xl bg-slate-800 hover:bg-slate-700 px-4 py-3 font-bold text-slate-300";
   }
 
-  function normalizeSavedSides(savedSides: Array<MatchSide | MatchPlayer>): MatchSide[] {
-    return savedSides.map((savedSide, index) => {
-      if ("members" in savedSide && savedSide.members.length > 0) {
-        return savedSide;
-      }
-
-      return {
-        id: savedSide.id,
-        name: savedSide.name,
-        score: savedSide.score,
-        legsWon: savedSide.legsWon,
-        members: [
-          {
-            id: `player-${index + 1}`,
-            name: savedSide.name,
-          },
-        ],
-        currentMemberIndex: 0,
-      };
-    });
-  }
-
   function addDummyMembersIfNeeded(
     side: MatchSide,
-    targetSize: number
+    targetSize: number,
   ): MatchSide {
     if (side.members.length >= targetSize) {
       return side;
@@ -320,14 +345,14 @@ useEffect(() => {
           name: `Missing Player ${dummyNumber}`,
           isDummy: true,
         };
-      }
+      },
     );
 
     return {
       ...side,
       members: [...side.members, ...dummyMembers],
     };
-  }  
+  }
 
   function startNewGame() {
     const isSinglesMatch = sideOneSize === 1 && sideTwoSize === 1;
@@ -348,7 +373,9 @@ useEffect(() => {
     if (rotationMode === "dummy" && sideOneSize !== sideTwoSize) {
       const targetSize = Math.max(sideOneSize, sideTwoSize);
 
-      newSides = newSides.map((side) => addDummyMembersIfNeeded(side, targetSize));
+      newSides = newSides.map((side) =>
+        addDummyMembersIfNeeded(side, targetSize),
+      );
     }
 
     setSides(newSides);
@@ -389,61 +416,61 @@ useEffect(() => {
     setIsResetConfirmationVisible(false);
   }
 
-    function handleReplayMatch() {
+  function handleReplayMatch() {
     startNewGame();
     setActiveView("score");
-    }
+  }
 
-    function handleNewGameSetup() {
-      setActiveView("setup");
-    }
+  function handleNewGameSetup() {
+    setActiveView("setup");
+  }
 
-    function handleViewFinishedGame() {
-      setActiveView("history");
-    }
+  function handleViewFinishedGame() {
+    setActiveView("history");
+  }
 
   function clearSavedMatch() {
-  localStorage.removeItem(savedMatchKey);
+    localStorage.removeItem(savedMatchKey);
 
     const resetSides: MatchSide[] = [
       createTeamSide("side-1", "Player 1", ["Player 1"], 501),
       createTeamSide("side-2", "Player 2", ["Player 2"], 501),
     ];
 
-      setStartingScore(501);
-      setFinishRule("double_out");
-      setBestOfLegs(3);
-      setMatchType("singles");
-      setTeamSize(1);
-      setRotationMode("independent");
-      setDummyScore(0);
-      setSideOneSize(1);
-      setSideTwoSize(1);
-      setPlayerOneName("Player 1");
-      setPlayerTwoName("Player 2");
-      setTeamOneName("Team 1");
-      setTeamTwoName("Team 2");
-      setTeamOnePlayerTwoName("Player 1B");
-      setTeamTwoPlayerTwoName("Player 2B");
-      setTeamOneMemberNames(["Player 1"]);
-      setTeamTwoMemberNames(["Player 2"]);
-      setSides(resetSides);
-      setcurrentSideIndex(0);
-      setstartingSideIndex(0);
-      setCurrentLegNumber(1);
-      setStartingMemberIndexBySide({
-        "side-1": 0,
-        "side-2": 0,
-      });
-      setScoreInput("");
-      setTurnHistory([]);
-      setCompletedLegs([]);
-      setIsLegComplete(false);
-      setIsMatchComplete(false);
-      setPendingCheckoutTurn(null);
-      setPendingDartsUsedTurn(null);
-      setMessage("Saved match cleared. Player 1 to throw.");
-}
+    setStartingScore(501);
+    setFinishRule("double_out");
+    setBestOfLegs(3);
+    setMatchType("singles");
+    setTeamSize(1);
+    setRotationMode("independent");
+    setDummyScore(0);
+    setSideOneSize(1);
+    setSideTwoSize(1);
+    setPlayerOneName("Player 1");
+    setPlayerTwoName("Player 2");
+    setTeamOneName("Team 1");
+    setTeamTwoName("Team 2");
+    setTeamOnePlayerTwoName("Player 1B");
+    setTeamTwoPlayerTwoName("Player 2B");
+    setTeamOneMemberNames(["Player 1"]);
+    setTeamTwoMemberNames(["Player 2"]);
+    setSides(resetSides);
+    setcurrentSideIndex(0);
+    setstartingSideIndex(0);
+    setCurrentLegNumber(1);
+    setStartingMemberIndexBySide({
+      "side-1": 0,
+      "side-2": 0,
+    });
+    setScoreInput("");
+    setTurnHistory([]);
+    setCompletedLegs([]);
+    setIsLegComplete(false);
+    setIsMatchComplete(false);
+    setPendingCheckoutTurn(null);
+    setPendingDartsUsedTurn(null);
+    setMessage("Saved match cleared. Player 1 to throw.");
+  }
 
   function getCurrentThrowerName(side: MatchSide): string {
     return side.members[side.currentMemberIndex]?.name ?? side.name;
@@ -537,7 +564,7 @@ useEffect(() => {
     if (resultWithThrower.isLegComplete) {
       setPendingDartsUsedTurn(resultWithThrower.turn);
       setMessage(
-        `${resultWithThrower.turn.throwerName ?? resultWithThrower.turn.playerName} checked out. How many darts were used?`
+        `${resultWithThrower.turn.throwerName ?? resultWithThrower.turn.playerName} checked out. How many darts were used?`,
       );
       return;
     }
@@ -566,66 +593,73 @@ useEffect(() => {
     const nextThrowerName = getCurrentThrowerName(sides[nextPlayerIndex]);
 
     setMessage(
-      `${resultWithThrower.message} ${nextThrowerName} (${nextPlayerName}) to throw.`
+      `${resultWithThrower.message} ${nextThrowerName} (${nextPlayerName}) to throw.`,
     );
   }
 
   function submitDummyScore() {
-  if (!isCurrentThrowerDummy()) {
-    return;
-  }
+    if (!isCurrentThrowerDummy()) {
+      return;
+    }
 
-  if (isMatchComplete || isLegComplete || pendingCheckoutTurn || pendingDartsUsedTurn) {
-    return;
-  }
+    if (
+      isMatchComplete ||
+      isLegComplete ||
+      pendingCheckoutTurn ||
+      pendingDartsUsedTurn
+    ) {
+      return;
+    }
 
-  const currentSide = sides[currentSideIndex];
-  const currentThrower = getCurrentThrower(currentSide);
+    const currentSide = sides[currentSideIndex];
+    const currentThrower = getCurrentThrower(currentSide);
 
-  if (!currentThrower) {
-    return;
-  }
+    if (!currentThrower) {
+      return;
+    }
 
-  const result = scoreTurn(currentSide, dummyScore, finishRule);
+    const result = scoreTurn(currentSide, dummyScore, finishRule);
 
-  const dummyTurn: Turn = {
-    ...result.turn,
-    throwerId: currentThrower.id,
-    throwerName: currentThrower.name,
-    isDummy: true,
-  };
-
-  setTurnHistory((previousHistory) => [dummyTurn, ...previousHistory]);
-
-  if (!dummyTurn.isBust) {
-    const updatedSides = [...sides];
-    updatedSides[currentSideIndex] = {
-      ...updatedSides[currentSideIndex],
-      score: result.updatedPlayer.score,
-      currentMemberIndex: getNextMemberIndex(updatedSides[currentSideIndex]),
+    const dummyTurn: Turn = {
+      ...result.turn,
+      throwerId: currentThrower.id,
+      throwerName: currentThrower.name,
+      isDummy: true,
     };
 
-    setSides(updatedSides);
-  } else {
-    advanceCurrentSideMember();
+    setTurnHistory((previousHistory) => [dummyTurn, ...previousHistory]);
+
+    if (!dummyTurn.isBust) {
+      const updatedSides = [...sides];
+      updatedSides[currentSideIndex] = {
+        ...updatedSides[currentSideIndex],
+        score: result.updatedPlayer.score,
+        currentMemberIndex: getNextMemberIndex(updatedSides[currentSideIndex]),
+      };
+
+      setSides(updatedSides);
+    } else {
+      advanceCurrentSideMember();
+    }
+
+    if (result.isLegComplete) {
+      setPendingDartsUsedTurn(dummyTurn);
+      setMessage(
+        `${currentThrower.name} checked out. How many darts were used?`,
+      );
+      return;
+    }
+
+    const nextSideIndex = getNextSideIndex();
+    setcurrentSideIndex(nextSideIndex);
+
+    const nextSide = sides[nextSideIndex];
+    const nextThrowerName = getCurrentThrowerName(nextSide);
+
+    setMessage(
+      `${currentThrower.name} dummy score ${dummyScore}. ${nextThrowerName} (${nextSide.name}) to throw.`,
+    );
   }
-
-  if (result.isLegComplete) {
-    setPendingDartsUsedTurn(dummyTurn);
-    setMessage(`${currentThrower.name} checked out. How many darts were used?`);
-    return;
-  }
-
-  const nextSideIndex = getNextSideIndex();
-  setcurrentSideIndex(nextSideIndex);
-
-  const nextSide = sides[nextSideIndex];
-  const nextThrowerName = getCurrentThrowerName(nextSide);
-
-  setMessage(
-    `${currentThrower.name} dummy score ${dummyScore}. ${nextThrowerName} (${nextSide.name}) to throw.`
-  );
-}
 
   function getNextMemberIndex(side: MatchSide): number {
     if (side.members.length <= 1) {
@@ -659,7 +693,7 @@ useEffect(() => {
     if (wasDouble) {
       setPendingDartsUsedTurn(pendingCheckoutTurn);
       setMessage(
-        `${pendingCheckoutTurn.playerName} checked out. How many darts were used?`
+        `${pendingCheckoutTurn.playerName} checked out. How many darts were used?`,
       );
       setPendingCheckoutTurn(null);
       return;
@@ -674,104 +708,104 @@ useEffect(() => {
 
     setTurnHistory((previousHistory) => [bustTurn, ...previousHistory]);
 
-      advanceCurrentSideMember();
+    advanceCurrentSideMember();
 
-      const nextPlayerIndex = getNextSideIndex();
-      const nextThrowerName = getCurrentThrowerName(sides[nextPlayerIndex]);
+    const nextPlayerIndex = getNextSideIndex();
+    const nextThrowerName = getCurrentThrowerName(sides[nextPlayerIndex]);
 
-      setcurrentSideIndex(nextPlayerIndex);
-      setMessage(
-        `${pendingCheckoutTurn.throwerName ?? pendingCheckoutTurn.playerName} busts! ${nextThrowerName} (${sides[nextPlayerIndex].name}) to throw.`
-      );
-      setPendingCheckoutTurn(null);
+    setcurrentSideIndex(nextPlayerIndex);
+    setMessage(
+      `${pendingCheckoutTurn.throwerName ?? pendingCheckoutTurn.playerName} busts! ${nextThrowerName} (${sides[nextPlayerIndex].name}) to throw.`,
+    );
+    setPendingCheckoutTurn(null);
   }
 
   function confirmCheckoutDartsUsed(dartsUsed: 1 | 2 | 3) {
-  if (!pendingDartsUsedTurn) {
-    return;
-  }
-
-  const completedTurn: Turn = {
-    ...pendingDartsUsedTurn,
-    dartsThrown: dartsUsed,
-  };
-
-  const updatedsides = sides.map((player) => {
-    if (player.id !== completedTurn.playerId) {
-      return player;
+    if (!pendingDartsUsedTurn) {
+      return;
     }
 
-    return {
-      ...player,
-      score: 0,
+    const completedTurn: Turn = {
+      ...pendingDartsUsedTurn,
+      dartsThrown: dartsUsed,
     };
-  });
 
-  setSides(
-    updatedsides.map((player) => {
+    const updatedsides = sides.map((player) => {
       if (player.id !== completedTurn.playerId) {
         return player;
       }
 
       return {
         ...player,
-        currentMemberIndex: getNextMemberIndex(player),
+        score: 0,
       };
-    })
-  );
+    });
 
-  setTurnHistory((previousHistory) => [completedTurn, ...previousHistory]);
-  setPendingDartsUsedTurn(null);
-  finishLeg(completedTurn.playerId, completedTurn);
+    setSides(
+      updatedsides.map((player) => {
+        if (player.id !== completedTurn.playerId) {
+          return player;
+        }
+
+        return {
+          ...player,
+          currentMemberIndex: getNextMemberIndex(player),
+        };
+      }),
+    );
+
+    setTurnHistory((previousHistory) => [completedTurn, ...previousHistory]);
+    setPendingDartsUsedTurn(null);
+    finishLeg(completedTurn.playerId, completedTurn);
   }
 
   function finishLeg(winnerPlayerId: string, winningTurn?: Turn) {
-  const updatedsides = sides.map((player) => {
-    if (player.id !== winnerPlayerId) {
-      return player;
+    const updatedsides = sides.map((player) => {
+      if (player.id !== winnerPlayerId) {
+        return player;
+      }
+
+      return {
+        ...player,
+        score: 0,
+        legsWon: player.legsWon + 1,
+      };
+    });
+
+    const winner = updatedsides.find((player) => player.id === winnerPlayerId);
+
+    if (!winner) {
+      return;
     }
 
-    return {
-      ...player,
-      score: 0,
-      legsWon: player.legsWon + 1,
+    const finalTurnHistory = winningTurn
+      ? [winningTurn, ...turnHistory]
+      : turnHistory;
+
+    const completedLeg: CompletedLeg = {
+      legNumber: currentLegNumber,
+      winnerId: winner.id,
+      winnerName: winner.name,
+      turns: finalTurnHistory,
     };
-  });
 
-  const winner = updatedsides.find((player) => player.id === winnerPlayerId);
+    setCompletedLegs((previousLegs) => [completedLeg, ...previousLegs]);
+    setSides(updatedsides);
+    setIsLegComplete(true);
 
-  if (!winner) {
-    return;
+    if (winner.legsWon >= legsNeededToWin) {
+      setIsMatchComplete(true);
+      setMessage(
+        `${winner.name} wins the match ${winner.legsWon}-${getOpponentLegs(
+          updatedsides,
+          winner.id,
+        )}!`,
+      );
+      return;
+    }
+
+    setMessage(`${winner.name} wins leg ${currentLegNumber}!`);
   }
-
-  const finalTurnHistory = winningTurn
-    ? [winningTurn, ...turnHistory]
-    : turnHistory;
-
-  const completedLeg: CompletedLeg = {
-    legNumber: currentLegNumber,
-    winnerId: winner.id,
-    winnerName: winner.name,
-    turns: finalTurnHistory,
-  };
-
-  setCompletedLegs((previousLegs) => [completedLeg, ...previousLegs]);
-  setSides(updatedsides);
-  setIsLegComplete(true);
-
-  if (winner.legsWon >= legsNeededToWin) {
-    setIsMatchComplete(true);
-    setMessage(
-      `${winner.name} wins the match ${winner.legsWon}-${getOpponentLegs(
-        updatedsides,
-        winner.id
-      )}!`
-    );
-    return;
-  }
-
-  setMessage(`${winner.name} wins leg ${currentLegNumber}!`);
-}
 
   function startNextLeg() {
     if (isMatchComplete) {
@@ -789,8 +823,7 @@ useEffect(() => {
     if (nextStartingSide.members.length > 1) {
       nextStartingMemberIndexBySide[nextStartingSide.id] = getNextMemberIndex({
         ...nextStartingSide,
-        currentMemberIndex:
-          startingMemberIndexBySide[nextStartingSide.id] ?? 0,
+        currentMemberIndex: startingMemberIndexBySide[nextStartingSide.id] ?? 0,
       });
     }
 
@@ -816,7 +849,7 @@ useEffect(() => {
 
     setMessage(`${startingThrower} (${startingSide.name}) to throw`);
   }
-   function getOpponentLegs(sideList: MatchSide[], winnerPlayerId: string) {
+  function getOpponentLegs(sideList: MatchSide[], winnerPlayerId: string) {
     const opponent = sideList.find((side) => side.id !== winnerPlayerId);
     return opponent?.legsWon ?? 0;
   }
@@ -825,7 +858,7 @@ useEffect(() => {
     const completedLegTurns = completedLegs.flatMap((leg) => leg.turns);
 
     const currentLegIsAlreadySaved = completedLegs.some(
-      (leg) => leg.legNumber === currentLegNumber
+      (leg) => leg.legNumber === currentLegNumber,
     );
 
     if (currentLegIsAlreadySaved) {
@@ -835,121 +868,125 @@ useEffect(() => {
     return [...turnHistory, ...completedLegTurns];
   }
 
-function getsidestats(playerId: string): PlayerStats {
-  const allTurns = getAllMatchTurns();
+  function getsidestats(playerId: string): PlayerStats {
+    const allTurns = getAllMatchTurns();
 
-  const playerTurns = allTurns.filter((turn) => turn.playerId === playerId);
+    const playerTurns = allTurns.filter((turn) => turn.playerId === playerId);
 
-  const scoringTurns = playerTurns.filter((turn) => !turn.isBust);
+    const scoringTurns = playerTurns.filter((turn) => !turn.isBust);
 
-  const pointsScored = scoringTurns.reduce((total, turn) => {
-    return total + turn.scoreEntered;
-  }, 0);
+    const pointsScored = scoringTurns.reduce((total, turn) => {
+      return total + turn.scoreEntered;
+    }, 0);
 
-  const dartsThrown = scoringTurns.reduce((total, turn) => {
-    return total + turn.dartsThrown;
-  }, 0);
+    const dartsThrown = scoringTurns.reduce((total, turn) => {
+      return total + turn.dartsThrown;
+    }, 0);
 
-  const threeDartAverage =
-    dartsThrown === 0 ? 0 : (pointsScored / dartsThrown) * 3;
+    const threeDartAverage =
+      dartsThrown === 0 ? 0 : (pointsScored / dartsThrown) * 3;
 
-  const checkoutTurns = scoringTurns.filter((turn) => turn.isCheckout);
+    const checkoutTurns = scoringTurns.filter((turn) => turn.isCheckout);
 
-  const highestCheckout = checkoutTurns.reduce((highest, turn) => {
-    return Math.max(highest, turn.scoreEntered);
-  }, 0);
+    const highestCheckout = checkoutTurns.reduce((highest, turn) => {
+      return Math.max(highest, turn.scoreEntered);
+    }, 0);
 
-  const count180s = scoringTurns.filter((turn) => turn.scoreEntered === 180).length;
+    const count180s = scoringTurns.filter(
+      (turn) => turn.scoreEntered === 180,
+    ).length;
 
-  const count140Plus = scoringTurns.filter(
-    (turn) => turn.scoreEntered >= 140
-  ).length;
+    const count140Plus = scoringTurns.filter(
+      (turn) => turn.scoreEntered >= 140,
+    ).length;
 
-  const count100Plus = scoringTurns.filter(
-    (turn) => turn.scoreEntered >= 100
-  ).length;
+    const count100Plus = scoringTurns.filter(
+      (turn) => turn.scoreEntered >= 100,
+    ).length;
 
-  const busts = playerTurns.filter((turn) => turn.isBust).length;
+    const busts = playerTurns.filter((turn) => turn.isBust).length;
 
-  return {
-    pointsScored,
-    dartsThrown,
-    threeDartAverage,
-    highestCheckout,
-    count180s,
-    count140Plus,
-    count100Plus,
-    busts,
-  };
-}
+    return {
+      pointsScored,
+      dartsThrown,
+      threeDartAverage,
+      highestCheckout,
+      count180s,
+      count140Plus,
+      count100Plus,
+      busts,
+    };
+  }
 
-function getMatchScoreText(): string {
-  return sides.map((player) => `${player.name}: ${player.legsWon}`).join(" | ");
-}
+  function getMatchScoreText(): string {
+    return sides
+      .map((player) => `${player.name}: ${player.legsWon}`)
+      .join(" | ");
+  }
 
-function getMatchWinnerName(): string | null {
-  const winner = sides.find((player) => player.legsWon >= legsNeededToWin);
+  function getMatchWinnerName(): string | null {
+    const winner = sides.find((player) => player.legsWon >= legsNeededToWin);
 
-  return winner?.name ?? null;
-}
+    return winner?.name ?? null;
+  }
 
   function getNextSideIndex() {
     return currentSideIndex === 0 ? 1 : 0;
   }
 
- function undoLastTurn() {
-  if (pendingDartsUsedTurn) {
-    setPendingDartsUsedTurn(null);
-    setScoreInput("");
-    setMessage(`Cancelled ${pendingDartsUsedTurn.playerName}'s checkout.`);
-    return;
-  }
-
-  if (pendingCheckoutTurn) {
-    setPendingCheckoutTurn(null);
-    setScoreInput("");
-    setMessage(`Cancelled ${pendingCheckoutTurn.playerName}'s checkout.`);
-    return;
-  }
-
-  const lastTurn = turnHistory[0];
-
-  if (!lastTurn) {
-    setMessage("There is no turn to undo.");
-    return;
-  }
-
-  const restoredsides = sides.map((player) => {
-    if (player.id !== lastTurn.playerId) {
-      return player;
+  function undoLastTurn() {
+    if (pendingDartsUsedTurn) {
+      setPendingDartsUsedTurn(null);
+      setScoreInput("");
+      setMessage(`Cancelled ${pendingDartsUsedTurn.playerName}'s checkout.`);
+      return;
     }
 
-    return {
-      ...player,
-      score: lastTurn.scoreBefore,
-      legsWon: lastTurn.isCheckout
-        ? Math.max(0, player.legsWon - 1)
-        : player.legsWon,
-    };
-  });
+    if (pendingCheckoutTurn) {
+      setPendingCheckoutTurn(null);
+      setScoreInput("");
+      setMessage(`Cancelled ${pendingCheckoutTurn.playerName}'s checkout.`);
+      return;
+    }
 
-  const restoredPlayerIndex = restoredsides.findIndex(
-    (player) => player.id === lastTurn.playerId
-  );
+    const lastTurn = turnHistory[0];
 
-  setSides(restoredsides);
-  setcurrentSideIndex(restoredPlayerIndex);
-  setTurnHistory((previousHistory) => previousHistory.slice(1));
+    if (!lastTurn) {
+      setMessage("There is no turn to undo.");
+      return;
+    }
 
-  if (lastTurn.isCheckout) {
-  setCompletedLegs((previousLegs) => previousLegs.slice(1));
+    const restoredsides = sides.map((player) => {
+      if (player.id !== lastTurn.playerId) {
+        return player;
+      }
+
+      return {
+        ...player,
+        score: lastTurn.scoreBefore,
+        legsWon: lastTurn.isCheckout
+          ? Math.max(0, player.legsWon - 1)
+          : player.legsWon,
+      };
+    });
+
+    const restoredPlayerIndex = restoredsides.findIndex(
+      (player) => player.id === lastTurn.playerId,
+    );
+
+    setSides(restoredsides);
+    setcurrentSideIndex(restoredPlayerIndex);
+    setTurnHistory((previousHistory) => previousHistory.slice(1));
+
+    if (lastTurn.isCheckout) {
+      setCompletedLegs((previousLegs) => previousLegs.slice(1));
+    }
+
+    setIsLegComplete(false);
+    setIsMatchComplete(false);
+    setScoreInput("");
+    setMessage(`Undid ${lastTurn.playerName}'s last turn.`);
   }
-
-  setIsLegComplete(false);
-  setIsMatchComplete(false);
-  setScoreInput("");
-  setMessage(`Undid ${lastTurn.playerName}'s last turn.`);
-  } 
   return (
     <main className="min-h-screen bg-slate-950 text-white p-6">
       <div className="mx-auto max-w-4xl">
@@ -957,159 +994,161 @@ function getMatchWinnerName(): string | null {
         <p className="text-slate-300 mb-6">Basic X01 scorer</p>
 
         <nav className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-          <button onClick={() => setActiveView("score")} className={getTabClass("score")}>
+          <button
+            onClick={() => setActiveView("score")}
+            className={getTabClass("score")}
+          >
             Score
           </button>
 
-          <button onClick={() => setActiveView("setup")} className={getTabClass("setup")}>
+          <button
+            onClick={() => setActiveView("setup")}
+            className={getTabClass("setup")}
+          >
             Setup
           </button>
 
-          <button onClick={() => setActiveView("stats")} className={getTabClass("stats")}>
+          <button
+            onClick={() => setActiveView("stats")}
+            className={getTabClass("stats")}
+          >
             Stats
           </button>
 
-          <button onClick={() => setActiveView("history")} className={getTabClass("history")}>
+          <button
+            onClick={() => setActiveView("history")}
+            className={getTabClass("history")}
+          >
             History
           </button>
         </nav>
 
-      {activeView === "setup" && (
-        <GameSetup
-          playerOneName={playerOneName}
-          playerTwoName={playerTwoName}
-          teamOneName={teamOneName}
-          teamTwoName={teamTwoName}
-          teamOnePlayerTwoName={teamOnePlayerTwoName}
-          teamTwoPlayerTwoName={teamTwoPlayerTwoName}
-          startingScore={startingScore}
-          finishRule={finishRule}
-          bestOfLegs={bestOfLegs}
-          matchType={matchType}
-          teamSize={teamSize}
-          sideOneSize={sideOneSize}
-          sideTwoSize={sideTwoSize}
-          rotationMode={rotationMode}
-          dummyScore={dummyScore}
-          setRotationMode={setRotationMode}
-          setDummyScore={setDummyScore}
-          setPlayerOneName={setPlayerOneName}
-          setPlayerTwoName={setPlayerTwoName}
-          setTeamOneName={setTeamOneName}
-          setTeamTwoName={setTeamTwoName}
-          setTeamOnePlayerTwoName={setTeamOnePlayerTwoName}
-          setTeamTwoPlayerTwoName={setTeamTwoPlayerTwoName}
-          teamOneMemberNames={teamOneMemberNames}
-          teamTwoMemberNames={teamTwoMemberNames}
-          resizeSideOneMembers={resizeSideOneMembers}
-          resizeSideTwoMembers={resizeSideTwoMembers}
-          setTeamOneMemberNames={setTeamOneMemberNames}
-          setTeamTwoMemberNames={setTeamTwoMemberNames}
-          setStartingScore={setStartingScore}
-          setFinishRule={setFinishRule}
-          setBestOfLegs={setBestOfLegs}
-          setMatchType={setMatchType}
-          startNewGame={handleStartNewGame}
-          clearSavedMatch={clearSavedMatch}
-          isResetConfirmationVisible={isResetConfirmationVisible}
-          confirmResetMatch={confirmResetMatch}
-          cancelResetMatch={cancelResetMatch}
-        />
-      )}
+        {activeView === "setup" && (
+          <GameSetup
+            teamOneName={teamOneName}
+            teamTwoName={teamTwoName}
+            startingScore={startingScore}
+            finishRule={finishRule}
+            bestOfLegs={bestOfLegs}
+            sideOneSize={sideOneSize}
+            sideTwoSize={sideTwoSize}
+            rotationMode={rotationMode}
+            dummyScore={dummyScore}
+            setRotationMode={setRotationMode}
+            setDummyScore={setDummyScore}
+            setTeamOneName={setTeamOneName}
+            setTeamTwoName={setTeamTwoName}
+            teamOneMemberNames={teamOneMemberNames}
+            teamTwoMemberNames={teamTwoMemberNames}
+            resizeSideOneMembers={resizeSideOneMembers}
+            resizeSideTwoMembers={resizeSideTwoMembers}
+            setTeamOneMemberNames={setTeamOneMemberNames}
+            setTeamTwoMemberNames={setTeamTwoMemberNames}
+            setStartingScore={setStartingScore}
+            setFinishRule={setFinishRule}
+            setBestOfLegs={setBestOfLegs}
+            startNewGame={handleStartNewGame}
+            clearSavedMatch={clearSavedMatch}
+            isResetConfirmationVisible={isResetConfirmationVisible}
+            confirmResetMatch={confirmResetMatch}
+            cancelResetMatch={cancelResetMatch}
+          />
+        )}
 
+        {activeView === "score" && (
+          <>
+            <CurrentTurnBanner
+              currentSide={sides[currentSideIndex]}
+              currentLegNumber={currentLegNumber}
+              bestOfLegs={bestOfLegs}
+              startingScore={startingScore}
+              finishRule={finishRule}
+              isCurrentThrowerDummy={isCurrentThrowerDummy()}
+              dummyScore={dummyScore}
+              scoreLayout={scoreLayout}
+              setScoreLayout={setScoreLayout}
+            />
+            <section className="rounded-2xl bg-slate-900 border border-slate-700 p-4 mb-8">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                <div>
+                  <div className="text-slate-400">Leg</div>
+                  <div className="text-2xl font-bold">{currentLegNumber}</div>
+                </div>
+                <div>
+                  <div className="text-slate-400">Format</div>
+                  <div className="text-2xl font-bold">Best of {bestOfLegs}</div>
+                </div>
+                <div>
+                  <div className="text-slate-400">To Win</div>
+                  <div className="text-2xl font-bold">
+                    {legsNeededToWin} legs
+                  </div>
+                </div>
+              </div>
+            </section>
 
-{activeView === "score" && (
-  <>
-      <CurrentTurnBanner
-      currentSide={sides[currentSideIndex]}
-      currentLegNumber={currentLegNumber}
-      bestOfLegs={bestOfLegs}
-      startingScore={startingScore}
-      finishRule={finishRule}
-      isCurrentThrowerDummy={isCurrentThrowerDummy()}
-      dummyScore={dummyScore}
-      scoreLayout={scoreLayout}
-      setScoreLayout={setScoreLayout}
-    />
-    <section className="rounded-2xl bg-slate-900 border border-slate-700 p-4 mb-8">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-        <div>
-          <div className="text-slate-400">Leg</div>
-          <div className="text-2xl font-bold">{currentLegNumber}</div>
-        </div>
-        <div>
-          <div className="text-slate-400">Format</div>
-          <div className="text-2xl font-bold">Best of {bestOfLegs}</div>
-        </div>
-        <div>
-          <div className="text-slate-400">To Win</div>
-          <div className="text-2xl font-bold">{legsNeededToWin} legs</div>
-        </div>
-      </div>
-    </section>
+            <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+              {sides.map((side, index) => (
+                <PlayerCard
+                  key={side.id}
+                  player={side}
+                  isCurrentPlayer={index === currentSideIndex}
+                  isLegComplete={isLegComplete}
+                  isMatchComplete={isMatchComplete}
+                  finishRule={finishRule}
+                  stats={getsidestats(side.id)}
+                  compact={scoreLayout === "compact"}
+                />
+              ))}
+            </section>
 
-    <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-      {sides.map((side, index) => (
-        <PlayerCard
-          key={side.id}
-          player={side}
-          isCurrentPlayer={index === currentSideIndex}
-          isLegComplete={isLegComplete}
-          isMatchComplete={isMatchComplete}
-          finishRule={finishRule}
-          stats={getsidestats(side.id)}
-          compact={scoreLayout === "compact"}
-        />
-      ))}
-    </section>
+            <ScoreEntry
+              message={message}
+              scoreInput={scoreInput}
+              compact={scoreLayout === "compact"}
+              setScoreInput={setScoreInput}
+              submitScore={submitScore}
+              undoLastTurn={undoLastTurn}
+              startNextLeg={startNextLeg}
+              confirmDoubleOut={confirmDoubleOut}
+              confirmCheckoutDartsUsed={confirmCheckoutDartsUsed}
+              appendScoreDigit={appendScoreDigit}
+              backspaceScoreInput={backspaceScoreInput}
+              setQuickScore={setQuickScore}
+              pendingCheckoutTurn={pendingCheckoutTurn}
+              pendingDartsUsedTurn={pendingDartsUsedTurn}
+              isLegComplete={isLegComplete}
+              isMatchComplete={isMatchComplete}
+              quickScores={quickScores}
+              keypadButtons={keypadButtons}
+              replayMatch={handleReplayMatch}
+              newGameSetup={handleNewGameSetup}
+              viewFinishedGame={handleViewFinishedGame}
+              isCurrentThrowerDummy={isCurrentThrowerDummy()}
+              dummyScore={dummyScore}
+              submitDummyScore={submitDummyScore}
+            />
+          </>
+        )}
 
-    <ScoreEntry
-      message={message}
-      scoreInput={scoreInput}
-      compact={scoreLayout === "compact"}
-      setScoreInput={setScoreInput}
-      submitScore={submitScore}
-      undoLastTurn={undoLastTurn}
-      startNextLeg={startNextLeg}
-      confirmDoubleOut={confirmDoubleOut}
-      confirmCheckoutDartsUsed={confirmCheckoutDartsUsed}
-      appendScoreDigit={appendScoreDigit}
-      backspaceScoreInput={backspaceScoreInput}
-      setQuickScore={setQuickScore}
-      pendingCheckoutTurn={pendingCheckoutTurn}
-      pendingDartsUsedTurn={pendingDartsUsedTurn}
-      isLegComplete={isLegComplete}
-      isMatchComplete={isMatchComplete}
-      quickScores={quickScores}
-      keypadButtons={keypadButtons}
-      replayMatch={handleReplayMatch}
-      newGameSetup={handleNewGameSetup}
-      viewFinishedGame={handleViewFinishedGame}
-      isCurrentThrowerDummy={isCurrentThrowerDummy()}
-      dummyScore={dummyScore}
-      submitDummyScore={submitDummyScore}
-    />
-  </>
-)}
+        {activeView === "stats" && (
+          <MatchSummary
+            players={sides}
+            isMatchComplete={isMatchComplete}
+            isLegComplete={isLegComplete}
+            currentLegNumber={currentLegNumber}
+            getMatchScoreText={getMatchScoreText}
+            getMatchWinnerName={getMatchWinnerName}
+            getPlayerStats={getsidestats}
+          />
+        )}
 
-{activeView === "stats" && (
-  <MatchSummary
-    players={sides}
-    isMatchComplete={isMatchComplete}
-    isLegComplete={isLegComplete}
-    currentLegNumber={currentLegNumber}
-    getMatchScoreText={getMatchScoreText}
-    getMatchWinnerName={getMatchWinnerName}
-    getPlayerStats={getsidestats}
-  />
-)}
-
-{activeView === "history" && (
-  <>
-    <TurnHistory turns={turnHistory} />
-    <CompletedLegs completedLegs={completedLegs} />
-  </>
-)}
+        {activeView === "history" && (
+          <>
+            <TurnHistory turns={turnHistory} />
+            <CompletedLegs completedLegs={completedLegs} />
+          </>
+        )}
       </div>
     </main>
   );

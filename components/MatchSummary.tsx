@@ -1,6 +1,5 @@
 import { MatchSide, PlayerStats } from "@/lib/types";
 
-
 type MatchSummaryProps = {
   players: MatchSide[];
   isMatchComplete: boolean;

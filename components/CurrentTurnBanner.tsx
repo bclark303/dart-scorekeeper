@@ -27,7 +27,8 @@ export function CurrentTurnBanner({
   setScoreLayout,
 }: CurrentTurnBannerProps) {
   const currentThrower =
-    currentSide.members[currentSide.currentMemberIndex]?.name ?? currentSide.name;
+    currentSide.members[currentSide.currentMemberIndex]?.name ??
+    currentSide.name;
 
   const finishLabel =
     finishRule === "double_out" ? "Double Out" : "Straight Out";

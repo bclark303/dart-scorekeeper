@@ -82,7 +82,7 @@ export function createTeamSide(
   sideId: string,
   sideName: string,
   memberNames: string[],
-  startingScore: number
+  startingScore: number,
 ): MatchSide {
   const cleanedMemberNames = memberNames
     .map((name) => name.trim())
@@ -117,7 +117,7 @@ export function createSinglesSide(
   sideId: string,
   playerId: string,
   name: string,
-  startingScore: number
+  startingScore: number,
 ): MatchSide {
   return {
     id: sideId,
@@ -140,7 +140,7 @@ export function createDoublesSide(
   playerOneName: string,
   playerTwoId: string,
   playerTwoName: string,
-  startingScore: number
+  startingScore: number,
 ): MatchSide {
   return {
     id: sideId,

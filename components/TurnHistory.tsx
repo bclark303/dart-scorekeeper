@@ -24,8 +24,8 @@ export function TurnHistory({ turns }: TurnHistoryProps) {
                 {turn.isCheckout ? " — CHECKOUT" : ""}
                 {turn.isDummy ? " — DUMMY" : ""}
                 {turn.throwerName && turn.throwerName !== turn.playerName
-                    ? ` for ${turn.playerName}`
-                    : ""}
+                  ? ` for ${turn.playerName}`
+                  : ""}
               </div>
 
               <div className="text-slate-300">

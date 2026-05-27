@@ -55,40 +55,40 @@ export function ScoreEntry({
 }: ScoreEntryProps) {
   return (
     <section
-        className={`rounded-2xl bg-slate-900 border border-slate-700 mb-8 ${
-            compact ? "p-4" : "p-6"
-        }`}
-        >
+      className={`rounded-2xl bg-slate-900 border border-slate-700 mb-8 ${
+        compact ? "p-4" : "p-6"
+      }`}
+    >
       <div className={compact ? "text-lg mb-3" : "text-xl mb-4"}>{message}</div>
 
       {isMatchComplete && (
         <div className="rounded-2xl bg-slate-800 border border-slate-700 p-4 mb-4">
-            <div className="text-lg font-bold mb-4">Match complete</div>
+          <div className="text-lg font-bold mb-4">Match complete</div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <button
-                onClick={replayMatch}
-                className="rounded-xl bg-green-600 hover:bg-green-500 p-4 text-xl font-bold"
+              onClick={replayMatch}
+              className="rounded-xl bg-green-600 hover:bg-green-500 p-4 text-xl font-bold"
             >
-                Replay Match
+              Replay Match
             </button>
 
             <button
-                onClick={newGameSetup}
-                className="rounded-xl bg-blue-600 hover:bg-blue-500 p-4 text-xl font-bold"
+              onClick={newGameSetup}
+              className="rounded-xl bg-blue-600 hover:bg-blue-500 p-4 text-xl font-bold"
             >
-                New Game / Setup
+              New Game / Setup
             </button>
 
             <button
-                onClick={viewFinishedGame}
-                className="rounded-xl bg-purple-600 hover:bg-purple-500 p-4 text-xl font-bold"
+              onClick={viewFinishedGame}
+              className="rounded-xl bg-purple-600 hover:bg-purple-500 p-4 text-xl font-bold"
             >
-                View Match History
+              View Match History
             </button>
-            </div>
+          </div>
         </div>
-        )}
+      )}
 
       {isLegComplete && !isMatchComplete && (
         <button
@@ -155,98 +155,112 @@ export function ScoreEntry({
         !isMatchComplete && (
           <>
             {isCurrentThrowerDummy ? (
-                <div className="rounded-2xl bg-slate-800 border border-slate-700 p-4">
-                    <div className="text-lg font-bold mb-2">Dummy player turn</div>
+              <div className="rounded-2xl bg-slate-800 border border-slate-700 p-4">
+                <div className="text-lg font-bold mb-2">Dummy player turn</div>
 
-                    <p className="text-slate-300 mb-4">
-                    This slot will automatically score{" "}
-                    <span className="font-bold text-white">{dummyScore}</span>.
-                    </p>
+                <p className="text-slate-300 mb-4">
+                  This slot will automatically score{" "}
+                  <span className="font-bold text-white">{dummyScore}</span>.
+                </p>
 
-                    <button
-                    onClick={submitDummyScore}
-                    className="w-full rounded-xl bg-purple-600 hover:bg-purple-500 p-4 text-xl font-bold"
-                    >
-                    Apply Dummy Score
-                    </button>
+                <button
+                  onClick={submitDummyScore}
+                  className="w-full rounded-xl bg-purple-600 hover:bg-purple-500 p-4 text-xl font-bold"
+                >
+                  Apply Dummy Score
+                </button>
+              </div>
+            ) : (
+              <>
+                <label className="block mb-2 text-slate-300">
+                  Score this turn
+                </label>
+
+                <input
+                  className={`w-full rounded-xl bg-slate-800 border border-slate-600 mb-4 ${
+                    compact ? "p-3 text-3xl" : "p-4 text-3xl"
+                  }`}
+                  value={scoreInput}
+                  onChange={(event) => setScoreInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      submitScore();
+                    }
+                  }}
+                  inputMode="numeric"
+                  autoFocus
+                />
+
+                <div className="mb-4">
+                  <div className="mb-2 text-slate-300">Quick scores</div>
+
+                  <div
+                    className={
+                      compact
+                        ? "grid grid-cols-5 gap-2"
+                        : "grid grid-cols-2 sm:grid-cols-5 gap-3"
+                    }
+                  >
+                    {quickScores.map((score) => (
+                      <button
+                        key={score}
+                        onClick={() => setQuickScore(score)}
+                        className={`rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 font-bold ${
+                          compact ? "p-3 text-lg" : "p-4 text-xl"
+                        }`}
+                      >
+                        {score}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                ) : (
-                <>
-                    <label className="block mb-2 text-slate-300">Score this turn</label>
 
-                    <input
-                    className={`w-full rounded-xl bg-slate-800 border border-slate-600 mb-4 ${
-                        compact ? "p-3 text-3xl" : "p-4 text-3xl"
+                <div className="mb-4">
+                  <div className="mb-2 text-slate-300">Keypad</div>
+
+                  <div
+                    className={
+                      compact
+                        ? "grid grid-cols-3 gap-2"
+                        : "grid grid-cols-3 gap-3"
+                    }
+                  >
+                    {keypadButtons.map((button) => (
+                      <button
+                        key={button}
+                        onClick={() => {
+                          if (button === "C") {
+                            setScoreInput("");
+                            return;
+                          }
+
+                          if (button === "⌫") {
+                            backspaceScoreInput();
+                            return;
+                          }
+
+                          appendScoreDigit(button);
+                        }}
+                        className={`rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 font-bold ${
+                          compact ? "p-3 text-xl" : "p-5 text-2xl"
                         }`}
-                    value={scoreInput}
-                    onChange={(event) => setScoreInput(event.target.value)}
-                    onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                        submitScore();
-                        }
-                    }}
-                    inputMode="numeric"
-                    autoFocus
-                    />
+                      >
+                        {button}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-                    <div className="mb-4">
-                    <div className="mb-2 text-slate-300">Quick scores</div>
-
-                    <div className={compact ? "grid grid-cols-5 gap-2" : "grid grid-cols-2 sm:grid-cols-5 gap-3"}>
-                        {quickScores.map((score) => (
-                        <button
-                            key={score}
-                            onClick={() => setQuickScore(score)}
-                            className={`rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 font-bold ${
-                                compact ? "p-3 text-lg" : "p-4 text-xl"
-                                }`}
-                        >
-                            {score}
-                        </button>
-                        ))}
-                    </div>
-                    </div>
-
-                    <div className="mb-4">
-                    <div className="mb-2 text-slate-300">Keypad</div>
-
-                    <div className={compact ? "grid grid-cols-3 gap-2" : "grid grid-cols-3 gap-3"}>
-                        {keypadButtons.map((button) => (
-                        <button
-                            key={button}
-                            onClick={() => {
-                            if (button === "C") {
-                                setScoreInput("");
-                                return;
-                            }
-
-                            if (button === "⌫") {
-                                backspaceScoreInput();
-                                return;
-                            }
-
-                            appendScoreDigit(button);
-                            }}
-                            className={`rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 font-bold ${
-                                compact ? "p-3 text-xl" : "p-5 text-2xl"
-                                }`}
-                        >
-                            {button}
-                        </button>
-                        ))}
-                    </div>
-                    </div>
-
-                    <button
-                    onClick={submitScore}
-                    className={`w-full rounded-xl bg-green-600 hover:bg-green-500 font-bold ${
-                        compact ? "p-3 text-lg" : "p-4 text-xl"
-                        }`}
-                    >
-                    Enter Score
-                    </button>
-                </>
-                )}
+                <button
+                  onClick={submitScore}
+                  className={`w-full rounded-xl bg-green-600 hover:bg-green-500 font-bold ${
+                    compact ? "p-3 text-lg" : "p-4 text-xl"
+                  }`}
+                >
+                  Enter Score
+                </button>
+              </>
+            )}
           </>
         )
       )}
@@ -254,8 +268,8 @@ export function ScoreEntry({
       <button
         onClick={undoLastTurn}
         className={`mt-4 w-full rounded-xl bg-amber-600 hover:bg-amber-500 font-bold ${
-            compact ? "p-3 text-lg" : "p-4 text-xl"
-            }`}
+          compact ? "p-3 text-lg" : "p-4 text-xl"
+        }`}
       >
         Undo Last Turn
       </button>
