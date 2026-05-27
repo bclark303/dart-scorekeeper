@@ -33,27 +33,54 @@ type AppView = "score" | "setup" | "stats" | "history";
 type ScoreLayout = "compact" | "full";
 
 export default function Home() {
+  // Match setup options.
+  // These control the X01 rules used when a new match is started.
   const [startingScore, setStartingScore] = useState<StartingScore>(501);
   const [finishRule, setFinishRule] = useState<FinishRule>("double_out");
   const [bestOfLegs, setBestOfLegs] = useState<BestOfLegs>(3);
+
+  // Legacy/simple match type.
+  // Kept while old saved matches and older setup logic transition to side sizes.
   const [matchType, setMatchType] = useState<MatchType>("singles");
+
+  // Team-size setup.
+  // teamSize is kept as a compatibility/display value.
+  // sideOneSize and sideTwoSize are the real current setup values.
   const [teamSize, setTeamSize] = useState<TeamSize>(1);
   const [sideOneSize, setSideOneSize] = useState<TeamSize>(1);
   const [sideTwoSize, setSideTwoSize] = useState<TeamSize>(1);
+
+  // Score tab layout.
+  // Compact mode is intended for tablets/phones during active play.
   const [scoreLayout, setScoreLayout] = useState<ScoreLayout>("compact");
 
-  const [rotationMode, setRotationMode] = useState<RotationMode>("independent");
+  // Uneven-team rotation settings.
+  // Independent mode lets each side rotate through only its listed members.
+  // Dummy mode pads the shorter side with automatic-score missing-player slots.
+  const [rotationMode, setRotationMode] =
+    useState<RotationMode>("independent");
 
   const [dummyScore, setDummyScore] = useState(0);
 
+  // App navigation.
+  // Tabs keep setup, scoring, stats, and history separated for smaller screens.
   const [activeView, setActiveView] = useState<AppView>("score");
+
+  // Legacy/simple name fields.
+  // These mostly exist to load older saved matches while the app transitions
+  // to teamOneMemberNames/teamTwoMemberNames.
   const [playerOneName, setPlayerOneName] = useState("Player 1");
   const [playerTwoName, setPlayerTwoName] = useState("Player 2");
   const [teamOneName, setTeamOneName] = useState("Team 1");
   const [teamTwoName, setTeamTwoName] = useState("Team 2");
-  const [teamOnePlayerTwoName, setTeamOnePlayerTwoName] = useState("Player 1B");
-  const [teamTwoPlayerTwoName, setTeamTwoPlayerTwoName] = useState("Player 2B");
+  const [teamOnePlayerTwoName, setTeamOnePlayerTwoName] =
+    useState("Player 1B");
+  const [teamTwoPlayerTwoName, setTeamTwoPlayerTwoName] =
+    useState("Player 2B");
 
+  // Current setup member names.
+  // These arrays are now the main source for creating singles, doubles,
+  // and larger team sides.
   const [teamOneMemberNames, setTeamOneMemberNames] = useState<string[]>([
     "Player 1",
   ]);
@@ -62,26 +89,47 @@ export default function Home() {
     "Player 2",
   ]);
 
+  // Active match sides.
+  // A side can be one player, a doubles pair, or a larger team.
+  // The side owns the score and legs won; members determine throw order.
   const [sides, setSides] = useState<MatchSide[]>([
     createTeamSide("side-1", "Player 1", ["Player 1"], 501),
     createTeamSide("side-2", "Player 2", ["Player 2"], 501),
   ]);
 
+  // Active match progress.
+  // currentSideIndex tells us which side is throwing now.
+  // startingSideIndex alternates who starts each new leg.
   const [currentSideIndex, setCurrentSideIndex] = useState(0);
   const [startingSideIndex, setStartingSideIndex] = useState(0);
   const [currentLegNumber, setCurrentLegNumber] = useState(1);
+
+  // Starting member rotation by side.
+  // This lets doubles/team matches rotate who starts future legs.
   const [startingMemberIndexBySide, setStartingMemberIndexBySide] = useState<
     Record<string, number>
   >({
     "side-1": 0,
     "side-2": 0,
   });
+
+  // Score entry and user-facing status.
   const [scoreInput, setScoreInput] = useState("");
   const [message, setMessage] = useState("Player 1 to throw");
+
+  // Match history.
+  // turnHistory is only the current leg.
+  // completedLegs stores snapshots of finished legs.
   const [turnHistory, setTurnHistory] = useState<Turn[]>([]);
   const [completedLegs, setCompletedLegs] = useState<CompletedLeg[]>([]);
+
+  // Completion flags.
   const [isLegComplete, setIsLegComplete] = useState(false);
   const [isMatchComplete, setIsMatchComplete] = useState(false);
+
+  // Checkout confirmation flow.
+  // Total-score entry cannot know whether the final dart was a double
+  // or how many darts were used, so the UI asks after a possible checkout.
   const [pendingCheckoutTurn, setPendingCheckoutTurn] = useState<Turn | null>(
     null,
   );
