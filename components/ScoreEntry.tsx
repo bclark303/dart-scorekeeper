@@ -3,6 +3,7 @@ import { Turn } from "@/lib/scoring";
 type ScoreEntryProps = {
   message: string;
   scoreInput: string;
+  compact: boolean;
   setScoreInput: (scoreInput: string) => void;
   submitScore: () => void;
   undoLastTurn: () => void;
@@ -29,6 +30,7 @@ type ScoreEntryProps = {
 export function ScoreEntry({
   message,
   scoreInput,
+  compact,
   setScoreInput,
   submitScore,
   undoLastTurn,
@@ -52,8 +54,12 @@ export function ScoreEntry({
   submitDummyScore,
 }: ScoreEntryProps) {
   return (
-    <section className="rounded-2xl bg-slate-900 border border-slate-700 p-6 mb-8">
-      <div className="text-xl mb-4">{message}</div>
+    <section
+        className={`rounded-2xl bg-slate-900 border border-slate-700 mb-8 ${
+            compact ? "p-4" : "p-6"
+        }`}
+        >
+      <div className={compact ? "text-lg mb-3" : "text-xl mb-4"}>{message}</div>
 
       {isMatchComplete && (
         <div className="rounded-2xl bg-slate-800 border border-slate-700 p-4 mb-4">
@@ -169,7 +175,9 @@ export function ScoreEntry({
                     <label className="block mb-2 text-slate-300">Score this turn</label>
 
                     <input
-                    className="w-full rounded-xl bg-slate-800 border border-slate-600 p-4 text-3xl mb-4"
+                    className={`w-full rounded-xl bg-slate-800 border border-slate-600 mb-4 ${
+                        compact ? "p-3 text-3xl" : "p-4 text-3xl"
+                        }`}
                     value={scoreInput}
                     onChange={(event) => setScoreInput(event.target.value)}
                     onKeyDown={(event) => {
@@ -184,12 +192,14 @@ export function ScoreEntry({
                     <div className="mb-4">
                     <div className="mb-2 text-slate-300">Quick scores</div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                    <div className={compact ? "grid grid-cols-5 gap-2" : "grid grid-cols-2 sm:grid-cols-5 gap-3"}>
                         {quickScores.map((score) => (
                         <button
                             key={score}
                             onClick={() => setQuickScore(score)}
-                            className="rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 p-4 text-xl font-bold"
+                            className={`rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 font-bold ${
+                                compact ? "p-3 text-lg" : "p-4 text-xl"
+                                }`}
                         >
                             {score}
                         </button>
@@ -200,7 +210,7 @@ export function ScoreEntry({
                     <div className="mb-4">
                     <div className="mb-2 text-slate-300">Keypad</div>
 
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className={compact ? "grid grid-cols-3 gap-2" : "grid grid-cols-3 gap-3"}>
                         {keypadButtons.map((button) => (
                         <button
                             key={button}
@@ -217,7 +227,9 @@ export function ScoreEntry({
 
                             appendScoreDigit(button);
                             }}
-                            className="rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 p-5 text-2xl font-bold"
+                            className={`rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 font-bold ${
+                                compact ? "p-3 text-xl" : "p-5 text-2xl"
+                                }`}
                         >
                             {button}
                         </button>
@@ -227,7 +239,9 @@ export function ScoreEntry({
 
                     <button
                     onClick={submitScore}
-                    className="w-full rounded-xl bg-green-600 hover:bg-green-500 p-4 text-xl font-bold"
+                    className={`w-full rounded-xl bg-green-600 hover:bg-green-500 font-bold ${
+                        compact ? "p-3 text-lg" : "p-4 text-xl"
+                        }`}
                     >
                     Enter Score
                     </button>
@@ -239,7 +253,9 @@ export function ScoreEntry({
 
       <button
         onClick={undoLastTurn}
-        className="mt-4 w-full rounded-xl bg-amber-600 hover:bg-amber-500 p-4 text-xl font-bold"
+        className={`mt-4 w-full rounded-xl bg-amber-600 hover:bg-amber-500 font-bold ${
+            compact ? "p-3 text-lg" : "p-4 text-xl"
+            }`}
       >
         Undo Last Turn
       </button>

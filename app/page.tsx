@@ -1066,6 +1066,7 @@ function getMatchWinnerName(): string | null {
     <ScoreEntry
       message={message}
       scoreInput={scoreInput}
+      compact={scoreLayout === "compact"}
       setScoreInput={setScoreInput}
       submitScore={submitScore}
       undoLastTurn={undoLastTurn}
