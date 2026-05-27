@@ -67,8 +67,8 @@ export default function Home() {
     createTeamSide("side-2", "Player 2", ["Player 2"], 501),
   ]);
 
-  const [currentSideIndex, setcurrentSideIndex] = useState(0);
-  const [startingSideIndex, setstartingSideIndex] = useState(0);
+  const [currentSideIndex, setCurrentSideIndex] = useState(0);
+  const [startingSideIndex, setStartingSideIndex] = useState(0);
   const [currentLegNumber, setCurrentLegNumber] = useState(1);
   const [startingMemberIndexBySide, setStartingMemberIndexBySide] = useState<
     Record<string, number>
@@ -134,7 +134,7 @@ export default function Home() {
   }
 
   const savedMatchKey = "dart-scorekeeper-current-match";
-
+  const [hasLoadedSavedMatch, setHasLoadedSavedMatch] = useState(false);
   const [isResetConfirmationVisible, setIsResetConfirmationVisible] =
     useState(false);
 
@@ -143,6 +143,7 @@ export default function Home() {
     const savedMatch = localStorage.getItem(savedMatchKey);
 
     if (!savedMatch) {
+      setHasLoadedSavedMatch(true);
       return;
     }
 
@@ -171,8 +172,8 @@ export default function Home() {
       setRotationMode(parsedMatch.rotationMode ?? "independent");
       setDummyScore(parsedMatch.dummyScore ?? 0);
 
-      setPlayerOneName(parsedMatch.playerOneName);
-      setPlayerTwoName(parsedMatch.playerTwoName);
+      setPlayerOneName(parsedMatch.playerOneName ?? "Player 1");
+      setPlayerTwoName(parsedMatch.playerTwoName ?? "Player 2");
       setTeamOneName(parsedMatch.teamOneName ?? "Team 1");
       setTeamTwoName(parsedMatch.teamTwoName ?? "Team 2");
       setTeamOnePlayerTwoName(parsedMatch.teamOnePlayerTwoName ?? "Player 1B");
@@ -197,10 +198,10 @@ export default function Home() {
       setSides(
         normalizeSavedSides(parsedMatch.sides ?? parsedMatch.players ?? []),
       );
-      setcurrentSideIndex(
+      setCurrentSideIndex(
         parsedMatch.currentSideIndex ?? parsedMatch.currentPlayerIndex ?? 0,
       );
-      setstartingSideIndex(
+      setStartingSideIndex(
         parsedMatch.startingSideIndex ?? parsedMatch.startingPlayerIndex ?? 0,
       );
       setCurrentLegNumber(parsedMatch.currentLegNumber);
@@ -210,18 +211,24 @@ export default function Home() {
           "side-2": 0,
         },
       );
-      setTurnHistory(parsedMatch.turnHistory);
-      setCompletedLegs(parsedMatch.completedLegs);
-      setIsLegComplete(parsedMatch.isLegComplete);
-      setIsMatchComplete(parsedMatch.isMatchComplete);
-      setMessage(parsedMatch.message);
+      setTurnHistory(parsedMatch.turnHistory ?? []);
+      setCompletedLegs(parsedMatch.completedLegs ?? []);
+      setIsLegComplete(parsedMatch.isLegComplete ?? false);
+      setIsMatchComplete(parsedMatch.isMatchComplete ?? false);
+      setMessage(parsedMatch.message ?? "Player 1 to throw");
     } catch {
       localStorage.removeItem(savedMatchKey);
+    } finally {
+      setHasLoadedSavedMatch(true);
     }
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
+    if (!hasLoadedSavedMatch) {
+      return;
+    }
+
     const matchState: SavedMatchState = {
       startingScore,
       finishRule,
@@ -254,6 +261,7 @@ export default function Home() {
 
     localStorage.setItem(savedMatchKey, JSON.stringify(matchState));
   }, [
+    hasLoadedSavedMatch,
     startingScore,
     finishRule,
     bestOfLegs,
@@ -379,8 +387,8 @@ export default function Home() {
     }
 
     setSides(newSides);
-    setcurrentSideIndex(0);
-    setstartingSideIndex(0);
+    setCurrentSideIndex(0);
+    setStartingSideIndex(0);
     setCurrentLegNumber(1);
     setStartingMemberIndexBySide({
       "side-1": 0,
@@ -393,7 +401,9 @@ export default function Home() {
     setIsMatchComplete(false);
     setPendingCheckoutTurn(null);
     setPendingDartsUsedTurn(null);
-    setMessage(`${newSides[0].name} to throw`);
+    setMessage(
+      `${getCurrentThrowerName(newSides[0])} (${newSides[0].name}) to throw`,
+    );
   }
 
   function handleStartNewGame() {
@@ -455,8 +465,8 @@ export default function Home() {
     setTeamOneMemberNames(["Player 1"]);
     setTeamTwoMemberNames(["Player 2"]);
     setSides(resetSides);
-    setcurrentSideIndex(0);
-    setstartingSideIndex(0);
+    setCurrentSideIndex(0);
+    setStartingSideIndex(0);
     setCurrentLegNumber(1);
     setStartingMemberIndexBySide({
       "side-1": 0,
@@ -587,7 +597,7 @@ export default function Home() {
     }
 
     const nextPlayerIndex = getNextSideIndex();
-    setcurrentSideIndex(nextPlayerIndex);
+    setCurrentSideIndex(nextPlayerIndex);
 
     const nextPlayerName = sides[nextPlayerIndex].name;
     const nextThrowerName = getCurrentThrowerName(sides[nextPlayerIndex]);
@@ -651,7 +661,7 @@ export default function Home() {
     }
 
     const nextSideIndex = getNextSideIndex();
-    setcurrentSideIndex(nextSideIndex);
+    setCurrentSideIndex(nextSideIndex);
 
     const nextSide = sides[nextSideIndex];
     const nextThrowerName = getCurrentThrowerName(nextSide);
@@ -713,7 +723,7 @@ export default function Home() {
     const nextPlayerIndex = getNextSideIndex();
     const nextThrowerName = getCurrentThrowerName(sides[nextPlayerIndex]);
 
-    setcurrentSideIndex(nextPlayerIndex);
+    setCurrentSideIndex(nextPlayerIndex);
     setMessage(
       `${pendingCheckoutTurn.throwerName ?? pendingCheckoutTurn.playerName} busts! ${nextThrowerName} (${sides[nextPlayerIndex].name}) to throw.`,
     );
@@ -835,8 +845,8 @@ export default function Home() {
 
     setSides(resetSides);
     setStartingMemberIndexBySide(nextStartingMemberIndexBySide);
-    setstartingSideIndex(nextstartingSideIndex);
-    setcurrentSideIndex(nextstartingSideIndex);
+    setStartingSideIndex(nextstartingSideIndex);
+    setCurrentSideIndex(nextstartingSideIndex);
     setCurrentLegNumber((previousLegNumber) => previousLegNumber + 1);
     setTurnHistory([]);
     setScoreInput("");
@@ -868,7 +878,7 @@ export default function Home() {
     return [...turnHistory, ...completedLegTurns];
   }
 
-  function getsidestats(playerId: string): PlayerStats {
+  function getPlayerStats(playerId: string): PlayerStats {
     const allTurns = getAllMatchTurns();
 
     const playerTurns = allTurns.filter((turn) => turn.playerId === playerId);
@@ -975,7 +985,7 @@ export default function Home() {
     );
 
     setSides(restoredsides);
-    setcurrentSideIndex(restoredPlayerIndex);
+    setCurrentSideIndex(restoredPlayerIndex);
     setTurnHistory((previousHistory) => previousHistory.slice(1));
 
     if (lastTurn.isCheckout) {
@@ -1096,7 +1106,7 @@ export default function Home() {
                   isLegComplete={isLegComplete}
                   isMatchComplete={isMatchComplete}
                   finishRule={finishRule}
-                  stats={getsidestats(side.id)}
+                  stats={getPlayerStats(side.id)}
                   compact={scoreLayout === "compact"}
                 />
               ))}
@@ -1139,7 +1149,7 @@ export default function Home() {
             currentLegNumber={currentLegNumber}
             getMatchScoreText={getMatchScoreText}
             getMatchWinnerName={getMatchWinnerName}
-            getPlayerStats={getsidestats}
+            getPlayerStats={getPlayerStats}
           />
         )}
 

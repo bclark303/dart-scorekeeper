@@ -49,18 +49,18 @@ export type SavedMatchState = {
   startingScore: StartingScore;
   finishRule: FinishRule;
   bestOfLegs: BestOfLegs;
-  matchType: MatchType;
-  teamSize: TeamSize;
+  matchType?: MatchType;
+  teamSize?: TeamSize;
   sideOneSize: TeamSize;
   sideTwoSize: TeamSize;
   rotationMode: RotationMode;
   dummyScore: number;
-  playerOneName: string;
-  playerTwoName: string;
+  playerOneName?: string;
+  playerTwoName?: string;
   teamOneName: string;
   teamTwoName: string;
-  teamOnePlayerTwoName: string;
-  teamTwoPlayerTwoName: string;
+  teamOnePlayerTwoName?: string;
+  teamTwoPlayerTwoName?: string;
   teamOneMemberNames?: string[];
   teamTwoMemberNames?: string[];
   sides: MatchSide[];
@@ -113,50 +113,3 @@ export function createTeamSide(
   };
 }
 
-export function createSinglesSide(
-  sideId: string,
-  playerId: string,
-  name: string,
-  startingScore: number,
-): MatchSide {
-  return {
-    id: sideId,
-    name,
-    score: startingScore,
-    legsWon: 0,
-    members: [
-      {
-        id: playerId,
-        name,
-      },
-    ],
-    currentMemberIndex: 0,
-  };
-}
-export function createDoublesSide(
-  sideId: string,
-  teamName: string,
-  playerOneId: string,
-  playerOneName: string,
-  playerTwoId: string,
-  playerTwoName: string,
-  startingScore: number,
-): MatchSide {
-  return {
-    id: sideId,
-    name: teamName,
-    score: startingScore,
-    legsWon: 0,
-    members: [
-      {
-        id: playerOneId,
-        name: playerOneName,
-      },
-      {
-        id: playerTwoId,
-        name: playerTwoName,
-      },
-    ],
-    currentMemberIndex: 0,
-  };
-}
