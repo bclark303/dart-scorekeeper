@@ -27,8 +27,8 @@ export function PlayerCard({
     <div
       className={`rounded-2xl border ${compact ? "p-4" : "p-6"} ${
         isCurrentPlayer && !isLegComplete && !isMatchComplete
-          ? "border-green-400 bg-slate-800"
-          : "border-slate-700 bg-slate-900"
+          ? "border-[var(--color-success)] bg-[var(--color-panel-soft)]"
+          : "border-[var(--color-panel-border)] bg-[var(--color-panel)]"
       }`}
     >
       <div className="flex items-start justify-between gap-3">
@@ -61,7 +61,7 @@ export function PlayerCard({
           )}
 
           {player.members.length > 1 && compact && (
-            <div className="text-sm text-slate-400">
+            <div className="text-sm text-[var(--color-text-muted)]">
               Thrower:{" "}
               <span className="font-semibold text-white">
                 {player.members[player.currentMemberIndex]?.name ?? player.name}
@@ -71,7 +71,7 @@ export function PlayerCard({
         </div>
 
         {isCurrentPlayer && !isLegComplete && !isMatchComplete && (
-          <div className="rounded-full bg-green-500/20 px-3 py-1 text-sm font-bold text-green-300">
+          <div className="rounded-full bg-[var(--color-success)]/20 px-3 py-1 text-sm font-bold text-[var(--color-success-hover)]">
             Throw
           </div>
         )}
@@ -103,11 +103,11 @@ export function PlayerCard({
 
         {!compact && (
           <>
-            <div className="text-base text-slate-400">
+            <div className="text-base text-[var(--color-text-muted)]">
               Points: {stats.pointsScored} | Darts: {stats.dartsThrown}
             </div>
 
-            <div className="text-base text-slate-400">
+            <div className="text-base text-[var(--color-text-muted)]">
               100+: {stats.count100Plus} | 140+: {stats.count140Plus} | 180s:{" "}
               {stats.count180s}
             </div>
@@ -116,16 +116,18 @@ export function PlayerCard({
 
         {checkoutText && (
           <div
-            className={`rounded-xl border border-green-500/40 bg-green-950/40 ${
+            className={`rounded-xl border border-[var(--color-success)]/40 bg-[var(--color-success)]/20 ${
               compact ? "col-span-2 mt-1 p-2" : "mt-3 p-3"
             }`}
           >
-            <div className="text-sm text-green-300">Checkout</div>
+            <div className="text-sm text-[var(--color-success-hover)]">
+              Checkout
+            </div>
             <div
               className={
                 compact
-                  ? "text-lg font-bold text-green-100"
-                  : "text-xl font-bold text-green-100"
+                  ? "text-lg font-bold text-[var(--color-text-main)]"
+                  : "text-xl font-bold text-[var(--color-text-main)]"
               }
             >
               {checkoutText}
