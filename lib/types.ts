@@ -49,26 +49,21 @@ export type SavedMatchState = {
   startingScore: StartingScore;
   finishRule: FinishRule;
   bestOfLegs: BestOfLegs;
-  matchType?: MatchType;
-  teamSize?: TeamSize;
+
+  // Current team/side setup
   sideOneSize: TeamSize;
   sideTwoSize: TeamSize;
   rotationMode: RotationMode;
   dummyScore: number;
-  playerOneName?: string;
-  playerTwoName?: string;
   teamOneName: string;
   teamTwoName: string;
-  teamOnePlayerTwoName?: string;
-  teamTwoPlayerTwoName?: string;
   teamOneMemberNames?: string[];
   teamTwoMemberNames?: string[];
+
+  // Current match state
   sides: MatchSide[];
-  players?: MatchSide[];
   currentSideIndex: number;
   startingSideIndex: number;
-  currentPlayerIndex?: number;
-  startingPlayerIndex?: number;
   currentLegNumber: number;
   startingMemberIndexBySide: Record<string, number>;
   turnHistory: Turn[];
@@ -76,6 +71,17 @@ export type SavedMatchState = {
   isLegComplete: boolean;
   isMatchComplete: boolean;
   message: string;
+
+  // Legacy compatibility fields from older saved matches
+  matchType?: MatchType;
+  teamSize?: TeamSize;
+  playerOneName?: string;
+  playerTwoName?: string;
+  teamOnePlayerTwoName?: string;
+  teamTwoPlayerTwoName?: string;
+  players?: MatchSide[];
+  currentPlayerIndex?: number;
+  startingPlayerIndex?: number;
 };
 
 export function createTeamSide(
@@ -112,4 +118,3 @@ export function createTeamSide(
     currentMemberIndex: 0,
   };
 }
-

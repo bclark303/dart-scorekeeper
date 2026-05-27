@@ -233,18 +233,12 @@ export default function Home() {
       startingScore,
       finishRule,
       bestOfLegs,
-      matchType,
-      teamSize,
       rotationMode,
       dummyScore,
       sideOneSize,
       sideTwoSize,
-      playerOneName,
-      playerTwoName,
       teamOneName,
       teamTwoName,
-      teamOnePlayerTwoName,
-      teamTwoPlayerTwoName,
       teamOneMemberNames,
       teamTwoMemberNames,
       sides,
@@ -258,7 +252,6 @@ export default function Home() {
       isMatchComplete,
       message,
     };
-
     localStorage.setItem(savedMatchKey, JSON.stringify(matchState));
   }, [
     hasLoadedSavedMatch,
