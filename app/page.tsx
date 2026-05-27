@@ -20,6 +20,7 @@ import { CompletedLegs } from "@/components/CompletedLegs";
 import { TurnHistory } from "@/components/TurnHistory";
 import { PlayerCard } from "@/components/PlayerCard";
 import { useEffect, useState } from "react";
+import { CurrentTurnBanner } from "@/components/CurrentTurnBanner";
 import {
   FinishRule,
   Player,
@@ -30,6 +31,7 @@ import {
 } from "@/lib/scoring";
 
 type AppView = "score" | "setup" | "stats" | "history";
+type ScoreLayout = "compact" | "full";
 
 export default function Home() {
   const [startingScore, setStartingScore] = useState<StartingScore>(501);
@@ -39,6 +41,7 @@ export default function Home() {
   const [teamSize, setTeamSize] = useState<TeamSize>(1);
   const [sideOneSize, setSideOneSize] = useState<TeamSize>(1);
   const [sideTwoSize, setSideTwoSize] = useState<TeamSize>(1);
+  const [scoreLayout, setScoreLayout] = useState<ScoreLayout>("compact");
 
   const [rotationMode, setRotationMode] =
     useState<RotationMode>("independent");
@@ -1017,6 +1020,17 @@ function getMatchWinnerName(): string | null {
 
 {activeView === "score" && (
   <>
+      <CurrentTurnBanner
+      currentSide={sides[currentSideIndex]}
+      currentLegNumber={currentLegNumber}
+      bestOfLegs={bestOfLegs}
+      startingScore={startingScore}
+      finishRule={finishRule}
+      isCurrentThrowerDummy={isCurrentThrowerDummy()}
+      dummyScore={dummyScore}
+      scoreLayout={scoreLayout}
+      setScoreLayout={setScoreLayout}
+    />
     <section className="rounded-2xl bg-slate-900 border border-slate-700 p-4 mb-8">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
         <div>
