@@ -21,11 +21,11 @@ export function CompletedLegs({ completedLegs }: CompletedLegsProps) {
   }
 
   return (
-    <section className="mt-8 rounded-2xl bg-slate-900 border border-slate-700 p-6">
+    <section className="mt-8 rounded-2xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] p-6">
       <h2 className="text-2xl font-bold mb-4">Completed Legs</h2>
 
       {completedLegs.length === 0 ? (
-        <p className="text-slate-400">No completed legs yet.</p>
+        <p className="text-[var(--color-text-muted)]">No completed legs yet.</p>
       ) : (
         <div className="space-y-4">
           {completedLegs.map((leg) => {
@@ -35,7 +35,7 @@ export function CompletedLegs({ completedLegs }: CompletedLegsProps) {
             return (
               <div
                 key={leg.legNumber}
-                className="rounded-xl bg-slate-800 border border-slate-700 p-4"
+                className="rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-4"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
                   <div className="text-lg font-bold">
@@ -44,13 +44,13 @@ export function CompletedLegs({ completedLegs }: CompletedLegsProps) {
 
                   <button
                     onClick={() => toggleLeg(leg.legNumber)}
-                    className="rounded-xl bg-slate-700 hover:bg-slate-600 px-4 py-2 font-bold"
+                    className="rounded-xl bg-[var(--color-panel-border)] hover:bg-[var(--color-panel)] px-4 py-2 font-bold"
                   >
                     {isExpanded ? "Hide turns" : "Show turns"}
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-slate-300">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[var(--color-text-muted)]">
                   <div>
                     Winner:{" "}
                     <span className="font-bold text-white">
@@ -90,7 +90,7 @@ export function CompletedLegs({ completedLegs }: CompletedLegsProps) {
                 </div>
 
                 {isExpanded && (
-                  <div className="mt-4 border-t border-slate-700 pt-4">
+                  <div className="mt-4 border-t border-[var(--color-panel-border)] pt-4">
                     <h3 className="font-bold mb-3">Turns</h3>
 
                     <div className="space-y-2">
@@ -100,7 +100,7 @@ export function CompletedLegs({ completedLegs }: CompletedLegsProps) {
                         .map((turn) => (
                           <div
                             key={turn.id}
-                            className="rounded-lg bg-slate-900 border border-slate-700 p-3"
+                            className="rounded-lg bg-[var(--color-panel)] border border-[var(--color-panel-border)] p-3"
                           >
                             <div className="font-semibold">
                               {turn.throwerName ?? turn.playerName} scored{" "}
@@ -114,7 +114,7 @@ export function CompletedLegs({ completedLegs }: CompletedLegsProps) {
                                 : ""}
                             </div>
 
-                            <div className="text-slate-300">
+                            <div className="text-[var(--color-text-muted)]">
                               {turn.scoreBefore} → {turn.scoreAfter} | Darts:{" "}
                               {turn.dartsThrown}
                             </div>
