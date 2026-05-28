@@ -55,34 +55,34 @@ export function ScoreEntry({
 }: ScoreEntryProps) {
   return (
     <section
-      className={`rounded-2xl bg-slate-900 border border-slate-700 mb-8 ${
+      className={`rounded-2xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] mb-8 ${
         compact ? "p-4" : "p-6"
       }`}
     >
       <div className={compact ? "text-lg mb-3" : "text-xl mb-4"}>{message}</div>
 
       {isMatchComplete && (
-        <div className="rounded-2xl bg-slate-800 border border-slate-700 p-4 mb-4">
+        <div className="rounded-2xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-4 mb-4">
           <div className="text-lg font-bold mb-4">Match complete</div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <button
               onClick={replayMatch}
-              className="rounded-xl bg-green-600 hover:bg-green-500 p-4 text-xl font-bold"
+              className="rounded-xl bg-[var(--color-success)] hover:bg-[var(--color-success-hover)] p-4 text-xl font-bold"
             >
               Replay Match
             </button>
 
             <button
               onClick={newGameSetup}
-              className="rounded-xl bg-blue-600 hover:bg-blue-500 p-4 text-xl font-bold"
+              className="rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] p-4 text-xl font-bold"
             >
               New Game / Setup
             </button>
 
             <button
               onClick={viewFinishedGame}
-              className="rounded-xl bg-purple-600 hover:bg-purple-500 p-4 text-xl font-bold"
+              className="rounded-xl bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] p-4 text-xl font-bold"
             >
               View Match History
             </button>
@@ -93,14 +93,14 @@ export function ScoreEntry({
       {isLegComplete && !isMatchComplete && (
         <button
           onClick={startNextLeg}
-          className="mb-4 w-full rounded-xl bg-purple-600 hover:bg-purple-500 p-4 text-xl font-bold"
+          className="mb-4 w-full rounded-xl bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] p-4 text-xl font-bold"
         >
           Start Next Leg
         </button>
       )}
 
       {pendingDartsUsedTurn ? (
-        <div className="rounded-2xl bg-slate-800 border border-slate-700 p-4 mb-4">
+        <div className="rounded-2xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-4 mb-4">
           <div className="text-lg font-semibold mb-4">
             How many darts were used to finish?
           </div>
@@ -108,28 +108,28 @@ export function ScoreEntry({
           <div className="grid grid-cols-3 gap-4">
             <button
               onClick={() => confirmCheckoutDartsUsed(1)}
-              className="rounded-xl bg-green-600 hover:bg-green-500 p-4 text-xl font-bold"
+              className="rounded-xl bg-[var(--color-success)] hover:bg-[var(--color-success-hover)] p-4 text-xl font-bold"
             >
               1 Dart
             </button>
 
             <button
               onClick={() => confirmCheckoutDartsUsed(2)}
-              className="rounded-xl bg-green-600 hover:bg-green-500 p-4 text-xl font-bold"
+              className="rounded-xl bg-[var(--color-success)] hover:bg-[var(--color-success-hover)] p-4 text-xl font-bold"
             >
               2 Darts
             </button>
 
             <button
               onClick={() => confirmCheckoutDartsUsed(3)}
-              className="rounded-xl bg-green-600 hover:bg-green-500 p-4 text-xl font-bold"
+              className="rounded-xl bg-[var(--color-success)] hover:bg-[var(--color-success-hover)] p-4 text-xl font-bold"
             >
               3 Darts
             </button>
           </div>
         </div>
       ) : pendingCheckoutTurn ? (
-        <div className="rounded-2xl bg-slate-800 border border-slate-700 p-4 mb-4">
+        <div className="rounded-2xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-4 mb-4">
           <div className="text-lg font-semibold mb-4">
             Confirm double-out checkout
           </div>
@@ -137,14 +137,14 @@ export function ScoreEntry({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <button
               onClick={() => confirmDoubleOut(true)}
-              className="rounded-xl bg-green-600 hover:bg-green-500 p-4 text-xl font-bold"
+              className="rounded-xl bg-[var(--color-success)] hover:bg-[var(--color-success-hover)] p-4 text-xl font-bold"
             >
               Yes, final dart was a double
             </button>
 
             <button
               onClick={() => confirmDoubleOut(false)}
-              className="rounded-xl bg-red-600 hover:bg-red-500 p-4 text-xl font-bold"
+              className="rounded-xl bg-[var(--color-danger)] hover:bg-[var(--color-danger-hover)] p-4 text-xl font-bold"
             >
               No, bust
             </button>
@@ -155,29 +155,29 @@ export function ScoreEntry({
         !isMatchComplete && (
           <>
             {isCurrentThrowerDummy ? (
-              <div className="rounded-2xl bg-slate-800 border border-slate-700 p-4">
+              <div className="rounded-2xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-4">
                 <div className="text-lg font-bold mb-2">Dummy player turn</div>
 
-                <p className="text-slate-300 mb-4">
+                <p className="text-[var(--color-text-muted)] mb-4">
                   This slot will automatically score{" "}
                   <span className="font-bold text-white">{dummyScore}</span>.
                 </p>
 
                 <button
                   onClick={submitDummyScore}
-                  className="w-full rounded-xl bg-purple-600 hover:bg-purple-500 p-4 text-xl font-bold"
+                  className="w-full rounded-xl bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] p-4 text-xl font-bold"
                 >
                   Apply Dummy Score
                 </button>
               </div>
             ) : (
               <>
-                <label className="block mb-2 text-slate-300">
+                <label className="block mb-2 text-[var(--color-text-muted)]">
                   Score this turn
                 </label>
 
                 <input
-                  className={`w-full rounded-xl bg-slate-800 border border-slate-600 mb-4 ${
+                  className={`w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] mb-4 ${
                     compact ? "p-3 text-3xl" : "p-4 text-3xl"
                   }`}
                   value={scoreInput}
@@ -205,7 +205,7 @@ export function ScoreEntry({
                       <button
                         key={score}
                         onClick={() => setQuickScore(score)}
-                        className={`rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 font-bold ${
+                        className={`rounded-xl bg-[var(--color-panel-soft)] hover:bg-[var(--color-panel-border)] border border-[var(--color-panel-border)] font-bold ${
                           compact ? "p-3 text-lg" : "p-4 text-xl"
                         }`}
                       >
@@ -241,8 +241,8 @@ export function ScoreEntry({
 
                           appendScoreDigit(button);
                         }}
-                        className={`rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 font-bold ${
-                          compact ? "p-3 text-xl" : "p-5 text-2xl"
+                        className={`rounded-xl bg-[var(--color-panel-soft)] hover:bg-[var(--color-panel-border)] border border-[var(--color-panel-border)] font-bold ${
+                          compact ? "p-3 text-lg" : "p-4 text-xl"
                         }`}
                       >
                         {button}
@@ -253,7 +253,7 @@ export function ScoreEntry({
 
                 <button
                   onClick={submitScore}
-                  className={`w-full rounded-xl bg-green-600 hover:bg-green-500 font-bold ${
+                  className={`w-full rounded-xl bg-[var(--color-success)] hover:bg-[var(--color-success-hover)] font-bold ${
                     compact ? "p-3 text-lg" : "p-4 text-xl"
                   }`}
                 >
@@ -267,7 +267,7 @@ export function ScoreEntry({
 
       <button
         onClick={undoLastTurn}
-        className={`mt-4 w-full rounded-xl bg-amber-600 hover:bg-amber-500 font-bold ${
+        className={`mt-4 w-full rounded-xl bg-[var(--color-warning)] hover:bg-[var(--color-warning-hover)] font-bold ${
           compact ? "p-3 text-lg" : "p-4 text-xl"
         }`}
       >
