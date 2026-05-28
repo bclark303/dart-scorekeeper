@@ -38,6 +38,10 @@ export default function Home() {
   // This controls the CSS variable set used by the app shell and components.
   const [themeName, setThemeName] = useState<ThemeName>("default");
 
+  // Branding.
+  // This is shown in the app header and can later be reused for TV displays/printouts.
+  const [brandName, setBrandName] = useState("Dart Scorekeeper");
+
   // Match setup options.
   // These control the X01 rules used when a new match is started.
   const [startingScore, setStartingScore] = useState<StartingScore>(501);
@@ -217,6 +221,8 @@ export default function Home() {
 
       setThemeName(parsedMatch.themeName ?? "default");
 
+      setBrandName(parsedMatch.brandName ?? "Dart Scorekeeper");
+
       setSideOneSize(loadedSideOneSize);
       setSideTwoSize(loadedSideTwoSize);
       setTeamSize(Math.max(loadedSideOneSize, loadedSideTwoSize) as TeamSize);
@@ -286,6 +292,7 @@ export default function Home() {
       finishRule,
       bestOfLegs,
       themeName,
+      brandName,
       rotationMode,
       dummyScore,
       sideOneSize,
@@ -312,6 +319,7 @@ export default function Home() {
     finishRule,
     bestOfLegs,
     themeName,
+    brandName,
     matchType,
     teamSize,
     rotationMode,
@@ -515,6 +523,7 @@ export default function Home() {
     setCurrentSideIndex(0);
     setStartingSideIndex(0);
     setCurrentLegNumber(1);
+    setBrandName("Dart Scorekeeper");
     setStartingMemberIndexBySide({
       "side-1": 0,
       "side-2": 0,
@@ -1108,7 +1117,7 @@ export default function Home() {
           <div className="text-sm uppercase tracking-wide text-[var(--color-text-muted)]">
             Local Scoring App
           </div>
-          <h1 className="text-4xl font-bold mb-2">Dart Scorekeeper</h1>
+          <h1 className="text-4xl font-bold mb-2">{brandName}</h1>
           <p className="text-[var(--color-text-muted)]">
             X01 scorer for singles, doubles, and team play
           </p>
@@ -1152,6 +1161,8 @@ export default function Home() {
             finishRule={finishRule}
             bestOfLegs={bestOfLegs}
             themeName={themeName}
+            brandName={brandName}
+            setBrandName={setBrandName}
             setThemeName={setThemeName}
             sideOneSize={sideOneSize}
             sideTwoSize={sideTwoSize}

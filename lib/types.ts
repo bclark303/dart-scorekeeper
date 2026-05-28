@@ -117,6 +117,7 @@ export type SavedMatchState = {
   finishRule: FinishRule;
   bestOfLegs: BestOfLegs;
   themeName: ThemeName;
+  brandName: string;
 
   // Current team/side setup.
   sideOneSize: TeamSize;

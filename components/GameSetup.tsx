@@ -9,6 +9,8 @@ type GameSetupProps = {
   finishRule: FinishRule;
   bestOfLegs: BestOfLegs;
   themeName: ThemeName;
+  brandName: string;
+  setBrandName: (brandName: string) => void;
   setThemeName: (themeName: ThemeName) => void;
   setTeamOneName: (name: string) => void;
   setTeamTwoName: (name: string) => void;
@@ -41,6 +43,8 @@ export function GameSetup({
   finishRule,
   bestOfLegs,
   themeName,
+  brandName,
+  setBrandName,
   setThemeName,
   setTeamOneName,
   setTeamTwoName,
@@ -74,7 +78,7 @@ export function GameSetup({
           Match
         </h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-5 lg:grid-cols-8 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-5 lg:grid-cols-4 xl:grid-cols-8 gap-4">
           <label className="block">
             <span className="block text-slate-300 mb-2">Team 1 Size</span>
             <select
@@ -208,6 +212,17 @@ export function GameSetup({
               <option value="default">Default Dark</option>
               <option value="firehall">Firehall</option>
             </select>
+          </label>
+
+          <label className="block">
+            <span className="block text-[var(--color-text-muted)] mb-2">
+              Brand Name
+            </span>
+            <input
+              className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
+              value={brandName}
+              onChange={(event) => setBrandName(event.target.value)}
+            />
           </label>
         </div>
       </div>
