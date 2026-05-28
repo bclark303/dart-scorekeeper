@@ -1,21 +1,25 @@
-import { RefreshBehavior, ThemeName } from "@/lib/types";
+import { DefaultScoreLayout, RefreshBehavior, ThemeName } from "@/lib/types";
 
 type AppSettingsProps = {
   brandName: string;
   themeName: ThemeName;
   refreshBehavior: RefreshBehavior;
+  defaultScoreLayout: DefaultScoreLayout;
   setBrandName: (brandName: string) => void;
   setThemeName: (themeName: ThemeName) => void;
   setRefreshBehavior: (refreshBehavior: RefreshBehavior) => void;
+  setDefaultScoreLayout: (layout: DefaultScoreLayout) => void;
 };
 
 export function AppSettings({
   brandName,
   themeName,
   refreshBehavior,
+  defaultScoreLayout,
   setBrandName,
   setThemeName,
   setRefreshBehavior,
+  setDefaultScoreLayout,
 }: AppSettingsProps) {
   return (
     <section className="rounded-2xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] p-6 mb-8">
@@ -31,6 +35,22 @@ export function AppSettings({
             value={brandName}
             onChange={(event) => setBrandName(event.target.value)}
           />
+        </label>
+
+        <label className="block">
+          <span className="block text-[var(--color-text-muted)] mb-2">
+            Default Scoring Layout
+          </span>
+          <select
+            className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
+            value={defaultScoreLayout}
+            onChange={(event) =>
+              setDefaultScoreLayout(event.target.value as DefaultScoreLayout)
+            }
+          >
+            <option value="compact">Compact</option>
+            <option value="full">Full</option>
+          </select>
         </label>
 
         <label className="block">

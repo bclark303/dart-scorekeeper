@@ -49,6 +49,17 @@ export type ThemeName = "default" | "firehall";
 export type RefreshBehavior = "score" | "last";
 
 /**
+ * Preferred scoring layout when the app loads.
+ *
+ * compact:
+ *   Better for tablets/phones during live scoring.
+ *
+ * full:
+ *   Shows more detail and works better on laptops/desktops.
+ */
+export type DefaultScoreLayout = "compact" | "full";
+
+/**
  * Older player-shaped match participant.
  * Kept temporarily for migration from older localStorage saves.
  */
@@ -130,6 +141,7 @@ export type SavedMatchState = {
   themeName: ThemeName;
   brandName: string;
   refreshBehavior: RefreshBehavior;
+  defaultScoreLayout: DefaultScoreLayout;
   activeView?: "score" | "game" | "app" | "stats" | "history";
 
   // Current team/side setup.

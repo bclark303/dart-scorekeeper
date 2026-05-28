@@ -13,6 +13,7 @@ import {
   ThemeName,
   createTeamSide,
   RefreshBehavior,
+  DefaultScoreLayout,
 } from "@/lib/types";
 
 import { ScoreEntry } from "@/components/ScoreEntry";
@@ -69,6 +70,10 @@ export default function Home() {
   // Score tab layout.
   // Compact mode is intended for tablets/phones during active play.
   const [scoreLayout, setScoreLayout] = useState<ScoreLayout>("compact");
+  // Default score layout preference.
+  // The Score tab can still be switched manually during use.
+  const [defaultScoreLayout, setDefaultScoreLayout] =
+    useState<DefaultScoreLayout>("compact");
 
   // Uneven-team rotation settings.
   // Independent mode lets each side rotate through only its listed members.
@@ -230,6 +235,12 @@ export default function Home() {
 
       setBrandName(parsedMatch.brandName ?? "Dart Scorekeeper");
 
+      const loadedDefaultScoreLayout =
+        parsedMatch.defaultScoreLayout ?? "compact";
+
+      setDefaultScoreLayout(loadedDefaultScoreLayout);
+      setScoreLayout(loadedDefaultScoreLayout);
+
       const loadedRefreshBehavior = parsedMatch.refreshBehavior ?? "score";
       setRefreshBehavior(loadedRefreshBehavior);
       setActiveView(
@@ -310,6 +321,7 @@ export default function Home() {
       brandName,
       refreshBehavior,
       activeView,
+      defaultScoreLayout,
       rotationMode,
       dummyScore,
       sideOneSize,
@@ -339,6 +351,7 @@ export default function Home() {
     brandName,
     refreshBehavior,
     activeView,
+    defaultScoreLayout,
     matchType,
     teamSize,
     rotationMode,
@@ -1216,9 +1229,11 @@ export default function Home() {
             brandName={brandName}
             themeName={themeName}
             refreshBehavior={refreshBehavior}
+            defaultScoreLayout={defaultScoreLayout}
             setBrandName={setBrandName}
             setThemeName={setThemeName}
             setRefreshBehavior={setRefreshBehavior}
+            setDefaultScoreLayout={setDefaultScoreLayout}
           />
         )}
 
