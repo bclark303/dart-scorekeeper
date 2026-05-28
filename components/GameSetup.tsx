@@ -62,17 +62,19 @@ export function GameSetup({
   setDummyScore,
 }: GameSetupProps) {
   return (
-    <section className="rounded-2xl bg-slate-900 border border-slate-700 p-6 mb-8">
+    <section className="rounded-2xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] p-6 mb-8">
       <h2 className="text-2xl font-bold mb-6">Game Setup</h2>
 
       <div className="mb-8">
-        <h3 className="text-lg font-bold mb-3 text-slate-200">Match</h3>
+        <h3 className="text-lg font-bold mb-3 text-[var(--color-text-main)]">
+          Match
+        </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-5 lg:grid-cols-7 gap-4">
           <label className="block">
             <span className="block text-slate-300 mb-2">Team 1 Size</span>
             <select
-              className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
+              className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
               value={sideOneSize}
               onChange={(event) =>
                 resizeSideOneMembers(Number(event.target.value) as TeamSize)
@@ -89,7 +91,7 @@ export function GameSetup({
           <label className="block">
             <span className="block text-slate-300 mb-2">Team 2 Size</span>
             <select
-              className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
+              className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
               value={sideTwoSize}
               onChange={(event) =>
                 resizeSideTwoMembers(Number(event.target.value) as TeamSize)
@@ -108,7 +110,7 @@ export function GameSetup({
               <label className="block">
                 <span className="block text-slate-300 mb-2">Rotation</span>
                 <select
-                  className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
+                  className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
                   value={rotationMode}
                   onChange={(event) =>
                     setRotationMode(event.target.value as RotationMode)
@@ -123,7 +125,7 @@ export function GameSetup({
                 <label className="block">
                   <span className="block text-slate-300 mb-2">Dummy Score</span>
                   <input
-                    className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
+                    className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
                     value={dummyScore}
                     onChange={(event) => {
                       const nextScore = Number(event.target.value);
@@ -145,7 +147,7 @@ export function GameSetup({
           <label className="block">
             <span className="block text-slate-300 mb-2">Game</span>
             <select
-              className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
+              className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
               value={startingScore}
               onChange={(event) =>
                 setStartingScore(Number(event.target.value) as StartingScore)
@@ -160,7 +162,7 @@ export function GameSetup({
           <label className="block">
             <span className="block text-slate-300 mb-2">Finish</span>
             <select
-              className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
+              className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
               value={finishRule}
               onChange={(event) =>
                 setFinishRule(event.target.value as FinishRule)
@@ -174,7 +176,7 @@ export function GameSetup({
           <label className="block">
             <span className="block text-slate-300 mb-2">Legs</span>
             <select
-              className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
+              className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
               value={bestOfLegs}
               onChange={(event) =>
                 setBestOfLegs(Number(event.target.value) as BestOfLegs)
@@ -191,7 +193,7 @@ export function GameSetup({
       </div>
 
       <div className="mb-8">
-        <h3 className="text-lg font-bold mb-3 text-slate-200">
+        <h3 className="text-lg font-bold mb-3 text-[var(--color-text-muted)]">
           {sideOneSize === 1 && sideTwoSize === 1 ? "Players" : "Teams"}
         </h3>
 
@@ -200,7 +202,7 @@ export function GameSetup({
             <label className="block">
               <span className="block text-slate-300 mb-2">Player 1</span>
               <input
-                className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
+                className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
                 value={teamOneMemberNames[0] ?? ""}
                 onChange={(event) =>
                   setTeamOneMemberNames([event.target.value])
@@ -211,7 +213,7 @@ export function GameSetup({
             <label className="block">
               <span className="block text-slate-300 mb-2">Player 2</span>
               <input
-                className="w-full rounded-xl bg-slate-800 border border-slate-600 p-3"
+                className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
                 value={teamTwoMemberNames[0] ?? ""}
                 onChange={(event) =>
                   setTeamTwoMemberNames([event.target.value])
@@ -221,14 +223,14 @@ export function GameSetup({
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="rounded-xl bg-slate-800 border border-slate-700 p-4">
+            <div className="rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-4">
               <h4 className="font-bold mb-3">Team 1</h4>
 
               <div className="grid grid-cols-1 gap-4">
                 <label className="block">
                   <span className="block text-slate-300 mb-2">Team Name</span>
                   <input
-                    className="w-full rounded-xl bg-slate-900 border border-slate-600 p-3"
+                    className="w-full rounded-xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] p-3"
                     value={teamOneName}
                     onChange={(event) => setTeamOneName(event.target.value)}
                   />
@@ -240,7 +242,7 @@ export function GameSetup({
                       Player {index + 1}
                     </span>
                     <input
-                      className="w-full rounded-xl bg-slate-900 border border-slate-600 p-3"
+                      className="w-full rounded-xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] p-3"
                       value={memberName}
                       onChange={(event) => {
                         const updatedNames = [...teamOneMemberNames];
@@ -253,14 +255,14 @@ export function GameSetup({
               </div>
             </div>
 
-            <div className="rounded-xl bg-slate-800 border border-slate-700 p-4">
+            <div className="rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-4">
               <h4 className="font-bold mb-3">Team 2</h4>
 
               <div className="grid grid-cols-1 gap-4">
                 <label className="block">
                   <span className="block text-slate-300 mb-2">Team Name</span>
                   <input
-                    className="w-full rounded-xl bg-slate-900 border border-slate-600 p-3"
+                    className="w-full rounded-xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] p-3"
                     value={teamTwoName}
                     onChange={(event) => setTeamTwoName(event.target.value)}
                   />
@@ -272,7 +274,7 @@ export function GameSetup({
                       Player {index + 1}
                     </span>
                     <input
-                      className="w-full rounded-xl bg-slate-900 border border-slate-600 p-3"
+                      className="w-full rounded-xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] p-3"
                       value={memberName}
                       onChange={(event) => {
                         const updatedNames = [...teamTwoMemberNames];
@@ -289,12 +291,12 @@ export function GameSetup({
       </div>
 
       {isResetConfirmationVisible && (
-        <div className="mb-6 rounded-2xl border border-amber-500/50 bg-amber-950/30 p-5">
-          <div className="text-xl font-bold text-amber-200 mb-2">
+        <div className="mb-6 rounded-2xl border border-[var(--color-warning)]/50 bg-[var(--color-warning)]/20 p-5">
+          <div className="text-xl font-bold text-[var(--color-warning-hover)] mb-2">
             Reset current match?
           </div>
 
-          <p className="text-amber-100/90 mb-4">
+          <p className="text-[var(--color-text-muted)] mb-4">
             This will clear the current scores, turns, legs, and match history.
             This cannot be undone.
           </p>
@@ -302,14 +304,14 @@ export function GameSetup({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <button
               onClick={confirmResetMatch}
-              className="rounded-xl bg-red-600 hover:bg-red-500 px-6 py-3 text-lg font-bold"
+              className="rounded-xl bg-[var(--color-danger)] hover:bg-[var(--color-danger-hover)] px-6 py-3 text-lg font-bold"
             >
               Yes, Reset Match
             </button>
 
             <button
               onClick={cancelResetMatch}
-              className="rounded-xl bg-slate-700 hover:bg-slate-600 px-6 py-3 text-lg font-bold"
+              className="rounded-xl bg-[var(--color-panel-soft)] hover:bg-[var(--color-panel-border)] px-6 py-3 text-lg font-bold"
             >
               Cancel
             </button>
@@ -320,14 +322,14 @@ export function GameSetup({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <button
           onClick={startNewGame}
-          className="rounded-xl bg-blue-600 hover:bg-blue-500 px-6 py-3 text-lg font-bold"
+          className="rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] px-6 py-3 text-lg font-bold"
         >
           Start / Reset Match
         </button>
 
         <button
           onClick={clearSavedMatch}
-          className="rounded-xl bg-slate-700 hover:bg-slate-600 px-6 py-3 text-lg font-bold"
+          className="rounded-xl bg-[var(--color-panel-soft)] hover:bg-[var(--color-panel-border)] px-6 py-3 text-lg font-bold"
         >
           Clear Saved Match
         </button>
