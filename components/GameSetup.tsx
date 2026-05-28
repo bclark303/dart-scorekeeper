@@ -1,6 +1,6 @@
 import { FinishRule, StartingScore } from "@/lib/scoring";
 
-import { BestOfLegs, RotationMode, TeamSize } from "@/lib/types";
+import { BestOfLegs, RotationMode, TeamSize, ThemeName } from "@/lib/types";
 
 type GameSetupProps = {
   teamOneName: string;
@@ -8,6 +8,8 @@ type GameSetupProps = {
   startingScore: StartingScore;
   finishRule: FinishRule;
   bestOfLegs: BestOfLegs;
+  themeName: ThemeName;
+  setThemeName: (themeName: ThemeName) => void;
   setTeamOneName: (name: string) => void;
   setTeamTwoName: (name: string) => void;
   setStartingScore: (score: StartingScore) => void;
@@ -38,6 +40,8 @@ export function GameSetup({
   startingScore,
   finishRule,
   bestOfLegs,
+  themeName,
+  setThemeName,
   setTeamOneName,
   setTeamTwoName,
   setStartingScore,
@@ -70,7 +74,7 @@ export function GameSetup({
           Match
         </h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-5 lg:grid-cols-7 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-5 lg:grid-cols-8 gap-4">
           <label className="block">
             <span className="block text-slate-300 mb-2">Team 1 Size</span>
             <select
@@ -187,6 +191,22 @@ export function GameSetup({
               <option value={5}>Best of 5</option>
               <option value={7}>Best of 7</option>
               <option value={9}>Best of 9</option>
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="block text-[var(--color-text-muted)] mb-2">
+              Theme
+            </span>
+            <select
+              className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
+              value={themeName}
+              onChange={(event) =>
+                setThemeName(event.target.value as ThemeName)
+              }
+            >
+              <option value="default">Default Dark</option>
+              <option value="firehall">Firehall</option>
             </select>
           </label>
         </div>

@@ -10,6 +10,7 @@ import {
   RotationMode,
   SavedMatchState,
   TeamSize,
+  ThemeName,
   createTeamSide,
 } from "@/lib/types";
 
@@ -33,6 +34,10 @@ type AppView = "score" | "setup" | "stats" | "history";
 type ScoreLayout = "compact" | "full";
 
 export default function Home() {
+  // Visual theme.
+  // This controls the CSS variable set used by the app shell and components.
+  const [themeName, setThemeName] = useState<ThemeName>("default");
+
   // Match setup options.
   // These control the X01 rules used when a new match is started.
   const [startingScore, setStartingScore] = useState<StartingScore>(501);
@@ -210,6 +215,8 @@ export default function Home() {
         parsedMatch.teamSize ??
         (parsedMatch.matchType === "doubles" ? 2 : 1);
 
+      setThemeName(parsedMatch.themeName ?? "default");
+
       setSideOneSize(loadedSideOneSize);
       setSideTwoSize(loadedSideTwoSize);
       setTeamSize(Math.max(loadedSideOneSize, loadedSideTwoSize) as TeamSize);
@@ -278,6 +285,7 @@ export default function Home() {
       startingScore,
       finishRule,
       bestOfLegs,
+      themeName,
       rotationMode,
       dummyScore,
       sideOneSize,
@@ -303,6 +311,7 @@ export default function Home() {
     startingScore,
     finishRule,
     bestOfLegs,
+    themeName,
     matchType,
     teamSize,
     rotationMode,
@@ -1089,7 +1098,11 @@ export default function Home() {
     );
   }
   return (
-    <main className="min-h-screen bg-[var(--color-app-bg)] text-[var(--color-text-main)] p-6">
+    <main
+      className={`min-h-screen bg-[var(--color-app-bg)] text-[var(--color-text-main)] p-6 ${
+        themeName === "firehall" ? "theme-firehall" : ""
+      }`}
+    >
       <div className="mx-auto max-w-4xl">
         <div className="mb-6">
           <div className="text-sm uppercase tracking-wide text-[var(--color-text-muted)]">
@@ -1138,6 +1151,8 @@ export default function Home() {
             startingScore={startingScore}
             finishRule={finishRule}
             bestOfLegs={bestOfLegs}
+            themeName={themeName}
+            setThemeName={setThemeName}
             sideOneSize={sideOneSize}
             sideTwoSize={sideTwoSize}
             rotationMode={rotationMode}

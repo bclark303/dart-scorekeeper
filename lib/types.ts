@@ -32,6 +32,12 @@ export type TeamSize = 1 | 2 | 3 | 4 | 5;
 export type RotationMode = "independent" | "dummy";
 
 /**
+ * Visual theme options.
+ * These map to CSS classes/variables in globals.css.
+ */
+export type ThemeName = "default" | "firehall";
+
+/**
  * Older player-shaped match participant.
  * Kept temporarily for migration from older localStorage saves.
  */
@@ -110,6 +116,7 @@ export type SavedMatchState = {
   startingScore: StartingScore;
   finishRule: FinishRule;
   bestOfLegs: BestOfLegs;
+  themeName: ThemeName;
 
   // Current team/side setup.
   sideOneSize: TeamSize;
