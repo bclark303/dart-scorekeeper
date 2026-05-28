@@ -1,6 +1,6 @@
 import { FinishRule, StartingScore } from "@/lib/scoring";
 
-import { BestOfLegs, RotationMode, TeamSize, ThemeName } from "@/lib/types";
+import { BestOfLegs, RotationMode, TeamSize } from "@/lib/types";
 
 type GameSetupProps = {
   teamOneName: string;
@@ -8,10 +8,6 @@ type GameSetupProps = {
   startingScore: StartingScore;
   finishRule: FinishRule;
   bestOfLegs: BestOfLegs;
-  themeName: ThemeName;
-  brandName: string;
-  setBrandName: (brandName: string) => void;
-  setThemeName: (themeName: ThemeName) => void;
   setTeamOneName: (name: string) => void;
   setTeamTwoName: (name: string) => void;
   setStartingScore: (score: StartingScore) => void;
@@ -42,10 +38,6 @@ export function GameSetup({
   startingScore,
   finishRule,
   bestOfLegs,
-  themeName,
-  brandName,
-  setBrandName,
-  setThemeName,
   setTeamOneName,
   setTeamTwoName,
   setStartingScore,
@@ -198,32 +190,6 @@ export function GameSetup({
             </select>
           </label>
 
-          <label className="block">
-            <span className="block text-[var(--color-text-muted)] mb-2">
-              Theme
-            </span>
-            <select
-              className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
-              value={themeName}
-              onChange={(event) =>
-                setThemeName(event.target.value as ThemeName)
-              }
-            >
-              <option value="default">Default Dark</option>
-              <option value="firehall">Firehall</option>
-            </select>
-          </label>
-
-          <label className="block">
-            <span className="block text-[var(--color-text-muted)] mb-2">
-              Brand Name
-            </span>
-            <input
-              className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
-              value={brandName}
-              onChange={(event) => setBrandName(event.target.value)}
-            />
-          </label>
         </div>
       </div>
 

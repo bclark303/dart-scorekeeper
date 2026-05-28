@@ -22,6 +22,7 @@ import { TurnHistory } from "@/components/TurnHistory";
 import { PlayerCard } from "@/components/PlayerCard";
 import { useEffect, useState } from "react";
 import { CurrentTurnBanner } from "@/components/CurrentTurnBanner";
+import { AppSettings } from "@/components/AppSettings";
 import {
   FinishRule,
   StartingScore,
@@ -30,7 +31,7 @@ import {
   validateTurnScore,
 } from "@/lib/scoring";
 
-type AppView = "score" | "setup" | "stats" | "history";
+type AppView = "score" | "game" | "app" | "stats" | "history";
 type ScoreLayout = "compact" | "full";
 
 export default function Home() {
@@ -487,7 +488,7 @@ export default function Home() {
   }
 
   function handleNewGameSetup() {
-    setActiveView("setup");
+    setActiveView("game");
   }
 
   function handleViewFinishedGame() {
@@ -1123,7 +1124,7 @@ export default function Home() {
           </p>
         </div>
 
-        <nav className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+        <nav className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-8">
           <button
             onClick={() => setActiveView("score")}
             className={getTabClass("score")}
@@ -1132,10 +1133,17 @@ export default function Home() {
           </button>
 
           <button
-            onClick={() => setActiveView("setup")}
-            className={getTabClass("setup")}
+            onClick={() => setActiveView("game")}
+            className={getTabClass("game")}
           >
-            Setup
+            Game
+          </button>
+
+          <button
+            onClick={() => setActiveView("app")}
+            className={getTabClass("app")}
+          >
+            App
           </button>
 
           <button
@@ -1153,17 +1161,13 @@ export default function Home() {
           </button>
         </nav>
 
-        {activeView === "setup" && (
+        {activeView === "game" && (
           <GameSetup
             teamOneName={teamOneName}
             teamTwoName={teamTwoName}
             startingScore={startingScore}
             finishRule={finishRule}
             bestOfLegs={bestOfLegs}
-            themeName={themeName}
-            brandName={brandName}
-            setBrandName={setBrandName}
-            setThemeName={setThemeName}
             sideOneSize={sideOneSize}
             sideTwoSize={sideTwoSize}
             rotationMode={rotationMode}
@@ -1186,6 +1190,15 @@ export default function Home() {
             isResetConfirmationVisible={isResetConfirmationVisible}
             confirmResetMatch={confirmResetMatch}
             cancelResetMatch={cancelResetMatch}
+          />
+        )}
+
+        {activeView === "app" && (
+          <AppSettings
+            brandName={brandName}
+            themeName={themeName}
+            setBrandName={setBrandName}
+            setThemeName={setThemeName}
           />
         )}
 
