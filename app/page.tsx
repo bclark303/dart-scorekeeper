@@ -12,6 +12,7 @@ import {
   TeamSize,
   ThemeName,
   createTeamSide,
+  RefreshBehavior,
 } from "@/lib/types";
 
 import { ScoreEntry } from "@/components/ScoreEntry";
@@ -42,6 +43,11 @@ export default function Home() {
   // Branding.
   // This is shown in the app header and can later be reused for TV displays/printouts.
   const [brandName, setBrandName] = useState("Dart Scorekeeper");
+
+  // Refresh behavior.
+  // Controls whether a browser refresh opens Score or restores the last tab.
+  const [refreshBehavior, setRefreshBehavior] =
+    useState<RefreshBehavior>("score");
 
   // Match setup options.
   // These control the X01 rules used when a new match is started.
@@ -224,6 +230,14 @@ export default function Home() {
 
       setBrandName(parsedMatch.brandName ?? "Dart Scorekeeper");
 
+      const loadedRefreshBehavior = parsedMatch.refreshBehavior ?? "score";
+      setRefreshBehavior(loadedRefreshBehavior);
+      setActiveView(
+        loadedRefreshBehavior === "last"
+          ? (parsedMatch.activeView ?? "score")
+          : "score",
+      );
+
       setSideOneSize(loadedSideOneSize);
       setSideTwoSize(loadedSideTwoSize);
       setTeamSize(Math.max(loadedSideOneSize, loadedSideTwoSize) as TeamSize);
@@ -294,6 +308,8 @@ export default function Home() {
       bestOfLegs,
       themeName,
       brandName,
+      refreshBehavior,
+      activeView,
       rotationMode,
       dummyScore,
       sideOneSize,
@@ -321,6 +337,8 @@ export default function Home() {
     bestOfLegs,
     themeName,
     brandName,
+    refreshBehavior,
+    activeView,
     matchType,
     teamSize,
     rotationMode,
@@ -1197,8 +1215,10 @@ export default function Home() {
           <AppSettings
             brandName={brandName}
             themeName={themeName}
+            refreshBehavior={refreshBehavior}
             setBrandName={setBrandName}
             setThemeName={setThemeName}
+            setRefreshBehavior={setRefreshBehavior}
           />
         )}
 

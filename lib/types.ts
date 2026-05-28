@@ -38,6 +38,17 @@ export type RotationMode = "independent" | "dummy";
 export type ThemeName = "default" | "firehall";
 
 /**
+ * Controls which tab the app opens after a browser refresh.
+ *
+ * score:
+ *   Always reopen on the Score tab.
+ *
+ * last:
+ *   Reopen whichever tab was active when the app was last saved.
+ */
+export type RefreshBehavior = "score" | "last";
+
+/**
  * Older player-shaped match participant.
  * Kept temporarily for migration from older localStorage saves.
  */
@@ -118,6 +129,8 @@ export type SavedMatchState = {
   bestOfLegs: BestOfLegs;
   themeName: ThemeName;
   brandName: string;
+  refreshBehavior: RefreshBehavior;
+  activeView?: "score" | "game" | "app" | "stats" | "history";
 
   // Current team/side setup.
   sideOneSize: TeamSize;
@@ -164,7 +177,7 @@ export function createTeamSide(
   sideId: string,
   sideName: string,
   memberNames: string[],
-  startingScore: number
+  startingScore: number,
 ): MatchSide {
   const cleanedMemberNames = memberNames
     .map((name) => name.trim())

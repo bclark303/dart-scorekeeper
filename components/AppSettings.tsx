@@ -1,17 +1,21 @@
-import { ThemeName } from "@/lib/types";
+import { RefreshBehavior, ThemeName } from "@/lib/types";
 
 type AppSettingsProps = {
   brandName: string;
   themeName: ThemeName;
+  refreshBehavior: RefreshBehavior;
   setBrandName: (brandName: string) => void;
   setThemeName: (themeName: ThemeName) => void;
+  setRefreshBehavior: (refreshBehavior: RefreshBehavior) => void;
 };
 
 export function AppSettings({
   brandName,
   themeName,
+  refreshBehavior,
   setBrandName,
   setThemeName,
+  setRefreshBehavior,
 }: AppSettingsProps) {
   return (
     <section className="rounded-2xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] p-6 mb-8">
@@ -40,6 +44,22 @@ export function AppSettings({
           >
             <option value="default">Default Dark</option>
             <option value="firehall">Firehall</option>
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="block text-[var(--color-text-muted)] mb-2">
+            Refresh Behavior
+          </span>
+          <select
+            className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
+            value={refreshBehavior}
+            onChange={(event) =>
+              setRefreshBehavior(event.target.value as RefreshBehavior)
+            }
+          >
+            <option value="score">Always open Score tab</option>
+            <option value="last">Restore last open tab</option>
           </select>
         </label>
       </div>
