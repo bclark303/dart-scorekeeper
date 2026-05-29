@@ -779,10 +779,11 @@ export default function Home() {
       turn: turnWithDarts,
     };
 
-    if (
+    const isInvalidDoubleOutCheckout =
       resultWithDarts.needsDoubleOutConfirmation &&
-      !isValidDartCheckout(darts, finishRule)
-    ) {
+      !isValidDartCheckout(darts, finishRule);
+
+    if (isInvalidDoubleOutCheckout) {
       turnWithDarts = {
         ...turnWithDarts,
         scoreAfter: currentSide.score,
@@ -850,9 +851,11 @@ export default function Home() {
     const throwerName =
       resultWithDarts.turn.throwerName ?? resultWithDarts.turn.playerName;
 
-    const turnMessage = resultWithDarts.turn.isBust
-      ? `${throwerName} busts with ${dartSummary}.`
-      : `${throwerName} scored ${resultWithDarts.turn.scoreEntered} with ${dartSummary}.`;
+    const turnMessage = isInvalidDoubleOutCheckout
+      ? resultWithDarts.message
+      : resultWithDarts.turn.isBust
+        ? `${throwerName} busts with ${dartSummary}.`
+        : `${throwerName} scored ${resultWithDarts.turn.scoreEntered} with ${dartSummary}.`;
 
     setMessage(
       `${turnMessage} ${nextThrowerName} (${nextSide.name}) to throw.`,
