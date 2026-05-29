@@ -742,7 +742,7 @@ export default function Home() {
 
     const result = scoreTurn(currentSide, scoreEntered, finishRule);
 
-    const turnWithDarts: Turn = {
+    let turnWithDarts: Turn = {
       ...result.turn,
       darts,
       dartsThrown: darts.length as 1 | 2 | 3,
@@ -751,24 +751,50 @@ export default function Home() {
       isDummy: currentThrower?.isDummy === true,
     };
 
-    const resultWithDarts = {
+    let resultWithDarts = {
       ...result,
       turn: turnWithDarts,
     };
 
+    if (
+      resultWithDarts.needsDoubleOutConfirmation &&
+      !isValidDartCheckout(darts, finishRule)
+    ) {
+      turnWithDarts = {
+        ...turnWithDarts,
+        scoreAfter: currentSide.score,
+        isBust: true,
+        isCheckout: false,
+      };
+
+      resultWithDarts = {
+        ...resultWithDarts,
+        turn: turnWithDarts,
+        updatedPlayer: {
+          ...currentSide,
+          score: currentSide.score,
+        },
+        isLegComplete: false,
+        needsDoubleOutConfirmation: false,
+        message: `${
+          turnWithDarts.throwerName ?? turnWithDarts.playerName
+        } busts! Final dart was not a double.`,
+      };
+    }
+
     if (resultWithDarts.needsDoubleOutConfirmation) {
-      setPendingCheckoutTurn(resultWithDarts.turn);
-      setMessage(
-        `${resultWithDarts.turn.throwerName ?? resultWithDarts.turn.playerName} reached zero. Was the final dart a double?`,
-      );
-      return;
+      resultWithDarts = {
+        ...resultWithDarts,
+        isLegComplete: true,
+        needsDoubleOutConfirmation: false,
+        message: `${
+          resultWithDarts.turn.throwerName ?? resultWithDarts.turn.playerName
+        } wins the leg!`,
+      };
     }
 
     if (resultWithDarts.isLegComplete) {
-      setPendingDartsUsedTurn(resultWithDarts.turn);
-      setMessage(
-        `${resultWithDarts.turn.throwerName ?? resultWithDarts.turn.playerName} checked out. How many darts were used?`,
-      );
+      completeLegWithTurn(resultWithDarts.turn);
       return;
     }
 
@@ -925,6 +951,57 @@ export default function Home() {
     setPendingCheckoutTurn(null);
   }
 
+  function completeLegWithTurn(completedTurn: Turn) {
+    const updatedSides = sides.map((side) => {
+      if (side.id !== completedTurn.playerId) {
+        return side;
+      }
+
+      return {
+        ...side,
+        score: completedTurn.scoreAfter,
+        legsWon: side.legsWon + 1,
+        currentMemberIndex: getNextMemberIndex(side),
+      };
+    });
+
+    const winnerSide = updatedSides.find(
+      (side) => side.id === completedTurn.playerId,
+    );
+
+    if (!winnerSide) {
+      return;
+    }
+
+    const completedLeg: CompletedLeg = {
+      legNumber: currentLegNumber,
+      winnerId: completedTurn.playerId,
+      winnerName: completedTurn.playerName,
+      turns: [completedTurn, ...turnHistory],
+    };
+
+    const nextCompletedLegs = [completedLeg, ...completedLegs];
+    const opponentLegs = getOpponentLegs(updatedSides, completedTurn.playerId);
+    const isMatchNowComplete =
+      winnerSide.legsWon >= legsNeededToWin &&
+      winnerSide.legsWon > opponentLegs;
+
+    setSides(updatedSides);
+    setTurnHistory((previousHistory) => [completedTurn, ...previousHistory]);
+    setCompletedLegs(nextCompletedLegs);
+    setIsLegComplete(true);
+    setIsMatchComplete(isMatchNowComplete);
+    setPendingCheckoutTurn(null);
+    setPendingDartsUsedTurn(null);
+
+    if (isMatchNowComplete) {
+      setMessage(`${completedTurn.playerName} wins the match!`);
+      return;
+    }
+
+    setMessage(`${completedTurn.playerName} wins the leg!`);
+  }
+
   function confirmCheckoutDartsUsed(dartsUsed: 1 | 2 | 3) {
     if (!pendingDartsUsedTurn) {
       return;
@@ -935,81 +1012,25 @@ export default function Home() {
       dartsThrown: dartsUsed,
     };
 
-    const updatedsides = sides.map((player) => {
-      if (player.id !== completedTurn.playerId) {
-        return player;
-      }
-
-      return {
-        ...player,
-        score: 0,
-      };
-    });
-
-    setSides(
-      updatedsides.map((player) => {
-        if (player.id !== completedTurn.playerId) {
-          return player;
-        }
-
-        return {
-          ...player,
-          currentMemberIndex: getNextMemberIndex(player),
-        };
-      }),
-    );
-
-    setTurnHistory((previousHistory) => [completedTurn, ...previousHistory]);
-    setPendingDartsUsedTurn(null);
-    finishLeg(completedTurn.playerId, completedTurn);
+    completeLegWithTurn(completedTurn);
   }
 
-  function finishLeg(winnerPlayerId: string, winningTurn?: Turn) {
-    const updatedsides = sides.map((player) => {
-      if (player.id !== winnerPlayerId) {
-        return player;
-      }
+  function isDoubleOutDart(dart: DartThrow) {
+    return dart.segment === "bull" || dart.multiplier === 2;
+  }
 
-      return {
-        ...player,
-        score: 0,
-        legsWon: player.legsWon + 1,
-      };
-    });
-
-    const winner = updatedsides.find((player) => player.id === winnerPlayerId);
-
-    if (!winner) {
-      return;
+  function isValidDartCheckout(darts: DartThrow[], finishRule: FinishRule) {
+    if (finishRule === "straight_out") {
+      return true;
     }
 
-    const finalTurnHistory = winningTurn
-      ? [winningTurn, ...turnHistory]
-      : turnHistory;
+    const finalDart = darts[darts.length - 1];
 
-    const completedLeg: CompletedLeg = {
-      legNumber: currentLegNumber,
-      winnerId: winner.id,
-      winnerName: winner.name,
-      turns: finalTurnHistory,
-    };
-
-    setCompletedLegs((previousLegs) => [completedLeg, ...previousLegs]);
-    setSides(updatedsides);
-    setIsLegComplete(true);
-
-    if (winner.legsWon >= legsNeededToWin) {
-      setIsMatchComplete(true);
-      setMessage(
-        `${winner.name} wins the match ${winner.legsWon}-${getOpponentLegs(
-          updatedsides,
-          winner.id,
-        )}!`,
-      );
-      return;
+    if (!finalDart) {
+      return false;
     }
 
-    setMessage(`${winner.name} wins leg ${currentLegNumber}!`);
+    return isDoubleOutDart(finalDart);
   }
 
   function startNextLeg() {
