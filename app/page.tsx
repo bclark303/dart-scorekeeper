@@ -1028,12 +1028,24 @@ export default function Home() {
     setPendingCheckoutTurn(null);
     setPendingDartsUsedTurn(null);
 
+    const checkoutDartSummary =
+      completedTurn.darts && completedTurn.darts.length > 0
+        ? ` with ${getDartSummary(completedTurn.darts)}`
+        : "";
+
+    const checkoutThrowerName =
+      completedTurn.throwerName ?? completedTurn.playerName;
+
     if (isMatchNowComplete) {
-      setMessage(`${completedTurn.playerName} wins the match!`);
+      setMessage(
+        `${checkoutThrowerName} checked out${checkoutDartSummary}. ${completedTurn.playerName} wins the match!`,
+      );
       return;
     }
 
-    setMessage(`${completedTurn.playerName} wins the leg!`);
+    setMessage(
+      `${checkoutThrowerName} checked out${checkoutDartSummary}. ${completedTurn.playerName} wins the leg!`,
+    );
   }
 
   function confirmCheckoutDartsUsed(dartsUsed: 1 | 2 | 3) {
