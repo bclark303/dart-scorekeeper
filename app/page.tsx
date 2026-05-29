@@ -1284,6 +1284,12 @@ export default function Home() {
         compact={scoreLayout === "compact"}
         submitDartTurn={submitDartTurn}
         undoLastTurn={undoLastTurn}
+        startNextLeg={startNextLeg}
+        replayMatch={handleReplayMatch}
+        newGameSetup={handleNewGameSetup}
+        viewFinishedGame={handleViewFinishedGame}
+        isLegComplete={isLegComplete}
+        isMatchComplete={isMatchComplete}
       />
     );
   }

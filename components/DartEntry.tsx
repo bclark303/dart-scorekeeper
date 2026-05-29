@@ -8,6 +8,12 @@ type DartEntryProps = {
   compact: boolean;
   submitDartTurn: (darts: DartThrow[]) => void;
   undoLastTurn: () => void;
+  startNextLeg: () => void;
+  replayMatch: () => void;
+  newGameSetup: () => void;
+  viewFinishedGame: () => void;
+  isLegComplete: boolean;
+  isMatchComplete: boolean;
 };
 
 type DartMultiplier = 1 | 2 | 3;
@@ -77,6 +83,12 @@ export function DartEntry({
   compact,
   submitDartTurn,
   undoLastTurn,
+  startNextLeg,
+  replayMatch,
+  newGameSetup,
+  viewFinishedGame,
+  isLegComplete,
+  isMatchComplete,
 }: DartEntryProps) {
   const [selectedMultiplier, setSelectedMultiplier] =
     useState<DartMultiplier | null>(null);
@@ -120,6 +132,45 @@ export function DartEntry({
     >
       <div className={compact ? "text-lg mb-3" : "text-xl mb-4"}>{message}</div>
 
+      {isMatchComplete && (
+        <div className="rounded-2xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-4 mb-4">
+          <div className="text-lg font-bold mb-4">Match complete</div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <button
+              onClick={replayMatch}
+              className="rounded-xl bg-[var(--color-success)] hover:bg-[var(--color-success-hover)] p-4 text-xl font-bold"
+            >
+              Replay Match
+            </button>
+
+            <button
+              onClick={newGameSetup}
+              className="rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] p-4 text-xl font-bold"
+            >
+              New Game / Setup
+            </button>
+
+            <button
+              onClick={viewFinishedGame}
+              className="rounded-xl bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] p-4 text-xl font-bold"
+            >
+              View Match History
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isLegComplete && !isMatchComplete && (
+        <button
+          onClick={startNextLeg}
+          className="mb-4 w-full rounded-xl bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] p-4 text-xl font-bold"
+        >
+          Start Next Leg
+        </button>
+      )}
+
+{!isLegComplete && !isMatchComplete && (
       <div className="rounded-2xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <div>
@@ -291,6 +342,8 @@ export function DartEntry({
           Undo Last Turn
         </button>
       </div>
+)}
     </section>
   );
 }
+
