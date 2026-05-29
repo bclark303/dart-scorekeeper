@@ -17,6 +17,7 @@ import {
   ScoreEntryMode,
 } from "@/lib/types";
 
+import { DartEntry } from "@/components/DartEntry";
 import { ScoreEntry } from "@/components/ScoreEntry";
 import { GameSetup } from "@/components/GameSetup";
 import { MatchSummary } from "@/components/MatchSummary";
@@ -1164,6 +1165,13 @@ export default function Home() {
       />
     );
   }
+
+  // Dart-by-dart score entry.
+  // This is a placeholder until we add the actual dart controls.
+  function renderDartEntry() {
+    return <DartEntry message={message} compact={scoreLayout === "compact"} />;
+  }
+
   return (
     <main
       className={`min-h-screen bg-[var(--color-app-bg)] text-[var(--color-text-main)] p-6 ${
@@ -1282,13 +1290,17 @@ export default function Home() {
 
             {scoreLayout === "compact" ? (
               <>
-                {renderScoreEntry()}
+                {scoreEntryMode === "dart"
+                  ? renderDartEntry()
+                  : renderScoreEntry()}
                 {renderScoreCards()}
               </>
             ) : (
               <>
                 {renderScoreCards()}
-                {renderScoreEntry()}
+                {scoreEntryMode === "dart"
+                  ? renderDartEntry()
+                  : renderScoreEntry()}
               </>
             )}
           </>
