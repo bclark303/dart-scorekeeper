@@ -106,6 +106,8 @@ export default function Home() {
   // App navigation.
   // Tabs keep setup, scoring, stats, and history separated for smaller screens.
   const [activeView, setActiveView] = useState<AppView>("score");
+  const [isGameModeActive, setIsGameModeActive] = useState(false);
+  const [isGameMenuOpen, setIsGameMenuOpen] = useState(false);
 
   // Legacy/simple name fields.
   // These mostly exist to load older saved matches while the app transitions
@@ -270,6 +272,7 @@ export default function Home() {
           ? (parsedMatch.activeView ?? "score")
           : "score",
       );
+      setIsGameModeActive(parsedMatch.isGameModeActive ?? false);
 
       setSideOneSize(loadedSideOneSize);
       setSideTwoSize(loadedSideTwoSize);
@@ -344,6 +347,7 @@ export default function Home() {
       brandName,
       refreshBehavior,
       activeView,
+      isGameModeActive,
       defaultScoreLayout,
       rotationMode,
       dummyScore,
@@ -375,6 +379,7 @@ export default function Home() {
     brandName,
     refreshBehavior,
     activeView,
+    isGameModeActive,
     defaultScoreLayout,
     matchType,
     teamSize,
@@ -446,6 +451,32 @@ export default function Home() {
       : "rounded-xl bg-[var(--color-panel-soft)] hover:bg-[var(--color-panel-border)] px-4 py-3 font-bold text-[var(--color-text-muted)]";
   }
 
+  function getGameMenuButtonClass(view: AppView) {
+    return activeView === view
+      ? "rounded-xl bg-blue-600 px-4 py-3 text-left font-bold text-white"
+      : "rounded-xl bg-slate-800 px-4 py-3 text-left font-bold text-slate-100 hover:bg-slate-700";
+  }
+
+  function openGameMenuView(view: AppView) {
+    setActiveView(view);
+    setIsGameMenuOpen(false);
+  }
+
+  function getActiveViewLabel() {
+    switch (activeView) {
+      case "score":
+        return "Score";
+      case "game":
+        return "Game Setup";
+      case "app":
+        return "App Settings";
+      case "stats":
+        return "Stats";
+      case "history":
+        return "History";
+    }
+  }
+
   function addDummyMembersIfNeeded(
     side: MatchSide,
     targetSize: number,
@@ -512,6 +543,8 @@ export default function Home() {
     setIsMatchComplete(false);
     setPendingCheckoutTurn(null);
     setPendingDartsUsedTurn(null);
+    setIsGameModeActive(true);
+    setIsGameMenuOpen(false);
     setMessage(
       `${getCurrentThrowerName(newSides[0])} (${newSides[0].name}) to throw`,
     );
@@ -544,10 +577,12 @@ export default function Home() {
 
   function handleNewGameSetup() {
     setActiveView("game");
+    setIsGameMenuOpen(false);
   }
 
   function handleViewFinishedGame() {
     setActiveView("history");
+    setIsGameMenuOpen(false);
   }
 
   function clearSavedMatch() {
@@ -591,6 +626,8 @@ export default function Home() {
     setIsMatchComplete(false);
     setPendingCheckoutTurn(null);
     setPendingDartsUsedTurn(null);
+    setIsGameModeActive(false);
+    setIsGameMenuOpen(false);
     setMessage("Saved match cleared. Player 1 to throw.");
   }
 
@@ -1491,6 +1528,173 @@ export default function Home() {
     }
   }
 
+  function renderFullNavigation() {
+    return (
+      <nav className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-8">
+        <button
+          onClick={() => setActiveView("score")}
+          className={getTabClass("score")}
+        >
+          Score
+        </button>
+
+        <button
+          onClick={() => setActiveView("game")}
+          className={getTabClass("game")}
+        >
+          Game
+        </button>
+
+        <button
+          onClick={() => setActiveView("app")}
+          className={getTabClass("app")}
+        >
+          App
+        </button>
+
+        <button
+          onClick={() => setActiveView("stats")}
+          className={getTabClass("stats")}
+        >
+          Stats
+        </button>
+
+        <button
+          onClick={() => setActiveView("history")}
+          className={getTabClass("history")}
+        >
+          History
+        </button>
+      </nav>
+    );
+  }
+
+  function renderGameModeHeader() {
+    const currentSide = sides[currentSideIndex];
+    const currentThrowerName = currentSide
+      ? getCurrentThrowerName(currentSide)
+      : "Player";
+
+    return (
+      <div className="relative mb-4 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-3 shadow-lg">
+        <div className="flex items-center justify-between gap-3">
+          <button
+            onClick={() => setIsGameMenuOpen((isOpen) => !isOpen)}
+            className="rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] px-4 py-3 text-xl font-bold text-white"
+            aria-expanded={isGameMenuOpen}
+            aria-label="Open game menu"
+          >
+            ☰
+          </button>
+
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-lg font-bold">{brandName}</div>
+            <div className="truncate text-sm text-[var(--color-text-muted)]">
+              {getActiveViewLabel()} · Leg {currentLegNumber} · {currentThrowerName}
+              {currentSide ? ` (${currentSide.name})` : ""}
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              setActiveView("score");
+              setIsGameMenuOpen(false);
+            }}
+            className="rounded-xl bg-[var(--color-panel-soft)] hover:bg-[var(--color-panel-border)] px-4 py-3 text-sm font-bold text-[var(--color-text-main)]"
+          >
+            Score
+          </button>
+        </div>
+
+        {isGameMenuOpen && (
+          <div
+            className="fixed inset-0 z-50 bg-black/70 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Game menu"
+          >
+            <div className="mx-auto max-w-sm rounded-2xl border border-slate-600 bg-slate-950 p-4 text-white shadow-2xl">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-lg font-bold">Game Menu</div>
+                  <div className="text-sm text-slate-300">{brandName}</div>
+                </div>
+
+                <button
+                  onClick={() => setIsGameMenuOpen(false)}
+                  className="rounded-xl bg-slate-800 px-3 py-2 text-sm font-bold text-white hover:bg-slate-700"
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2">
+                <button
+                  onClick={() => openGameMenuView("score")}
+                  className={getGameMenuButtonClass("score")}
+                >
+                  Score
+                </button>
+
+                <button
+                  onClick={() => openGameMenuView("game")}
+                  className={getGameMenuButtonClass("game")}
+                >
+                  Game Setup
+                </button>
+
+                <button
+                  onClick={() => openGameMenuView("app")}
+                  className={getGameMenuButtonClass("app")}
+                >
+                  App Settings
+                </button>
+
+                <button
+                  onClick={() => openGameMenuView("stats")}
+                  className={getGameMenuButtonClass("stats")}
+                >
+                  Stats
+                </button>
+
+                <button
+                  onClick={() => openGameMenuView("history")}
+                  className={getGameMenuButtonClass("history")}
+                >
+                  History
+                </button>
+
+                <button
+                  onClick={() => {
+                    setFeedbackSubmitStatus("idle");
+                    setFeedbackSubmitError("");
+                    setIsFeedbackModalOpen(true);
+                    setIsGameMenuOpen(false);
+                  }}
+                  className="rounded-xl bg-slate-800 px-4 py-3 text-left font-bold text-slate-100 hover:bg-slate-700"
+                >
+                  Feedback
+                </button>
+
+                <button
+                  onClick={() => {
+                    setIsGameModeActive(false);
+                    setIsGameMenuOpen(false);
+                  }}
+                  className="rounded-xl bg-slate-800 px-4 py-3 text-left font-bold text-slate-100 hover:bg-slate-700"
+                >
+                  Show full tabs
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const shouldUseGameModeShell = isGameModeActive && !isMatchComplete;
+
   return (
     <main
       className={`min-h-screen bg-[var(--color-app-bg)] text-[var(--color-text-main)] p-6 ${
@@ -1498,75 +1702,55 @@ export default function Home() {
       }`}
     >
       <div className="mx-auto max-w-4xl">
-        <div className="mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div>
-              <div className="text-sm uppercase tracking-wide text-[var(--color-text-muted)]">
-                Local Scoring App
+        {shouldUseGameModeShell ? (
+          renderGameModeHeader()
+        ) : (
+          <>
+            <div className="mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div>
+                  <div className="text-sm uppercase tracking-wide text-[var(--color-text-muted)]">
+                    Local Scoring App
+                  </div>
+
+                  <h1 className="text-4xl font-bold mb-2">{brandName}</h1>
+
+                  <p className="text-[var(--color-text-muted)]">
+                    X01 scorer for singles, doubles, and team play
+                  </p>
+                </div>
+
+                <div className="flex flex-col sm:items-end gap-2">
+                  <div className="rounded-xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] px-3 py-2 text-sm text-[var(--color-text-muted)]">
+                    v{APP_VERSION}
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setFeedbackSubmitStatus("idle");
+                      setFeedbackSubmitError("");
+                      setIsFeedbackModalOpen(true);
+                    }}
+                    className="rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] px-4 py-2 text-sm font-bold"
+                  >
+                    Feedback
+                  </button>
+
+                  {activeView === "score" && !isMatchComplete && (
+                    <button
+                      onClick={() => setIsGameModeActive(true)}
+                      className="rounded-xl bg-[var(--color-panel-soft)] hover:bg-[var(--color-panel-border)] px-4 py-2 text-sm font-bold text-[var(--color-text-main)]"
+                    >
+                      Game Mode
+                    </button>
+                  )}
+                </div>
               </div>
-
-              <h1 className="text-4xl font-bold mb-2">{brandName}</h1>
-
-              <p className="text-[var(--color-text-muted)]">
-                X01 scorer for singles, doubles, and team play
-              </p>
             </div>
 
-            <div className="flex flex-col sm:items-end gap-2">
-              <div className="rounded-xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] px-3 py-2 text-sm text-[var(--color-text-muted)]">
-                v{APP_VERSION}
-              </div>
-
-              <button
-                onClick={() => {
-                  setFeedbackSubmitStatus("idle");
-                  setFeedbackSubmitError("");
-                  setIsFeedbackModalOpen(true);
-                }}
-                className="rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] px-4 py-2 text-sm font-bold"
-              >
-                Feedback
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <nav className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-8">
-          <button
-            onClick={() => setActiveView("score")}
-            className={getTabClass("score")}
-          >
-            Score
-          </button>
-
-          <button
-            onClick={() => setActiveView("game")}
-            className={getTabClass("game")}
-          >
-            Game
-          </button>
-
-          <button
-            onClick={() => setActiveView("app")}
-            className={getTabClass("app")}
-          >
-            App
-          </button>
-
-          <button
-            onClick={() => setActiveView("stats")}
-            className={getTabClass("stats")}
-          >
-            Stats
-          </button>
-
-          <button
-            onClick={() => setActiveView("history")}
-            className={getTabClass("history")}
-          >
-            History
-          </button>
-        </nav>
+            {renderFullNavigation()}
+          </>
+        )}
 
         {activeView === "game" && (
           <GameSetup

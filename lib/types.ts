@@ -155,6 +155,7 @@ export type SavedMatchState = {
   refreshBehavior: RefreshBehavior;
   defaultScoreLayout: DefaultScoreLayout;
   activeView?: "score" | "game" | "app" | "stats" | "history";
+  isGameModeActive?: boolean;
 
   // Current team/side setup.
   sideOneSize: TeamSize;
