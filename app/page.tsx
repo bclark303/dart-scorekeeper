@@ -586,7 +586,12 @@ export default function Home() {
   }
 
   function appendScoreDigit(digit: string) {
-    if (isLegComplete || isMatchComplete || pendingCheckoutTurn) {
+    if (
+      isLegComplete ||
+      isMatchComplete ||
+      pendingCheckoutTurn ||
+      pendingDartsUsedTurn
+    ) {
       return;
     }
 
@@ -606,7 +611,12 @@ export default function Home() {
   }
 
   function setQuickScore(score: number) {
-    if (isLegComplete || isMatchComplete || pendingCheckoutTurn) {
+    if (
+      isLegComplete ||
+      isMatchComplete ||
+      pendingCheckoutTurn ||
+      pendingDartsUsedTurn
+    ) {
       return;
     }
 
@@ -1054,26 +1064,34 @@ export default function Home() {
       return;
     }
 
-    const restoredsides = sides.map((player) => {
-      if (player.id !== lastTurn.playerId) {
-        return player;
+    const restoredSides = sides.map((side) => {
+      if (side.id !== lastTurn.playerId) {
+        return side;
       }
 
+      const restoredMemberIndex = lastTurn.throwerId
+        ? side.members.findIndex((member) => member.id === lastTurn.throwerId)
+        : side.currentMemberIndex;
+
       return {
-        ...player,
+        ...side,
         score: lastTurn.scoreBefore,
         legsWon: lastTurn.isCheckout
-          ? Math.max(0, player.legsWon - 1)
-          : player.legsWon,
+          ? Math.max(0, side.legsWon - 1)
+          : side.legsWon,
+        currentMemberIndex:
+          restoredMemberIndex >= 0
+            ? restoredMemberIndex
+            : side.currentMemberIndex,
       };
     });
 
-    const restoredPlayerIndex = restoredsides.findIndex(
-      (player) => player.id === lastTurn.playerId,
+    const restoredSideIndex = restoredSides.findIndex(
+      (side) => side.id === lastTurn.playerId,
     );
 
-    setSides(restoredsides);
-    setCurrentSideIndex(restoredPlayerIndex);
+    setSides(restoredSides);
+    setCurrentSideIndex(restoredSideIndex);
     setTurnHistory((previousHistory) => previousHistory.slice(1));
 
     if (lastTurn.isCheckout) {

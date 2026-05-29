@@ -160,7 +160,10 @@ export function ScoreEntry({
 
                 <p className="text-[var(--color-text-muted)] mb-4">
                   This slot will automatically score{" "}
-                  <span className="font-bold text-white">{dummyScore}</span>.
+                  <span className="font-bold text-[var(--color-text-main)]">
+                    {dummyScore}
+                  </span>
+                  .
                 </p>
 
                 <button
@@ -192,7 +195,9 @@ export function ScoreEntry({
                 />
 
                 <div className="mb-4">
-                  <div className="mb-2 text-slate-300">Quick scores</div>
+                  <div className="mb-2 text-[var(--color-text-muted)]">
+                    Quick scores
+                  </div>
 
                   <div
                     className={
@@ -216,7 +221,9 @@ export function ScoreEntry({
                 </div>
 
                 <div className="mb-4">
-                  <div className="mb-2 text-slate-300">Keypad</div>
+                  <div className="mb-2 text-[var(--color-text-muted)]">
+                    Keypad
+                  </div>
 
                   <div
                     className={

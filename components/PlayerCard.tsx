@@ -42,7 +42,7 @@ export function PlayerCard({
           </h2>
 
           {player.members.length > 1 && !compact && (
-            <div className="mb-3 text-slate-300">
+            <div className="mb-3 text-[var(--color-text-muted)]">
               <div>
                 {player.members
                   .map((member) =>
@@ -52,7 +52,7 @@ export function PlayerCard({
               </div>
               <div className="mt-1 text-sm">
                 Thrower:{" "}
-                <span className="font-semibold text-white">
+                <span className="font-semibold text-[var(--color-text-main)]">
                   {player.members[player.currentMemberIndex]?.name ??
                     player.name}
                 </span>
@@ -63,7 +63,7 @@ export function PlayerCard({
           {player.members.length > 1 && compact && (
             <div className="text-sm text-[var(--color-text-muted)]">
               Thrower:{" "}
-              <span className="font-semibold text-white">
+              <span className="font-semibold text-[var(--color-text-main)]">
                 {player.members[player.currentMemberIndex]?.name ?? player.name}
               </span>
             </div>
