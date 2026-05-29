@@ -1,4 +1,31 @@
-import { Turn } from "@/lib/scoring";
+import { DartThrow, Turn } from "@/lib/scoring";
+
+function getDartLabel(dart: DartThrow) {
+  if (dart.segment === "miss") {
+    return "Miss";
+  }
+
+  if (dart.segment === "outer-bull") {
+    return "Outer Bull";
+  }
+
+  if (dart.segment === "bull") {
+    return "Bull";
+  }
+
+  const prefix =
+    dart.multiplier === 3 ? "T" : dart.multiplier === 2 ? "D" : "S";
+
+  return `${prefix}${dart.segment}`;
+}
+
+function getDartSummary(turn: Turn) {
+  if (!turn.darts || turn.darts.length === 0) {
+    return null;
+  }
+
+  return turn.darts.map(getDartLabel).join(", ");
+}
 
 type TurnHistoryProps = {
   turns: Turn[];
@@ -20,6 +47,7 @@ export function TurnHistory({ turns }: TurnHistoryProps) {
             >
               <div className="font-semibold">
                 {turn.throwerName ?? turn.playerName} scored {turn.scoreEntered}
+                {turn.darts ? ` — ${getDartSummary(turn)}` : ""}
                 {turn.isBust ? " — BUST" : ""}
                 {turn.isCheckout ? " — CHECKOUT" : ""}
                 {turn.isDummy ? " — DUMMY" : ""}
