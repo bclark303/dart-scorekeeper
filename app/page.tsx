@@ -226,6 +226,8 @@ export default function Home() {
   const [hasLoadedSavedMatch, setHasLoadedSavedMatch] = useState(false);
   const [isResetConfirmationVisible, setIsResetConfirmationVisible] =
     useState(false);
+  const [isClearSavedConfirmationVisible, setIsClearSavedConfirmationVisible] =
+    useState(false);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -585,7 +587,7 @@ export default function Home() {
     setIsGameMenuOpen(false);
   }
 
-  function clearSavedMatch() {
+  function resetAppToDefaults() {
     localStorage.removeItem(savedMatchKey);
 
     const resetSides: MatchSide[] = [
@@ -628,7 +630,21 @@ export default function Home() {
     setPendingDartsUsedTurn(null);
     setIsGameModeActive(false);
     setIsGameMenuOpen(false);
+    setIsClearSavedConfirmationVisible(false);
     setMessage("Saved match cleared. Player 1 to throw.");
+  }
+
+  function clearSavedMatch() {
+    setIsClearSavedConfirmationVisible(true);
+  }
+
+  function confirmClearSavedMatch() {
+    resetAppToDefaults();
+    setActiveView("score");
+  }
+
+  function cancelClearSavedMatch() {
+    setIsClearSavedConfirmationVisible(false);
   }
 
   function getCurrentThrowerName(side: MatchSide): string {
@@ -1617,7 +1633,7 @@ export default function Home() {
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
                   <div className="text-lg font-bold">Game Menu</div>
-                  <div className="text-sm text-slate-300">{brandName}</div>
+                  <div className="text-sm text-slate-300">{brandName} · v{APP_VERSION}</div>
                 </div>
 
                 <button
@@ -1783,6 +1799,9 @@ export default function Home() {
             isResetConfirmationVisible={isResetConfirmationVisible}
             confirmResetMatch={confirmResetMatch}
             cancelResetMatch={cancelResetMatch}
+            isClearSavedConfirmationVisible={isClearSavedConfirmationVisible}
+            confirmClearSavedMatch={confirmClearSavedMatch}
+            cancelClearSavedMatch={cancelClearSavedMatch}
           />
         )}
 

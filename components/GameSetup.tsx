@@ -25,6 +25,9 @@ type GameSetupProps = {
   isResetConfirmationVisible: boolean;
   confirmResetMatch: () => void;
   cancelResetMatch: () => void;
+  isClearSavedConfirmationVisible: boolean;
+  confirmClearSavedMatch: () => void;
+  cancelClearSavedMatch: () => void;
   sideOneSize: TeamSize;
   sideTwoSize: TeamSize;
   teamOneMemberNames: string[];
@@ -57,6 +60,9 @@ export function GameSetup({
   isResetConfirmationVisible,
   confirmResetMatch,
   cancelResetMatch,
+  isClearSavedConfirmationVisible,
+  confirmClearSavedMatch,
+  cancelClearSavedMatch,
   teamOneMemberNames,
   teamTwoMemberNames,
   sideOneSize,
@@ -358,6 +364,37 @@ export function GameSetup({
 
             <button
               onClick={cancelResetMatch}
+              className="rounded-xl bg-[var(--color-panel-soft)] hover:bg-[var(--color-panel-border)] px-6 py-3 text-lg font-bold"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+
+
+      {isClearSavedConfirmationVisible && (
+        <div className="mb-6 rounded-2xl border border-[var(--color-danger)]/50 bg-[var(--color-danger)]/20 p-5">
+          <div className="text-xl font-bold text-[var(--color-danger-hover)] mb-2">
+            Clear saved match and settings?
+          </div>
+
+          <p className="text-[var(--color-text-muted)] mb-4">
+            This clears the saved match, players, game options, app name, and
+            current scores from this browser. This cannot be undone.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <button
+              onClick={confirmClearSavedMatch}
+              className="rounded-xl bg-[var(--color-danger)] hover:bg-[var(--color-danger-hover)] px-6 py-3 text-lg font-bold"
+            >
+              Yes, Clear Everything
+            </button>
+
+            <button
+              onClick={cancelClearSavedMatch}
               className="rounded-xl bg-[var(--color-panel-soft)] hover:bg-[var(--color-panel-border)] px-6 py-3 text-lg font-bold"
             >
               Cancel
