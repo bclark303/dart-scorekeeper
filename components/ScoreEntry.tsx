@@ -91,12 +91,21 @@ export function ScoreEntry({
       )}
 
       {isLegComplete && !isMatchComplete && (
-        <button
-          onClick={startNextLeg}
-          className="mb-4 w-full rounded-xl bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] p-4 text-xl font-bold"
-        >
-          Start Next Leg
-        </button>
+        <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <button
+            onClick={undoLastTurn}
+            className="rounded-xl bg-[var(--color-warning)] hover:bg-[var(--color-warning-hover)] p-4 text-xl font-bold"
+          >
+            Undo Last Turn
+          </button>
+
+          <button
+            onClick={startNextLeg}
+            className="rounded-xl bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] p-4 text-xl font-bold"
+          >
+            Start Next Leg
+          </button>
+        </div>
       )}
 
       {pendingDartsUsedTurn ? (
