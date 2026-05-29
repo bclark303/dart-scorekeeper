@@ -41,8 +41,13 @@ import {
 type AppView = "score" | "game" | "app" | "stats" | "history";
 type ScoreLayout = "compact" | "full";
 type FeedbackType = "bug" | "feature" | "general";
+type FeedbackSubmitStatus = "idle" | "submitting" | "success" | "error";
 
 export default function Home() {
+  const [feedbackSubmitStatus, setFeedbackSubmitStatus] =
+    useState<FeedbackSubmitStatus>("idle");
+  const [feedbackSubmitError, setFeedbackSubmitError] = useState("");
+
   // Visual theme.
   // This controls the CSS variable set used by the app shell and components.
   const [themeName, setThemeName] = useState<ThemeName>("default");
@@ -1438,6 +1443,54 @@ export default function Home() {
     );
   }
 
+  async function submitFeedback() {
+    const endpoint = process.env.NEXT_PUBLIC_FEEDBACK_ENDPOINT;
+
+    if (!endpoint) {
+      setFeedbackSubmitStatus("error");
+      setFeedbackSubmitError(
+        "Feedback endpoint is not configured. Add NEXT_PUBLIC_FEEDBACK_ENDPOINT to .env.local.",
+      );
+      return;
+    }
+
+    if (feedbackMessage.trim() === "") {
+      setFeedbackSubmitStatus("error");
+      setFeedbackSubmitError("Enter a message before submitting feedback.");
+      return;
+    }
+
+    setFeedbackSubmitStatus("submitting");
+    setFeedbackSubmitError("");
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          type: feedbackType,
+          message: feedbackMessage,
+          diagnostics: getFeedbackDiagnostics(),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Feedback service returned an error.");
+      }
+
+      setFeedbackSubmitStatus("success");
+      setFeedbackMessage("");
+    } catch {
+      setFeedbackSubmitStatus("error");
+      setFeedbackSubmitError(
+        "Feedback could not be sent. Check your connection and try again.",
+      );
+    }
+  }
+
   return (
     <main
       className={`min-h-screen bg-[var(--color-app-bg)] text-[var(--color-text-main)] p-6 ${
@@ -1465,7 +1518,11 @@ export default function Home() {
               </div>
 
               <button
-                onClick={() => setIsFeedbackModalOpen(true)}
+                onClick={() => {
+                  setFeedbackSubmitStatus("idle");
+                  setFeedbackSubmitError("");
+                  setIsFeedbackModalOpen(true);
+                }}
                 className="rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] px-4 py-2 text-sm font-bold"
               >
                 Feedback
@@ -1614,8 +1671,11 @@ export default function Home() {
           feedbackType={feedbackType}
           feedbackMessage={feedbackMessage}
           diagnostics={getFeedbackDiagnostics()}
+          feedbackSubmitStatus={feedbackSubmitStatus}
+          feedbackSubmitError={feedbackSubmitError}
           setFeedbackType={setFeedbackType}
           setFeedbackMessage={setFeedbackMessage}
+          submitFeedback={submitFeedback}
           closeFeedbackModal={() => setIsFeedbackModalOpen(false)}
         />
       </div>

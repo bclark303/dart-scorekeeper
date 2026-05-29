@@ -2,13 +2,18 @@
 
 type FeedbackType = "bug" | "feature" | "general";
 
+type FeedbackSubmitStatus = "idle" | "submitting" | "success" | "error";
+
 type FeedbackModalProps = {
   isOpen: boolean;
   feedbackType: FeedbackType;
   feedbackMessage: string;
   diagnostics: string;
+  feedbackSubmitStatus: FeedbackSubmitStatus;
+  feedbackSubmitError: string;
   setFeedbackType: (type: FeedbackType) => void;
   setFeedbackMessage: (message: string) => void;
+  submitFeedback: () => void;
   closeFeedbackModal: () => void;
 };
 
@@ -17,8 +22,11 @@ export function FeedbackModal({
   feedbackType,
   feedbackMessage,
   diagnostics,
+  feedbackSubmitStatus,
+  feedbackSubmitError,
   setFeedbackType,
   setFeedbackMessage,
+  submitFeedback,
   closeFeedbackModal,
 }: FeedbackModalProps) {
   if (!isOpen) {
@@ -83,14 +91,32 @@ export function FeedbackModal({
           </pre>
         </details>
 
+        {feedbackSubmitStatus === "success" && (
+          <div className="mb-4 rounded-xl border border-[var(--color-success)]/40 bg-[var(--color-success)]/20 p-3">
+            Feedback sent. Thanks!
+          </div>
+        )}
+
+        {feedbackSubmitStatus === "error" && (
+          <div className="mb-4 rounded-xl border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/20 p-3">
+            {feedbackSubmitError ||
+              "Feedback could not be sent. Please try again."}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button
-            disabled
-            className="rounded-xl bg-[var(--color-success)] opacity-50 p-4 text-lg font-bold"
+            onClick={submitFeedback}
+            disabled={
+              feedbackSubmitStatus === "submitting" ||
+              feedbackMessage.trim() === ""
+            }
+            className="rounded-xl bg-[var(--color-success)] hover:bg-[var(--color-success-hover)] disabled:opacity-50 p-4 text-lg font-bold"
           >
-            Submit Feedback Soon
+            {feedbackSubmitStatus === "submitting"
+              ? "Submitting..."
+              : "Submit Feedback"}
           </button>
-
           <button
             onClick={closeFeedbackModal}
             className="rounded-xl bg-[var(--color-panel-soft)] hover:bg-[var(--color-panel-border)] p-4 text-lg font-bold"
