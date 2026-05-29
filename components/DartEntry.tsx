@@ -287,28 +287,54 @@ export function DartEntry({
               Current darts
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {[0, 1, 2].map((index) => {
-                const dart = currentDarts[index];
+            {compact ? (
+              <div className="rounded-xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  {[0, 1, 2].map((index) => {
+                    const dart = currentDarts[index];
 
-                return (
-                  <div
-                    key={index}
-                    className="rounded-xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] p-3"
-                  >
-                    <div className="text-sm text-[var(--color-text-muted)]">
-                      Dart {index + 1}
-                    </div>
-                    <div className="text-xl font-bold">
-                      {dart ? getDartLabel(dart) : "—"}
-                    </div>
-                    <div className="text-[var(--color-text-muted)]">
-                      {dart ? `${dart.score} points` : ""}
-                    </div>
+                    return (
+                      <div
+                        key={index}
+                        className="rounded-lg bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] px-3 py-2 font-bold"
+                      >
+                        {dart ? getDartLabel(dart) : `Dart ${index + 1}`}
+                      </div>
+                    );
+                  })}
+
+                  <div className="ml-auto text-[var(--color-text-muted)]">
+                    Total:{" "}
+                    <span className="font-bold text-[var(--color-text-main)]">
+                      {turnTotal}
+                    </span>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {[0, 1, 2].map((index) => {
+                  const dart = currentDarts[index];
+
+                  return (
+                    <div
+                      key={index}
+                      className="rounded-xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] p-3"
+                    >
+                      <div className="text-sm text-[var(--color-text-muted)]">
+                        Dart {index + 1}
+                      </div>
+                      <div className="text-xl font-bold">
+                        {dart ? getDartLabel(dart) : "—"}
+                      </div>
+                      <div className="text-[var(--color-text-muted)]">
+                        {dart ? `${dart.score} points` : ""}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

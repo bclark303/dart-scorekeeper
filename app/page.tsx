@@ -1456,21 +1456,21 @@ export default function Home() {
               setScoreLayout={setScoreLayout}
             />
 
-            {scoreLayout === "compact" ? (
-              <>
+            <div className="flex flex-col">
+              <div
+                className={scoreLayout === "compact" ? "order-1" : "order-2"}
+              >
                 {scoreEntryMode === "dart"
                   ? renderDartEntry()
                   : renderScoreEntry()}
+              </div>
+
+              <div
+                className={scoreLayout === "compact" ? "order-2" : "order-1"}
+              >
                 {renderScoreCards()}
-              </>
-            ) : (
-              <>
-                {renderScoreCards()}
-                {scoreEntryMode === "dart"
-                  ? renderDartEntry()
-                  : renderScoreEntry()}
-              </>
-            )}
+              </div>
+            </div>
           </>
         )}
 
