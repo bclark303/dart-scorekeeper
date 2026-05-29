@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { DartThrow } from "@/lib/scoring";
+import { getDartLabel } from "@/lib/darts";
 
 type DartEntryProps = {
   message: string;
@@ -19,25 +20,6 @@ type DartEntryProps = {
 type DartMultiplier = 1 | 2 | 3;
 
 const numberSegments = Array.from({ length: 20 }, (_, index) => index + 1);
-
-function getDartLabel(dart: DartThrow) {
-  if (dart.segment === "miss") {
-    return "Miss";
-  }
-
-  if (dart.segment === "outer-bull") {
-    return "Outer Bull";
-  }
-
-  if (dart.segment === "bull") {
-    return "Bull";
-  }
-
-  const prefix =
-    dart.multiplier === 3 ? "T" : dart.multiplier === 2 ? "D" : "S";
-
-  return `${prefix}${dart.segment}`;
-}
 
 function createNumberDart(
   segment: number,

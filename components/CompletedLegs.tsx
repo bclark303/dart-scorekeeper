@@ -1,35 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { DartThrow, Turn } from "@/lib/scoring";
 import { CompletedLeg } from "@/lib/types";
-
-function getDartLabel(dart: DartThrow) {
-  if (dart.segment === "miss") {
-    return "Miss";
-  }
-
-  if (dart.segment === "outer-bull") {
-    return "Outer Bull";
-  }
-
-  if (dart.segment === "bull") {
-    return "Bull";
-  }
-
-  const prefix =
-    dart.multiplier === 3 ? "T" : dart.multiplier === 2 ? "D" : "S";
-
-  return `${prefix}${dart.segment}`;
-}
-
-function getDartSummary(turn: Turn) {
-  if (!turn.darts || turn.darts.length === 0) {
-    return null;
-  }
-
-  return turn.darts.map(getDartLabel).join(", ");
-}
+import { getDartSummary } from "@/lib/darts";
 
 type CompletedLegsProps = {
   completedLegs: CompletedLeg[];
@@ -133,7 +106,7 @@ export function CompletedLegs({ completedLegs }: CompletedLegsProps) {
                             <div className="font-semibold">
                               {turn.throwerName ?? turn.playerName} scored{" "}
                               {turn.scoreEntered}
-                              {turn.darts ? ` — ${getDartSummary(turn)}` : ""}
+                              {turn.darts ? ` — ${getDartSummary(turn.darts)}` : ""}
                               {turn.isBust ? " — BUST" : ""}
                               {turn.isCheckout ? " — CHECKOUT" : ""}
                               {turn.isDummy ? " — DUMMY" : ""}
