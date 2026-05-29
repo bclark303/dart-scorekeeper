@@ -14,6 +14,7 @@ import {
   createTeamSide,
   RefreshBehavior,
   DefaultScoreLayout,
+  ScoreEntryMode,
 } from "@/lib/types";
 
 import { ScoreEntry } from "@/components/ScoreEntry";
@@ -55,6 +56,10 @@ export default function Home() {
   const [startingScore, setStartingScore] = useState<StartingScore>(501);
   const [finishRule, setFinishRule] = useState<FinishRule>("double_out");
   const [bestOfLegs, setBestOfLegs] = useState<BestOfLegs>(3);
+
+  // Score entry mode.
+  // Total-turn entry is current behavior. Dart-by-dart will be added later.
+  const [scoreEntryMode, setScoreEntryMode] = useState<ScoreEntryMode>("turn");
 
   // Legacy/simple match type.
   // Kept while old saved matches and older setup logic transition to side sizes.
@@ -219,6 +224,7 @@ export default function Home() {
       setStartingScore(parsedMatch.startingScore);
       setFinishRule(parsedMatch.finishRule);
       setBestOfLegs(parsedMatch.bestOfLegs);
+      setScoreEntryMode(parsedMatch.scoreEntryMode ?? "turn");
       setMatchType(parsedMatch.matchType ?? "singles");
 
       const loadedSideOneSize =
@@ -317,6 +323,7 @@ export default function Home() {
       startingScore,
       finishRule,
       bestOfLegs,
+      scoreEntryMode,
       themeName,
       brandName,
       refreshBehavior,
@@ -347,6 +354,7 @@ export default function Home() {
     startingScore,
     finishRule,
     bestOfLegs,
+    scoreEntryMode,
     themeName,
     brandName,
     refreshBehavior,
@@ -1217,6 +1225,8 @@ export default function Home() {
             startingScore={startingScore}
             finishRule={finishRule}
             bestOfLegs={bestOfLegs}
+            scoreEntryMode={scoreEntryMode}
+            setScoreEntryMode={setScoreEntryMode}
             sideOneSize={sideOneSize}
             sideTwoSize={sideTwoSize}
             rotationMode={rotationMode}

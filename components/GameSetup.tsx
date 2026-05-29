@@ -1,6 +1,11 @@
 import { FinishRule, StartingScore } from "@/lib/scoring";
 
-import { BestOfLegs, RotationMode, TeamSize } from "@/lib/types";
+import {
+  BestOfLegs,
+  RotationMode,
+  TeamSize,
+  ScoreEntryMode,
+} from "@/lib/types";
 
 type GameSetupProps = {
   teamOneName: string;
@@ -8,6 +13,8 @@ type GameSetupProps = {
   startingScore: StartingScore;
   finishRule: FinishRule;
   bestOfLegs: BestOfLegs;
+  scoreEntryMode: ScoreEntryMode;
+  setScoreEntryMode: (mode: ScoreEntryMode) => void;
   setTeamOneName: (name: string) => void;
   setTeamTwoName: (name: string) => void;
   setStartingScore: (score: StartingScore) => void;
@@ -38,6 +45,8 @@ export function GameSetup({
   startingScore,
   finishRule,
   bestOfLegs,
+  scoreEntryMode,
+  setScoreEntryMode,
   setTeamOneName,
   setTeamTwoName,
   setStartingScore,
@@ -72,7 +81,9 @@ export function GameSetup({
 
         <div className="grid grid-cols-1 sm:grid-cols-5 lg:grid-cols-4 xl:grid-cols-8 gap-4">
           <label className="block">
-            <span className="block text-[var(--color-text-muted)] mb-2">Team 1 Size</span>
+            <span className="block text-[var(--color-text-muted)] mb-2">
+              Team 1 Size
+            </span>
             <select
               className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
               value={sideOneSize}
@@ -89,7 +100,9 @@ export function GameSetup({
           </label>
 
           <label className="block">
-            <span className="block text-[var(--color-text-muted)] mb-2">Team 2 Size</span>
+            <span className="block text-[var(--color-text-muted)] mb-2">
+              Team 2 Size
+            </span>
             <select
               className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
               value={sideTwoSize}
@@ -108,7 +121,9 @@ export function GameSetup({
           {sideOneSize !== sideTwoSize && (
             <>
               <label className="block">
-                <span className="block text-[var(--color-text-muted)] mb-2">Rotation</span>
+                <span className="block text-[var(--color-text-muted)] mb-2">
+                  Rotation
+                </span>
                 <select
                   className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
                   value={rotationMode}
@@ -123,7 +138,9 @@ export function GameSetup({
 
               {rotationMode === "dummy" && (
                 <label className="block">
-                  <span className="block text-[var(--color-text-muted)] mb-2">Dummy Score</span>
+                  <span className="block text-[var(--color-text-muted)] mb-2">
+                    Dummy Score
+                  </span>
                   <input
                     className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
                     value={dummyScore}
@@ -145,7 +162,9 @@ export function GameSetup({
           )}
 
           <label className="block">
-            <span className="block text-[var(--color-text-muted)] mb-2">Game</span>
+            <span className="block text-[var(--color-text-muted)] mb-2">
+              Game
+            </span>
             <select
               className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
               value={startingScore}
@@ -160,7 +179,9 @@ export function GameSetup({
           </label>
 
           <label className="block">
-            <span className="block text-[var(--color-text-muted)] mb-2">Finish</span>
+            <span className="block text-[var(--color-text-muted)] mb-2">
+              Finish
+            </span>
             <select
               className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
               value={finishRule}
@@ -174,7 +195,25 @@ export function GameSetup({
           </label>
 
           <label className="block">
-            <span className="block text-[var(--color-text-muted)] mb-2">Legs</span>
+            <span className="block text-[var(--color-text-muted)] mb-2">
+              Score Entry
+            </span>
+            <select
+              className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
+              value={scoreEntryMode}
+              onChange={(event) =>
+                setScoreEntryMode(event.target.value as ScoreEntryMode)
+              }
+            >
+              <option value="turn">Total Turn Score</option>
+              <option value="dart">Dart-by-Dart</option>
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="block text-[var(--color-text-muted)] mb-2">
+              Legs
+            </span>
             <select
               className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
               value={bestOfLegs}
@@ -189,7 +228,6 @@ export function GameSetup({
               <option value={9}>Best of 9</option>
             </select>
           </label>
-
         </div>
       </div>
 
@@ -201,7 +239,9 @@ export function GameSetup({
         {sideOneSize === 1 && sideTwoSize === 1 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label className="block">
-              <span className="block text-[var(--color-text-muted)] mb-2">Player 1</span>
+              <span className="block text-[var(--color-text-muted)] mb-2">
+                Player 1
+              </span>
               <input
                 className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
                 value={teamOneMemberNames[0] ?? ""}
@@ -212,7 +252,9 @@ export function GameSetup({
             </label>
 
             <label className="block">
-              <span className="block text-[var(--color-text-muted)] mb-2">Player 2</span>
+              <span className="block text-[var(--color-text-muted)] mb-2">
+                Player 2
+              </span>
               <input
                 className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
                 value={teamTwoMemberNames[0] ?? ""}
@@ -229,7 +271,9 @@ export function GameSetup({
 
               <div className="grid grid-cols-1 gap-4">
                 <label className="block">
-                  <span className="block text-[var(--color-text-muted)] mb-2">Team Name</span>
+                  <span className="block text-[var(--color-text-muted)] mb-2">
+                    Team Name
+                  </span>
                   <input
                     className="w-full rounded-xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] p-3"
                     value={teamOneName}
@@ -261,7 +305,9 @@ export function GameSetup({
 
               <div className="grid grid-cols-1 gap-4">
                 <label className="block">
-                  <span className="block text-[var(--color-text-muted)] mb-2">Team Name</span>
+                  <span className="block text-[var(--color-text-muted)] mb-2">
+                    Team Name
+                  </span>
                   <input
                     className="w-full rounded-xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] p-3"
                     value={teamTwoName}

@@ -32,6 +32,17 @@ export type TeamSize = 1 | 2 | 3 | 4 | 5;
 export type RotationMode = "independent" | "dummy";
 
 /**
+ * How scores are entered during a match.
+ *
+ * turn:
+ *   Current mode. Enter one total score for the full turn.
+ *
+ * dart:
+ *   Future mode. Enter each dart individually.
+ */
+export type ScoreEntryMode = "turn" | "dart";
+
+/**
  * Visual theme options.
  * These map to CSS classes/variables in globals.css.
  */
@@ -138,6 +149,7 @@ export type SavedMatchState = {
   startingScore: StartingScore;
   finishRule: FinishRule;
   bestOfLegs: BestOfLegs;
+  scoreEntryMode: ScoreEntryMode;
   themeName: ThemeName;
   brandName: string;
   refreshBehavior: RefreshBehavior;
