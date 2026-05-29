@@ -1576,11 +1576,11 @@ export default function Home() {
       : "Player";
 
     return (
-      <div className="relative mb-4 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-3 shadow-lg">
+      <div className="relative mb-3 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-2.5 shadow-lg">
         <div className="flex items-center justify-between gap-3">
           <button
             onClick={() => setIsGameMenuOpen((isOpen) => !isOpen)}
-            className="rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] px-4 py-3 text-xl font-bold text-white"
+            className="rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] px-4 py-2.5 text-xl font-bold text-white"
             aria-expanded={isGameMenuOpen}
             aria-label="Open game menu"
           >
@@ -1600,7 +1600,7 @@ export default function Home() {
               setActiveView("score");
               setIsGameMenuOpen(false);
             }}
-            className="rounded-xl bg-[var(--color-panel-soft)] hover:bg-[var(--color-panel-border)] px-4 py-3 text-sm font-bold text-[var(--color-text-main)]"
+            className="rounded-xl bg-[var(--color-panel-soft)] hover:bg-[var(--color-panel-border)] px-4 py-2.5 text-sm font-bold text-[var(--color-text-main)]"
           >
             Score
           </button>
@@ -1697,9 +1697,9 @@ export default function Home() {
 
   return (
     <main
-      className={`min-h-screen bg-[var(--color-app-bg)] text-[var(--color-text-main)] p-6 ${
-        themeName === "firehall" ? "theme-firehall" : ""
-      }`}
+      className={`min-h-screen bg-[var(--color-app-bg)] text-[var(--color-text-main)] ${
+        shouldUseGameModeShell ? "p-3 sm:p-4" : "p-6"
+      } ${themeName === "firehall" ? "theme-firehall" : ""}`}
     >
       <div className="mx-auto max-w-4xl">
         {shouldUseGameModeShell ? (
@@ -1801,22 +1801,30 @@ export default function Home() {
 
         {activeView === "score" && (
           <>
-            <CurrentTurnBanner
-              currentSide={sides[currentSideIndex]}
-              currentLegNumber={currentLegNumber}
-              bestOfLegs={bestOfLegs}
-              legsNeededToWin={legsNeededToWin}
-              startingScore={startingScore}
-              finishRule={finishRule}
-              isCurrentThrowerDummy={isCurrentThrowerDummy()}
-              dummyScore={dummyScore}
-              scoreLayout={scoreLayout}
-              setScoreLayout={setScoreLayout}
-            />
+            {!shouldUseGameModeShell && (
+              <CurrentTurnBanner
+                currentSide={sides[currentSideIndex]}
+                currentLegNumber={currentLegNumber}
+                bestOfLegs={bestOfLegs}
+                legsNeededToWin={legsNeededToWin}
+                startingScore={startingScore}
+                finishRule={finishRule}
+                isCurrentThrowerDummy={isCurrentThrowerDummy()}
+                dummyScore={dummyScore}
+                scoreLayout={scoreLayout}
+                setScoreLayout={setScoreLayout}
+              />
+            )}
 
             <div className="flex flex-col">
               <div
-                className={scoreLayout === "compact" ? "order-1" : "order-2"}
+                className={
+                  shouldUseGameModeShell
+                    ? "order-2"
+                    : scoreLayout === "compact"
+                      ? "order-1"
+                      : "order-2"
+                }
               >
                 {scoreEntryMode === "dart"
                   ? renderDartEntry()
@@ -1824,7 +1832,13 @@ export default function Home() {
               </div>
 
               <div
-                className={scoreLayout === "compact" ? "order-2" : "order-1"}
+                className={
+                  shouldUseGameModeShell
+                    ? "order-1"
+                    : scoreLayout === "compact"
+                      ? "order-2"
+                      : "order-1"
+                }
               >
                 {renderScoreCards()}
               </div>

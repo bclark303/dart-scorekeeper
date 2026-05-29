@@ -55,11 +55,11 @@ export function ScoreEntry({
 }: ScoreEntryProps) {
   return (
     <section
-      className={`rounded-2xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] mb-8 ${
-        compact ? "p-4" : "p-6"
+      className={`rounded-2xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] mb-4 ${
+        compact ? "p-3" : "p-6"
       }`}
     >
-      <div className={compact ? "text-lg mb-3" : "text-xl mb-4"}>{message}</div>
+      <div className={compact ? "text-base mb-2" : "text-xl mb-4"}>{message}</div>
 
       {isMatchComplete && (
         <div className="rounded-2xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-4 mb-4">
@@ -191,14 +191,14 @@ export function ScoreEntry({
               </div>
             ) : (
               <>
-                <label className="block mb-2 text-[var(--color-text-muted)]">
+                <label className={compact ? "block mb-1 text-sm text-[var(--color-text-muted)]" : "block mb-2 text-[var(--color-text-muted)]"}>
                   Score this turn
                 </label>
 
-                <div className="mb-4 grid grid-cols-2 gap-3">
+                <div className={compact ? "mb-3 grid grid-cols-2 gap-2" : "mb-4 grid grid-cols-2 gap-3"}>
                   <input
                     className={`w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] text-center ${
-                      compact ? "p-3 text-3xl" : "p-4 text-3xl"
+                      compact ? "p-2 text-2xl" : "p-4 text-3xl"
                     }`}
                     value={scoreInput}
                     onChange={(event) => setScoreInput(event.target.value)}
@@ -214,15 +214,15 @@ export function ScoreEntry({
                   <button
                     onClick={submitScore}
                     className={`rounded-xl bg-[var(--color-success)] hover:bg-[var(--color-success-hover)] font-bold whitespace-nowrap ${
-                      compact ? "px-5 py-3 text-lg" : "px-6 py-4 text-xl"
+                      compact ? "px-5 py-2 text-base" : "px-6 py-4 text-xl"
                     }`}
                   >
                     Enter Score
                   </button>
                 </div>
 
-                <div className="mb-4">
-                  <div className="mb-2 text-[var(--color-text-muted)]">
+                <div className={compact ? "mb-3" : "mb-4"}>
+                  <div className={compact ? "mb-1 text-sm text-[var(--color-text-muted)]" : "mb-2 text-[var(--color-text-muted)]"}>
                     Quick scores
                   </div>
 
@@ -238,7 +238,7 @@ export function ScoreEntry({
                         key={score}
                         onClick={() => setQuickScore(score)}
                         className={`rounded-xl bg-[var(--color-panel-soft)] hover:bg-[var(--color-panel-border)] border border-[var(--color-panel-border)] font-bold ${
-                          compact ? "p-3 text-lg" : "p-4 text-xl"
+                          compact ? "p-2 text-base" : "p-4 text-xl"
                         }`}
                       >
                         {score}
@@ -247,8 +247,8 @@ export function ScoreEntry({
                   </div>
                 </div>
 
-                <div className="mb-4">
-                  <div className="mb-2 text-[var(--color-text-muted)]">
+                <div className={compact ? "mb-3" : "mb-4"}>
+                  <div className={compact ? "mb-1 text-sm text-[var(--color-text-muted)]" : "mb-2 text-[var(--color-text-muted)]"}>
                     Keypad
                   </div>
 
@@ -276,7 +276,7 @@ export function ScoreEntry({
                           appendScoreDigit(button);
                         }}
                         className={`rounded-xl bg-[var(--color-panel-soft)] hover:bg-[var(--color-panel-border)] border border-[var(--color-panel-border)] font-bold ${
-                          compact ? "p-3 text-lg" : "p-4 text-xl"
+                          compact ? "p-2 text-base" : "p-4 text-xl"
                         }`}
                       >
                         {button}
@@ -292,8 +292,8 @@ export function ScoreEntry({
 
       <button
         onClick={undoLastTurn}
-        className={`mt-4 w-full rounded-xl bg-[var(--color-warning)] hover:bg-[var(--color-warning-hover)] font-bold ${
-          compact ? "p-3 text-lg" : "p-4 text-xl"
+        className={`mt-2 w-full rounded-xl bg-[var(--color-warning)] hover:bg-[var(--color-warning-hover)] font-bold ${
+          compact ? "p-2 text-base" : "p-4 text-xl"
         }`}
       >
         Undo Last Turn

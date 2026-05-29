@@ -25,7 +25,7 @@ export function PlayerCard({
 
   return (
     <div
-      className={`rounded-2xl border ${compact ? "p-4" : "p-6"} ${
+      className={`rounded-2xl border ${compact ? "p-3" : "p-6"} ${
         isCurrentPlayer && !isLegComplete && !isMatchComplete
           ? "border-[var(--color-success)] bg-[var(--color-panel-soft)]"
           : "border-[var(--color-panel-border)] bg-[var(--color-panel)]"
@@ -35,7 +35,7 @@ export function PlayerCard({
         <div>
           <h2
             className={
-              compact ? "text-xl font-semibold" : "text-2xl font-semibold mb-2"
+              compact ? "text-lg font-semibold" : "text-2xl font-semibold mb-2"
             }
           >
             {player.name}
@@ -71,7 +71,7 @@ export function PlayerCard({
         </div>
 
         {isCurrentPlayer && !isLegComplete && !isMatchComplete && (
-          <div className="rounded-full bg-[var(--color-success)]/20 px-3 py-1 text-sm font-bold text-[var(--color-success-hover)]">
+          <div className="rounded-full bg-[var(--color-success)]/20 px-2 py-1 text-xs font-bold text-[var(--color-success-hover)]">
             Throw
           </div>
         )}
@@ -79,7 +79,7 @@ export function PlayerCard({
 
       <div
         className={
-          compact ? "mt-3 text-6xl font-bold" : "mt-3 text-6xl font-bold"
+          compact ? "mt-2 text-5xl font-bold" : "mt-3 text-6xl font-bold"
         }
       >
         {player.score}
@@ -88,7 +88,7 @@ export function PlayerCard({
       <div
         className={
           compact
-            ? "mt-3 grid grid-cols-2 gap-2 text-base"
+            ? "mt-2 grid grid-cols-2 gap-2 text-sm"
             : "mt-4 grid grid-cols-1 gap-2 text-xl"
         }
       >
