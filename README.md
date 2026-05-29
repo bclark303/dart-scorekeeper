@@ -1,36 +1,100 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Dart Scorekeeper
 
-## Getting Started
+A local-first X01 dart scoring app built with Next.js.
 
-First, run the development server:
+## Current Version
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+v0.1.0
+
+## Current Features
+
+- 301 / 501 / 701 X01 scoring
+- Straight-out and double-out finishes
+- Total-turn score entry
+- Dart-by-dart score entry
+- Singles, doubles, and larger team matches
+- Uneven team sizes
+- Dummy-score rotation for missing players
+- Undo last turn
+- Completed leg history
+- Dart details in history
+- Compact / full scoring layouts
+- Theme and branding settings
+- Local browser save/resume
+- Feedback form with diagnostics
+
+## Known Limitations
+
+- X01 is the only supported game type right now.
+- No graphical dartboard input yet.
+- No league, tournament, or backend sync yet.
+- Match data is stored only in the current browser/device.
+- Clearing browser data may erase saved matches.
+- Feedback submission requires an internet connection.
+
+## Local Development
+
+Install dependencies:
+
+```powershell
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Run the dev server:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```powershell
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Build for production:
 
-## Learn More
+```powershell
+npm run build
+```
 
-To learn more about Next.js, take a look at the following resources:
+Run lint checks:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```powershell
+npm run lint
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Feedback Form Setup
 
-## Deploy on Vercel
+Create a `.env.local` file in the project root:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```env
+NEXT_PUBLIC_FEEDBACK_ENDPOINT=https://formspree.io/f/your-form-id
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Do not commit `.env.local`.
+
+The project `.gitignore` should include:
+
+```text
+.env*.local
+```
+
+## Deployment Notes
+
+This app can be deployed to Vercel as a Next.js project.
+
+Required environment variable on Vercel:
+
+```text
+NEXT_PUBLIC_FEEDBACK_ENDPOINT
+```
+
+Set it to the Formspree endpoint used for tester feedback.
+
+## Tester Notes
+
+For v0.1.0 testing, focus on:
+
+- Total-turn score entry
+- Dart-by-dart score entry
+- Undo behavior
+- Checkouts
+- Team rotation
+- Uneven teams
+- Compact layout on tablets/phones
+- Feedback form submissions
