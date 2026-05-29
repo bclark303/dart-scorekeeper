@@ -28,6 +28,7 @@ import { useEffect, useState } from "react";
 import { CurrentTurnBanner } from "@/components/CurrentTurnBanner";
 import { AppSettings } from "@/components/AppSettings";
 import {
+  DartThrow,
   FinishRule,
   StartingScore,
   Turn,
@@ -714,6 +715,93 @@ export default function Home() {
     );
   }
 
+  function submitDartTurn(darts: DartThrow[]) {
+    if (isMatchComplete) {
+      setMessage("The match is complete. Start/reset the game to play again.");
+      return;
+    }
+
+    if (isLegComplete) {
+      setMessage("The leg is complete. Start the next leg.");
+      return;
+    }
+
+    if (pendingCheckoutTurn || pendingDartsUsedTurn) {
+      setMessage("Finish the checkout prompt before entering another score.");
+      return;
+    }
+
+    if (darts.length === 0 || darts.length > 3) {
+      setMessage("Enter 1 to 3 darts before submitting the turn.");
+      return;
+    }
+
+    const currentSide = sides[currentSideIndex];
+    const currentThrower = getCurrentThrower(currentSide);
+    const scoreEntered = darts.reduce((total, dart) => total + dart.score, 0);
+
+    const result = scoreTurn(currentSide, scoreEntered, finishRule);
+
+    const turnWithDarts: Turn = {
+      ...result.turn,
+      darts,
+      dartsThrown: darts.length as 1 | 2 | 3,
+      throwerId: currentThrower?.id,
+      throwerName: currentThrower?.name ?? getCurrentThrowerName(currentSide),
+      isDummy: currentThrower?.isDummy === true,
+    };
+
+    const resultWithDarts = {
+      ...result,
+      turn: turnWithDarts,
+    };
+
+    if (resultWithDarts.needsDoubleOutConfirmation) {
+      setPendingCheckoutTurn(resultWithDarts.turn);
+      setMessage(
+        `${resultWithDarts.turn.throwerName ?? resultWithDarts.turn.playerName} reached zero. Was the final dart a double?`,
+      );
+      return;
+    }
+
+    if (resultWithDarts.isLegComplete) {
+      setPendingDartsUsedTurn(resultWithDarts.turn);
+      setMessage(
+        `${resultWithDarts.turn.throwerName ?? resultWithDarts.turn.playerName} checked out. How many darts were used?`,
+      );
+      return;
+    }
+
+    setTurnHistory((previousHistory) => [
+      resultWithDarts.turn,
+      ...previousHistory,
+    ]);
+
+    if (!resultWithDarts.turn.isBust) {
+      const updatedSides = [...sides];
+
+      updatedSides[currentSideIndex] = {
+        ...updatedSides[currentSideIndex],
+        score: resultWithDarts.updatedPlayer.score,
+        currentMemberIndex: getNextMemberIndex(updatedSides[currentSideIndex]),
+      };
+
+      setSides(updatedSides);
+    } else {
+      advanceCurrentSideMember();
+    }
+
+    const nextSideIndex = getNextSideIndex();
+    setCurrentSideIndex(nextSideIndex);
+
+    const nextSide = sides[nextSideIndex];
+    const nextThrowerName = getCurrentThrowerName(nextSide);
+
+    setMessage(
+      `${resultWithDarts.message} ${nextThrowerName} (${nextSide.name}) to throw.`,
+    );
+  }
+
   function submitDummyScore() {
     if (!isCurrentThrowerDummy()) {
       return;
@@ -1169,7 +1257,14 @@ export default function Home() {
   // Dart-by-dart score entry.
   // This is a placeholder until we add the actual dart controls.
   function renderDartEntry() {
-    return <DartEntry message={message} compact={scoreLayout === "compact"} />;
+    return (
+      <DartEntry
+        message={message}
+        compact={scoreLayout === "compact"}
+        submitDartTurn={submitDartTurn}
+        undoLastTurn={undoLastTurn}
+      />
+    );
   }
 
   return (

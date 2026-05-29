@@ -6,6 +6,8 @@ import { DartThrow } from "@/lib/scoring";
 type DartEntryProps = {
   message: string;
   compact: boolean;
+  submitDartTurn: (darts: DartThrow[]) => void;
+  undoLastTurn: () => void;
 };
 
 type DartMultiplier = 1 | 2 | 3;
@@ -70,7 +72,12 @@ function createSpecialDart(segment: "outer-bull" | "bull" | "miss"): DartThrow {
   };
 }
 
-export function DartEntry({ message, compact }: DartEntryProps) {
+export function DartEntry({
+  message,
+  compact,
+  submitDartTurn,
+  undoLastTurn,
+}: DartEntryProps) {
   const [selectedMultiplier, setSelectedMultiplier] =
     useState<DartMultiplier | null>(null);
   const [currentDarts, setCurrentDarts] = useState<DartThrow[]>([]);
@@ -93,6 +100,16 @@ export function DartEntry({ message, compact }: DartEntryProps) {
 
   function clearDarts() {
     setCurrentDarts([]);
+  }
+
+  function handleSubmitTurn() {
+    if (currentDarts.length === 0) {
+      return;
+    }
+
+    submitDartTurn(currentDarts);
+    setCurrentDarts([]);
+    setSelectedMultiplier(null);
   }
 
   return (
@@ -259,12 +276,20 @@ export function DartEntry({ message, compact }: DartEntryProps) {
           </button>
 
           <button
+            onClick={handleSubmitTurn}
             disabled={currentDarts.length === 0}
             className="rounded-xl bg-[var(--color-success)] hover:bg-[var(--color-success-hover)] disabled:opacity-40 p-3 font-bold"
           >
             Submit Turn
           </button>
         </div>
+
+        <button
+          onClick={undoLastTurn}
+          className="mt-3 w-full rounded-xl bg-[var(--color-warning)] hover:bg-[var(--color-warning-hover)] p-3 font-bold"
+        >
+          Undo Last Turn
+        </button>
       </div>
     </section>
   );
