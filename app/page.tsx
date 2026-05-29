@@ -584,6 +584,29 @@ export default function Home() {
     return side.members[side.currentMemberIndex]?.name ?? side.name;
   }
 
+  function getDartLabel(dart: DartThrow) {
+    if (dart.segment === "miss") {
+      return "Miss";
+    }
+
+    if (dart.segment === "outer-bull") {
+      return "Outer Bull";
+    }
+
+    if (dart.segment === "bull") {
+      return "Bull";
+    }
+
+    const prefix =
+      dart.multiplier === 3 ? "T" : dart.multiplier === 2 ? "D" : "S";
+
+    return `${prefix}${dart.segment}`;
+  }
+
+  function getDartSummary(darts: DartThrow[]) {
+    return darts.map(getDartLabel).join(", ");
+  }
+
   function getCurrentThrower(side: MatchSide) {
     return side.members[side.currentMemberIndex];
   }
@@ -778,7 +801,7 @@ export default function Home() {
         needsDoubleOutConfirmation: false,
         message: `${
           turnWithDarts.throwerName ?? turnWithDarts.playerName
-        } busts! Final dart was not a double.`,
+        } busts with ${getDartSummary(darts)}. Final dart was not a double.`,
       };
     }
 
@@ -823,8 +846,16 @@ export default function Home() {
     const nextSide = sides[nextSideIndex];
     const nextThrowerName = getCurrentThrowerName(nextSide);
 
+    const dartSummary = getDartSummary(darts);
+    const throwerName =
+      resultWithDarts.turn.throwerName ?? resultWithDarts.turn.playerName;
+
+    const turnMessage = resultWithDarts.turn.isBust
+      ? `${throwerName} busts with ${dartSummary}.`
+      : `${throwerName} scored ${resultWithDarts.turn.scoreEntered} with ${dartSummary}.`;
+
     setMessage(
-      `${resultWithDarts.message} ${nextThrowerName} (${nextSide.name}) to throw.`,
+      `${turnMessage} ${nextThrowerName} (${nextSide.name}) to throw.`,
     );
   }
 
