@@ -13,6 +13,19 @@ export type StartingScore = 301 | 501 | 701;
 export type FinishRule = "straight_out" | "double_out";
 
 /**
+ * One individual dart.
+ *
+ * This will let us support dart-by-dart entry later while keeping
+ * total-turn score entry working during the transition.
+ */
+export type DartThrow = {
+  id: string;
+  segment: number | "outer-bull" | "bull" | "miss";
+  multiplier: 0 | 1 | 2 | 3;
+  score: number;
+};
+
+/**
  * This is the minimum shape needed by the scoring engine.
  *
  * Even though the app now uses MatchSide for singles/teams,
@@ -31,6 +44,9 @@ export type Player = {
  * the individual thrower.
  *
  * throwerId/throwerName identify the actual team member who threw.
+ *
+ * darts is optional so total-score entry can keep working.
+ * Dart-by-dart entry will populate it later.
  */
 export type Turn = {
   id: string;
@@ -39,6 +55,7 @@ export type Turn = {
   throwerId?: string;
   throwerName?: string;
   isDummy?: boolean;
+  darts?: DartThrow[];
   scoreEntered: number;
   scoreBefore: number;
   scoreAfter: number;
