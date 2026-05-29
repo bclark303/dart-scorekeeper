@@ -179,20 +179,31 @@ export function ScoreEntry({
                   Score this turn
                 </label>
 
-                <input
-                  className={`w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] mb-4 ${
-                    compact ? "p-3 text-3xl" : "p-4 text-3xl"
-                  }`}
-                  value={scoreInput}
-                  onChange={(event) => setScoreInput(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      submitScore();
-                    }
-                  }}
-                  inputMode="numeric"
-                  autoFocus
-                />
+                <div className="mb-4 grid grid-cols-2 gap-3">
+                  <input
+                    className={`w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] text-center ${
+                      compact ? "p-3 text-3xl" : "p-4 text-3xl"
+                    }`}
+                    value={scoreInput}
+                    onChange={(event) => setScoreInput(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        submitScore();
+                      }
+                    }}
+                    inputMode="numeric"
+                    autoFocus
+                  />
+
+                  <button
+                    onClick={submitScore}
+                    className={`rounded-xl bg-[var(--color-success)] hover:bg-[var(--color-success-hover)] font-bold whitespace-nowrap ${
+                      compact ? "px-5 py-3 text-lg" : "px-6 py-4 text-xl"
+                    }`}
+                  >
+                    Enter Score
+                  </button>
+                </div>
 
                 <div className="mb-4">
                   <div className="mb-2 text-[var(--color-text-muted)]">
@@ -257,15 +268,6 @@ export function ScoreEntry({
                     ))}
                   </div>
                 </div>
-
-                <button
-                  onClick={submitScore}
-                  className={`w-full rounded-xl bg-[var(--color-success)] hover:bg-[var(--color-success-hover)] font-bold ${
-                    compact ? "p-3 text-lg" : "p-4 text-xl"
-                  }`}
-                >
-                  Enter Score
-                </button>
               </>
             )}
           </>
