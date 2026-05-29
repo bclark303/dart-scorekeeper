@@ -17,6 +17,7 @@ import {
   ScoreEntryMode,
 } from "@/lib/types";
 
+import { FeedbackModal } from "@/components/FeedbackModal";
 import { APP_VERSION } from "@/lib/appInfo";
 import { DartEntry } from "@/components/DartEntry";
 import { ScoreEntry } from "@/components/ScoreEntry";
@@ -39,11 +40,18 @@ import {
 
 type AppView = "score" | "game" | "app" | "stats" | "history";
 type ScoreLayout = "compact" | "full";
+type FeedbackType = "bug" | "feature" | "general";
 
 export default function Home() {
   // Visual theme.
   // This controls the CSS variable set used by the app shell and components.
   const [themeName, setThemeName] = useState<ThemeName>("default");
+
+  // Feedback modal state.
+  // The submit action will later send this to a hosted form endpoint.
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const [feedbackType, setFeedbackType] = useState<FeedbackType>("bug");
+  const [feedbackMessage, setFeedbackMessage] = useState("");
 
   // Branding.
   // This is shown in the app header and can later be reused for TV displays/printouts.
@@ -1341,6 +1349,95 @@ export default function Home() {
     );
   }
 
+  function getFeedbackDiagnostics() {
+    const recentTurns = turnHistory.slice(0, 5).map((turn) => ({
+      playerName: turn.playerName,
+      throwerName: turn.throwerName,
+      scoreEntered: turn.scoreEntered,
+      scoreBefore: turn.scoreBefore,
+      scoreAfter: turn.scoreAfter,
+      dartsThrown: turn.dartsThrown,
+      isBust: turn.isBust,
+      isCheckout: turn.isCheckout,
+      darts: turn.darts?.map((dart) => ({
+        segment: dart.segment,
+        multiplier: dart.multiplier,
+        score: dart.score,
+      })),
+    }));
+
+    return JSON.stringify(
+      {
+        appVersion: APP_VERSION,
+        timestamp: new Date().toISOString(),
+        activeView,
+        themeName,
+        brandName,
+        scoreLayout,
+        defaultScoreLayout,
+        refreshBehavior,
+        game: {
+          startingScore,
+          finishRule,
+          bestOfLegs,
+          scoreEntryMode,
+          sideOneSize,
+          sideTwoSize,
+          rotationMode,
+          dummyScore,
+        },
+        match: {
+          currentLegNumber,
+          currentSideIndex,
+          isLegComplete,
+          isMatchComplete,
+          message,
+          sides: sides.map((side) => ({
+            id: side.id,
+            name: side.name,
+            score: side.score,
+            legsWon: side.legsWon,
+            currentMemberIndex: side.currentMemberIndex,
+            members: side.members.map((member) => ({
+              id: member.id,
+              name: member.name,
+              isDummy: member.isDummy,
+            })),
+          })),
+        },
+        recentTurns,
+        browser:
+          typeof window === "undefined" || typeof navigator === "undefined"
+            ? {
+                userAgent: "Unavailable during server prerender",
+                language: "Unavailable during server prerender",
+                screen: {
+                  width: null,
+                  height: null,
+                },
+                viewport: {
+                  width: null,
+                  height: null,
+                },
+              }
+            : {
+                userAgent: navigator.userAgent,
+                language: navigator.language,
+                screen: {
+                  width: window.screen.width,
+                  height: window.screen.height,
+                },
+                viewport: {
+                  width: window.innerWidth,
+                  height: window.innerHeight,
+                },
+              },
+      },
+      null,
+      2,
+    );
+  }
+
   return (
     <main
       className={`min-h-screen bg-[var(--color-app-bg)] text-[var(--color-text-main)] p-6 ${
@@ -1362,8 +1459,17 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="rounded-xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] px-3 py-2 text-sm text-[var(--color-text-muted)]">
-              v{APP_VERSION}
+            <div className="flex flex-col sm:items-end gap-2">
+              <div className="rounded-xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] px-3 py-2 text-sm text-[var(--color-text-muted)]">
+                v{APP_VERSION}
+              </div>
+
+              <button
+                onClick={() => setIsFeedbackModalOpen(true)}
+                className="rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] px-4 py-2 text-sm font-bold"
+              >
+                Feedback
+              </button>
             </div>
           </div>
         </div>
@@ -1503,6 +1609,15 @@ export default function Home() {
             <CompletedLegs completedLegs={completedLegs} />
           </>
         )}
+        <FeedbackModal
+          isOpen={isFeedbackModalOpen}
+          feedbackType={feedbackType}
+          feedbackMessage={feedbackMessage}
+          diagnostics={getFeedbackDiagnostics()}
+          setFeedbackType={setFeedbackType}
+          setFeedbackMessage={setFeedbackMessage}
+          closeFeedbackModal={() => setIsFeedbackModalOpen(false)}
+        />
       </div>
     </main>
   );
