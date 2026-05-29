@@ -17,6 +17,7 @@ import {
   ScoreEntryMode,
 } from "@/lib/types";
 
+import { APP_VERSION } from "@/lib/appInfo";
 import { DartEntry } from "@/components/DartEntry";
 import { ScoreEntry } from "@/components/ScoreEntry";
 import { GameSetup } from "@/components/GameSetup";
@@ -1348,13 +1349,23 @@ export default function Home() {
     >
       <div className="mx-auto max-w-4xl">
         <div className="mb-6">
-          <div className="text-sm uppercase tracking-wide text-[var(--color-text-muted)]">
-            Local Scoring App
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <div className="text-sm uppercase tracking-wide text-[var(--color-text-muted)]">
+                Local Scoring App
+              </div>
+
+              <h1 className="text-4xl font-bold mb-2">{brandName}</h1>
+
+              <p className="text-[var(--color-text-muted)]">
+                X01 scorer for singles, doubles, and team play
+              </p>
+            </div>
+
+            <div className="rounded-xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] px-3 py-2 text-sm text-[var(--color-text-muted)]">
+              v{APP_VERSION}
+            </div>
           </div>
-          <h1 className="text-4xl font-bold mb-2">{brandName}</h1>
-          <p className="text-[var(--color-text-muted)]">
-            X01 scorer for singles, doubles, and team play
-          </p>
         </div>
 
         <nav className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-8">
