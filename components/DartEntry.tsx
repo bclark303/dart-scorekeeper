@@ -340,6 +340,14 @@ export function DartEntry({
     currentDarts,
     finishRule,
   );
+
+  const fullscreenStatusText =
+    turnPreview.tone === "danger" || turnPreview.tone === "good"
+      ? turnPreview.label
+      : getCheckoutSuggestion(currentScore)
+        ? `CO: ${getCheckoutSuggestion(currentScore)}`
+        : "CO: —";
+
   const isOuterBullSelected = specialDartIsSelected(currentDarts, "outer-bull");
   const isBullSelected = specialDartIsSelected(currentDarts, "bull");
   const isPreviewAnimated =
@@ -1130,33 +1138,40 @@ export function DartEntry({
       {isBoardFullscreen && !isLegComplete && !isMatchComplete && (
         <div className="fixed inset-0 z-[90] h-[100dvh] overflow-hidden bg-neutral-950 p-2 text-white">
           <div className="mx-auto grid h-full max-w-[1600px] grid-rows-[auto_minmax(0,1fr)] gap-2 overflow-hidden">
-            <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-2xl border border-white/20 bg-neutral-900 px-3 py-2 shadow-2xl">
+            <div className="shrink-0 rounded-2xl border border-white/20 bg-neutral-900 px-4 py-2 shadow-2xl">
               <div className="min-w-0">
-                <div className="truncate text-sm font-black sm:text-lg">
-                  {message}
-                </div>
-                <div className="truncate text-xs text-white/65 sm:text-sm">
-                  {currentScore} remaining •{" "}
-                  {isTurnReady
-                    ? "Ready to submit"
-                    : `Dart ${nextDartNumber} of 3`}{" "}
-                  • Turn {turnTotal}
-                  {turnPreview.detail ? ` • ${turnPreview.detail}` : ""}
-                </div>
-              </div>
+                <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <span className="truncate text-2xl font-black leading-tight sm:text-3xl">
+                    {currentThrowerName}
+                  </span>
 
-              <div className="flex items-center gap-2">
-                {compact && renderAutoFullscreenToggle(true)}
-                <button
-                  onClick={() => {
-                    setShowFullscreenScorecard(false);
-                    setIsBoardFullscreen(false);
-                    setHasAutoOpenedBoard(false);
-                  }}
-                  className="rounded-lg bg-white/10 px-3 py-2 text-sm font-bold hover:bg-white/20"
-                >
-                  Exit
-                </button>
+                  <span className="truncate text-sm font-bold uppercase tracking-wide text-white/60 sm:text-base">
+                    {currentSideName}
+                  </span>
+
+                  <span className="text-4xl font-black leading-none text-white sm:text-5xl">
+                    {currentScore}
+                  </span>
+
+                  <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-sm font-black text-white/85 sm:text-base">
+                    {isTurnReady ? "Ready" : `Dart ${nextDartNumber}/3`}
+                  </span>
+
+                  <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-sm font-black text-white/85 sm:text-base">
+                    Turn {turnTotal}
+                  </span>
+
+                  <span
+                    className={`rounded-full border px-3 py-1 text-sm font-black sm:text-base ${turnPreview.tone === "danger"
+                      ? "border-[#b3261e] bg-[#b3261e]/25 text-white"
+                      : turnPreview.tone === "good"
+                        ? "border-[var(--color-success)] bg-[var(--color-success)]/20 text-white"
+                        : "border-white/15 bg-white/10 text-white/75"
+                      }`}
+                  >
+                    {fullscreenStatusText}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -1303,6 +1318,23 @@ export function DartEntry({
                   >
                     Undo Last Turn
                   </button>
+
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    {compact && renderAutoFullscreenToggle(true)}
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowFullscreenScorecard(false);
+                        setIsBoardFullscreen(false);
+                        setHasAutoOpenedBoard(false);
+                      }}
+                      className="rounded-lg border border-white/15 bg-white/5 px-2 py-2 text-xs font-bold text-white/75 hover:bg-white/10"
+                    >
+                      Exit
+                    </button>
+                  </div>
+
                 </div>
               </div>
             </div>
