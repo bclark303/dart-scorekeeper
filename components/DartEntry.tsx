@@ -26,6 +26,8 @@ type TurnPreview = {
 };
 
 type NumberRing = "single-inner" | "triple" | "single-outer" | "double";
+type DartInputStyle = "board" | "numeric";
+
 
 type BoardTarget = {
   segment: number;
@@ -296,6 +298,8 @@ export function DartEntry({
 }: DartEntryProps) {
   const [currentDarts, setCurrentDarts] = useState<DartThrow[]>([]);
   const [isBoardFullscreen, setIsBoardFullscreen] = useState(false);
+  const [dartInputStyle, setDartInputStyle] = useState<DartInputStyle>("board");
+  const [numericMultiplier, setNumericMultiplier] = useState<1 | 2 | 3 | null>(null);
 
   const turnTotal = currentDarts.reduce((total, dart) => total + dart.score, 0);
   const canAddDart = currentDarts.length < 3;
@@ -320,6 +324,71 @@ export function DartEntry({
 
   function clearDarts() {
     setCurrentDarts([]);
+  }
+
+  function addNumericDart(segment: number) {
+    if (!numericMultiplier) {
+      return;
+    }
+
+    addDart({
+      id: getRandomId(),
+      segment,
+      multiplier: numericMultiplier,
+      score: segment * numericMultiplier,
+    });
+    setNumericMultiplier(null);
+  }
+
+  function renderDartInputStyleToggle(isFullscreen = false) {
+    return (
+      <div
+        className={`flex items-center justify-between gap-2 rounded-xl border ${
+          isFullscreen
+            ? "border-white/20 bg-white/5 p-2"
+            : "border-[var(--color-panel-border)] bg-[var(--color-panel)] p-2"
+        }`}
+      >
+        <div>
+          <div className="text-xs font-bold uppercase tracking-wide opacity-70">Dart input</div>
+          <div className={isFullscreen ? "text-sm font-black" : "text-sm font-bold"}>
+            {dartInputStyle === "board" ? "Graphical board" : "Numeric dart pad"}
+          </div>
+        </div>
+
+        <div className={`grid grid-cols-2 rounded-lg border p-1 ${isFullscreen ? "border-white/20 bg-black/20" : "border-[var(--color-panel-border)] bg-[var(--color-panel-soft)]"}`}>
+          <button
+            type="button"
+            onClick={() => setDartInputStyle("board")}
+            className={`rounded-md px-3 py-2 text-sm font-bold transition ${
+              dartInputStyle === "board"
+                ? "bg-[var(--color-primary)] text-white shadow"
+                : isFullscreen
+                  ? "text-white/70 hover:bg-white/10 hover:text-white"
+                  : "text-[var(--color-text-muted)] hover:bg-[var(--color-panel-border)] hover:text-[var(--color-text-main)]"
+            }`}
+            aria-pressed={dartInputStyle === "board"}
+          >
+            Board
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setDartInputStyle("numeric")}
+            className={`rounded-md px-3 py-2 text-sm font-bold transition ${
+              dartInputStyle === "numeric"
+                ? "bg-[var(--color-primary)] text-white shadow"
+                : isFullscreen
+                  ? "text-white/70 hover:bg-white/10 hover:text-white"
+                  : "text-[var(--color-text-muted)] hover:bg-[var(--color-panel-border)] hover:text-[var(--color-text-main)]"
+            }`}
+            aria-pressed={dartInputStyle === "numeric"}
+          >
+            Numeric
+          </button>
+        </div>
+      </div>
+    );
   }
 
   function handleSubmitTurn() {
@@ -429,6 +498,73 @@ export function DartEntry({
           );
         })}
       </svg>
+    );
+  }
+
+  function renderNumericDartInput(isFullscreen = false) {
+    const multiplierOptions: Array<{ label: string; value: 1 | 2 | 3 }> = [
+      { label: "Single", value: 1 },
+      { label: "Double", value: 2 },
+      { label: "Triple", value: 3 },
+    ];
+
+    return (
+      <div
+        className={`rounded-2xl border ${
+          isFullscreen
+            ? "border-white/20 bg-neutral-950 p-3"
+            : "border-[var(--color-panel-border)] bg-[var(--color-panel)] p-3"
+        }`}
+      >
+        <div className="mb-3 grid grid-cols-3 gap-2">
+          {multiplierOptions.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setNumericMultiplier(option.value)}
+              className={`rounded-xl border font-black transition ${
+                numericMultiplier === option.value
+                  ? "border-[#facc15] bg-[var(--color-primary)] text-white ring-2 ring-[#facc15]"
+                  : isFullscreen
+                    ? "border-white/20 bg-white/10 text-white hover:bg-white/20"
+                    : "border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] hover:bg-[var(--color-panel-border)]"
+              } ${isFullscreen ? "p-4 text-lg" : compact ? "p-2 text-sm" : "p-3 text-base"}`}
+              aria-pressed={numericMultiplier === option.value}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-5 gap-2">
+          {Array.from({ length: 20 }, (_, index) => index + 1).map((segment) => {
+            const value = numericMultiplier ? segment * numericMultiplier : segment;
+            const prefix = numericMultiplier === 1 ? "S" : numericMultiplier === 2 ? "D" : numericMultiplier === 3 ? "T" : "—";
+            const label = numericMultiplier ? `${prefix}${segment}` : `Segment ${segment}`;
+            const isNumberDisabled = !canAddDart || !numericMultiplier;
+
+            return (
+              <button
+                key={segment}
+                type="button"
+                onClick={() => addNumericDart(segment)}
+                disabled={isNumberDisabled}
+                className={`rounded-xl border font-black transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                  isFullscreen
+                    ? "border-white/20 bg-white/10 text-white hover:bg-white/20"
+                    : "border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] hover:bg-[var(--color-panel-border)]"
+                } ${isFullscreen ? "p-4 text-xl" : compact ? "p-2 text-base" : "p-3 text-lg"}`}
+                aria-label={numericMultiplier ? `${label}, ${value} points` : `Choose multiplier before segment ${segment}`}
+              >
+                <span className="block">{segment}</span>
+                <span className="block text-[0.65rem] font-bold opacity-70">
+                  {numericMultiplier ? `${label} · ${value}` : "Pick S/D/T"}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
     );
   }
 
@@ -648,7 +784,10 @@ export function DartEntry({
 
       {!isLegComplete && !isMatchComplete && (
         <div className="rounded-2xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3">
-          <div className="mb-3">{renderTurnStatus()}</div>
+          <div className="mb-3 space-y-2">
+            {renderDartInputStyleToggle()}
+            {renderTurnStatus()}
+          </div>
 
           <div
             className={
@@ -657,17 +796,21 @@ export function DartEntry({
                 : "grid grid-cols-[minmax(260px,380px)_1fr] gap-5 items-start"
             }
           >
-            <div className={`rounded-2xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] ${compact ? "p-1" : "p-2"}`}>
-              <div className="mb-2 flex justify-end">
-                <button
-                  onClick={() => setIsBoardFullscreen(true)}
-                  className="rounded-lg bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] px-3 py-1 text-xs font-bold hover:bg-[var(--color-panel-border)]"
-                >
-                  Full screen board
-                </button>
+            {dartInputStyle === "board" ? (
+              <div className={`rounded-2xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] ${compact ? "p-1" : "p-2"}`}>
+                <div className="mb-2 flex justify-end">
+                  <button
+                    onClick={() => setIsBoardFullscreen(true)}
+                    className="rounded-lg bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] px-3 py-1 text-xs font-bold hover:bg-[var(--color-panel-border)]"
+                  >
+                    Full screen board
+                  </button>
+                </div>
+                {renderDartBoard(compact ? "w-full max-w-[315px]" : "w-full max-w-[380px]")}
               </div>
-              {renderDartBoard(compact ? "w-full max-w-[315px]" : "w-full max-w-[380px]")}
-            </div>
+            ) : (
+              renderNumericDartInput()
+            )}
 
             {renderTurnControls()}
           </div>
@@ -690,11 +833,16 @@ export function DartEntry({
               </button>
             </div>
 
-            {renderTurnStatus(true)}
+            <div className="space-y-2">
+              {renderDartInputStyleToggle(true)}
+              {renderTurnStatus(true)}
+            </div>
 
             <div className="grid flex-1 grid-cols-1 gap-3 lg:grid-cols-[minmax(360px,1fr)_380px]">
               <div className="flex items-center justify-center rounded-2xl border border-white/20 bg-neutral-950 p-2 shadow-2xl">
-                {renderDartBoard("h-[min(72vh,760px)] max-h-full w-full max-w-[min(92vw,760px)]")}
+                {dartInputStyle === "board"
+                  ? renderDartBoard("h-[min(72vh,760px)] max-h-full w-full max-w-[min(92vw,760px)]")
+                  : renderNumericDartInput(true)}
               </div>
 
               <div className="rounded-2xl border border-white/20 bg-neutral-950 p-3 shadow-2xl">

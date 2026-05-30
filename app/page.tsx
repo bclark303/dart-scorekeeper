@@ -1357,6 +1357,55 @@ export default function Home() {
     );
   }
 
+  function renderScoreEntryModeToggle() {
+    const isBoardMode = scoreEntryMode === "dart";
+
+    return (
+      <div
+        className={`mb-3 flex items-center justify-between gap-2 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] ${
+          shouldUseGameModeShell ? "p-2" : "p-3"
+        }`}
+      >
+        <div>
+          <div className="text-xs font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
+            Input
+          </div>
+          <div className="text-sm font-bold text-[var(--color-text-main)]">
+            {isBoardMode ? "Dart-by-dart" : "Turn total"}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-1">
+          <button
+            type="button"
+            onClick={() => setScoreEntryMode("turn")}
+            className={`rounded-lg px-3 py-2 text-sm font-bold transition ${
+              !isBoardMode
+                ? "bg-[var(--color-primary)] text-white shadow"
+                : "text-[var(--color-text-muted)] hover:bg-[var(--color-panel-border)] hover:text-[var(--color-text-main)]"
+            }`}
+            aria-pressed={!isBoardMode}
+          >
+            Turn
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setScoreEntryMode("dart")}
+            className={`rounded-lg px-3 py-2 text-sm font-bold transition ${
+              isBoardMode
+                ? "bg-[var(--color-primary)] text-white shadow"
+                : "text-[var(--color-text-muted)] hover:bg-[var(--color-panel-border)] hover:text-[var(--color-text-main)]"
+            }`}
+            aria-pressed={isBoardMode}
+          >
+            Darts
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   function renderScoreEntry() {
     return (
       <ScoreEntry
@@ -1836,6 +1885,8 @@ export default function Home() {
                 setScoreLayout={setScoreLayout}
               />
             )}
+
+            {!isLegComplete && !isMatchComplete && renderScoreEntryModeToggle()}
 
             <div className="flex flex-col">
               <div
