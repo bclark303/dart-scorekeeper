@@ -1395,6 +1395,8 @@ export default function Home() {
       <DartEntry
         message={message}
         compact={scoreLayout === "compact"}
+        currentScore={sides[currentSideIndex]?.score ?? 0}
+        finishRule={finishRule}
         submitDartTurn={submitDartTurn}
         undoLastTurn={undoLastTurn}
         startNextLeg={startNextLeg}
