@@ -1175,7 +1175,7 @@ export function DartEntry({
                 )}
               </div>
 
-              <div className="grid min-h-0 grid-rows-[auto_auto_auto_auto_minmax(0,1fr)_auto] gap-2 overflow-hidden rounded-2xl border border-white/20 bg-neutral-900 p-2 shadow-2xl">
+              <div className="grid min-h-0 grid-rows-[auto_auto_auto_auto_auto_1fr] gap-2 overflow-hidden rounded-2xl border border-white/20 bg-neutral-900 p-2 shadow-2xl">
                 {!showFullscreenScorecard && renderDartInputStyleToggle(true)}
 
                 <div
@@ -1266,7 +1266,7 @@ export function DartEntry({
                   </button>
                 </div>
 
-                <div className="min-h-0" />
+                <div className="min-h-0 overflow-hidden" />
 
                 <div className="grid gap-2">
                   <button
