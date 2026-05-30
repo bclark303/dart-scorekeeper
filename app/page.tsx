@@ -1445,6 +1445,13 @@ export default function Home() {
         message={message}
         compact={scoreLayout === "compact"}
         currentScore={sides[currentSideIndex]?.score ?? 0}
+        currentSideName={sides[currentSideIndex]?.name ?? "Side"}
+        currentThrowerName={
+          sides[currentSideIndex]
+            ? getCurrentThrowerName(sides[currentSideIndex])
+            : "Player"
+        }
+        currentLegNumber={currentLegNumber}
         finishRule={finishRule}
         submitDartTurn={submitDartTurn}
         undoLastTurn={undoLastTurn}
@@ -1657,7 +1664,8 @@ export default function Home() {
           <div className="min-w-0 flex-1">
             <div className="truncate text-lg font-bold">{brandName}</div>
             <div className="truncate text-sm text-[var(--color-text-muted)]">
-              {getActiveViewLabel()} · Leg {currentLegNumber} · {currentThrowerName}
+              {getActiveViewLabel()} · Leg {currentLegNumber} ·{" "}
+              {currentThrowerName}
               {currentSide ? ` (${currentSide.name})` : ""}
             </div>
           </div>
@@ -1684,7 +1692,9 @@ export default function Home() {
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
                   <div className="text-lg font-bold">Game Menu</div>
-                  <div className="text-sm text-slate-300">{brandName} · v{APP_VERSION}</div>
+                  <div className="text-sm text-slate-300">
+                    {brandName} · v{APP_VERSION}
+                  </div>
                 </div>
 
                 <button
@@ -1886,7 +1896,10 @@ export default function Home() {
               />
             )}
 
-            {!isLegComplete && !isMatchComplete && renderScoreEntryModeToggle()}
+            {!isLegComplete &&
+              !isMatchComplete &&
+              !isCurrentThrowerDummy() &&
+              renderScoreEntryModeToggle()}
 
             <div className="flex flex-col">
               <div
@@ -1898,7 +1911,7 @@ export default function Home() {
                       : "order-2"
                 }
               >
-                {scoreEntryMode === "dart"
+                {scoreEntryMode === "dart" && !isCurrentThrowerDummy()
                   ? renderDartEntry()
                   : renderScoreEntry()}
               </div>

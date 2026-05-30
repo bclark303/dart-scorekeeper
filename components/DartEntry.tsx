@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DartThrow, FinishRule, getCheckoutSuggestion } from "@/lib/scoring";
 import { getDartLabel } from "@/lib/darts";
 
@@ -8,6 +8,9 @@ type DartEntryProps = {
   message: string;
   compact: boolean;
   currentScore: number;
+  currentSideName: string;
+  currentThrowerName: string;
+  currentLegNumber: number;
   finishRule: FinishRule;
   submitDartTurn: (darts: DartThrow[]) => void;
   undoLastTurn: () => void;
@@ -28,6 +31,8 @@ type TurnPreview = {
 type NumberRing = "single-inner" | "triple" | "single-outer" | "double";
 type DartInputStyle = "board" | "numeric";
 
+const AUTO_FULLSCREEN_BOARD_STORAGE_KEY =
+  "dart-scorekeeper-auto-fullscreen-board";
 
 type BoardTarget = {
   segment: number;
@@ -52,11 +57,11 @@ const ringDefinitions: Array<{
   innerRadius: number;
   outerRadius: number;
 }> = [
-  { ring: "double", multiplier: 2, innerRadius: 92, outerRadius: 102 },
-  { ring: "single-outer", multiplier: 1, innerRadius: 60, outerRadius: 90 },
-  { ring: "triple", multiplier: 3, innerRadius: 48, outerRadius: 58 },
-  { ring: "single-inner", multiplier: 1, innerRadius: 17, outerRadius: 46 },
-];
+    { ring: "double", multiplier: 2, innerRadius: 92, outerRadius: 102 },
+    { ring: "single-outer", multiplier: 1, innerRadius: 60, outerRadius: 90 },
+    { ring: "triple", multiplier: 3, innerRadius: 48, outerRadius: 58 },
+    { ring: "single-inner", multiplier: 1, innerRadius: 17, outerRadius: 46 },
+  ];
 
 function getRandomId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -118,7 +123,11 @@ function getBoardFillClass(target: BoardTarget) {
   return isEvenPosition ? "fill-[#1f1f1f]" : "fill-[#eadfbf]";
 }
 
-function getRingClass(target: BoardTarget, canAddDart: boolean, isSelected: boolean) {
+function getRingClass(
+  target: BoardTarget,
+  canAddDart: boolean,
+  isSelected: boolean,
+) {
   const stateClass = canAddDart
     ? "cursor-pointer active:brightness-150 hover:brightness-125"
     : "cursor-not-allowed opacity-40";
@@ -213,7 +222,9 @@ function getTurnPreview(
 
     return {
       label: `${currentScore} remaining`,
-      detail: checkout ? `Checkout: ${checkout}` : "Tap the board to build this turn.",
+      detail: checkout
+        ? `Checkout: ${checkout}`
+        : "Tap the board to build this turn.",
       tone: "neutral",
     };
   }
@@ -237,7 +248,10 @@ function getTurnPreview(
   }
 
   if (remaining === 0) {
-    if (finishRule === "double_out" && !isDoubleOutDart(darts[darts.length - 1])) {
+    if (
+      finishRule === "double_out" &&
+      !isDoubleOutDart(darts[darts.length - 1])
+    ) {
       return {
         label: "Invalid checkout",
         detail: "Final dart must be a double or bull.",
@@ -286,6 +300,9 @@ export function DartEntry({
   message,
   compact,
   currentScore,
+  currentSideName,
+  currentThrowerName,
+  currentLegNumber,
   finishRule,
   submitDartTurn,
   undoLastTurn,
@@ -298,23 +315,91 @@ export function DartEntry({
 }: DartEntryProps) {
   const [currentDarts, setCurrentDarts] = useState<DartThrow[]>([]);
   const [isBoardFullscreen, setIsBoardFullscreen] = useState(false);
-  const [dartInputStyle, setDartInputStyle] = useState<DartInputStyle>("board");
-  const [numericMultiplier, setNumericMultiplier] = useState<1 | 2 | 3 | null>(null);
+  const [autoFullscreenBoard, setAutoFullscreenBoard] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
 
+    return (
+      window.localStorage.getItem(AUTO_FULLSCREEN_BOARD_STORAGE_KEY) === "true"
+    );
+  });
+  const [hasAutoOpenedBoard, setHasAutoOpenedBoard] = useState(false);
+  const [dartInputStyle, setDartInputStyle] = useState<DartInputStyle>("board");
+  const [numericMultiplier, setNumericMultiplier] = useState<1 | 2 | 3 | null>(
+    null,
+  );
+  const [showFullscreenScorecard, setShowFullscreenScorecard] = useState(false);
   const turnTotal = currentDarts.reduce((total, dart) => total + dart.score, 0);
   const canAddDart = currentDarts.length < 3;
   const nextDartNumber = Math.min(currentDarts.length + 1, 3);
   const isTurnReady = currentDarts.length === 3;
-  const turnPreview = getTurnPreview(currentScore, turnTotal, currentDarts, finishRule);
+  const turnPreview = getTurnPreview(
+    currentScore,
+    turnTotal,
+    currentDarts,
+    finishRule,
+  );
   const isOuterBullSelected = specialDartIsSelected(currentDarts, "outer-bull");
   const isBullSelected = specialDartIsSelected(currentDarts, "bull");
-  const isPreviewAnimated = turnPreview.tone === "good" || turnPreview.tone === "danger";
+  const isPreviewAnimated =
+    turnPreview.tone === "good" || turnPreview.tone === "danger";
+  const shouldAutoOpenBoard =
+    compact &&
+    autoFullscreenBoard &&
+    dartInputStyle === "board" &&
+    !isLegComplete &&
+    !isMatchComplete;
+
+
+  useEffect(() => {
+    if (!shouldAutoOpenBoard || hasAutoOpenedBoard || isBoardFullscreen) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setIsBoardFullscreen(true);
+      setHasAutoOpenedBoard(true);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [hasAutoOpenedBoard, isBoardFullscreen, shouldAutoOpenBoard]);
+
+  useEffect(() => {
+    if (!isBoardFullscreen) {
+      return;
+    }
+
+    const originalBodyOverflow = document.body.style.overflow;
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = originalBodyOverflow;
+      document.documentElement.style.overflow = originalHtmlOverflow;
+    };
+  }, [isBoardFullscreen]);
+
+  function setAutoFullscreenPreference(enabled: boolean) {
+    setAutoFullscreenBoard(enabled);
+    window.localStorage.setItem(
+      AUTO_FULLSCREEN_BOARD_STORAGE_KEY,
+      String(enabled),
+    );
+
+    if (enabled) {
+      setHasAutoOpenedBoard(false);
+    }
+  }
 
   function addDart(dart: DartThrow) {
     if (!canAddDart) {
       return;
     }
 
+    setShowFullscreenScorecard(false);
     setCurrentDarts((previousDarts) => [...previousDarts, dart]);
   }
 
@@ -340,33 +425,103 @@ export function DartEntry({
     setNumericMultiplier(null);
   }
 
-  function renderDartInputStyleToggle(isFullscreen = false) {
+  function renderAutoFullscreenToggle(isFullscreen = false) {
+    if (isFullscreen) {
+      return (
+        <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-white/15 bg-white/5 px-2 py-1 text-xs font-bold text-white/80 hover:bg-white/10">
+          <input
+            type="checkbox"
+            checked={autoFullscreenBoard}
+            onChange={(event) =>
+              setAutoFullscreenPreference(event.target.checked)
+            }
+            className="h-4 w-4 accent-[var(--color-primary)]"
+          />
+          Auto-open
+        </label>
+      );
+    }
+
     return (
-      <div
-        className={`flex items-center justify-between gap-2 rounded-xl border ${
-          isFullscreen
-            ? "border-white/20 bg-white/5 p-2"
-            : "border-[var(--color-panel-border)] bg-[var(--color-panel)] p-2"
-        }`}
+      <button
+        type="button"
+        onClick={() => setAutoFullscreenPreference(!autoFullscreenBoard)}
+        className={`rounded-lg border px-3 py-1 text-xs font-bold transition ${autoFullscreenBoard
+          ? "border-[#facc15] bg-[var(--color-primary)] text-white ring-1 ring-[#facc15]"
+          : "border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] text-[var(--color-text-main)] hover:bg-[var(--color-panel-border)]"
+          }`}
+        aria-pressed={autoFullscreenBoard}
+        title="Automatically open the full-screen board while Game Mode is active"
       >
+        {autoFullscreenBoard ? "Auto full screen: On" : "Auto full screen: Off"}
+      </button>
+    );
+  }
+
+  function renderDartInputStyleToggle(isFullscreen = false) {
+    if (isFullscreen) {
+      return (
+        <div className="rounded-xl border border-white/15 bg-white/5 p-2">
+          <div className="mb-1 text-[0.65rem] font-bold uppercase tracking-wide text-white/60">
+            Dart input
+          </div>
+          <div className="grid grid-cols-2 gap-1">
+            <label
+              className={`flex cursor-pointer items-center justify-center gap-2 rounded-lg border px-2 py-2 text-sm font-bold ${dartInputStyle === "board" ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white" : "border-white/15 bg-white/5 text-white/75 hover:bg-white/10"}`}
+            >
+              <input
+                type="radio"
+                name="fullscreen-dart-input-style"
+                checked={dartInputStyle === "board"}
+                onChange={() => {
+                  setDartInputStyle("board");
+                  setHasAutoOpenedBoard(false);
+                }}
+                className="sr-only"
+              />
+              Board
+            </label>
+            <label
+              className={`flex cursor-pointer items-center justify-center gap-2 rounded-lg border px-2 py-2 text-sm font-bold ${dartInputStyle === "numeric" ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white" : "border-white/15 bg-white/5 text-white/75 hover:bg-white/10"}`}
+            >
+              <input
+                type="radio"
+                name="fullscreen-dart-input-style"
+                checked={dartInputStyle === "numeric"}
+                onChange={() => setDartInputStyle("numeric")}
+                className="sr-only"
+              />
+              Numeric
+            </label>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex items-center justify-between gap-2 rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-2">
         <div>
-          <div className="text-xs font-bold uppercase tracking-wide opacity-70">Dart input</div>
-          <div className={isFullscreen ? "text-sm font-black" : "text-sm font-bold"}>
-            {dartInputStyle === "board" ? "Graphical board" : "Numeric dart pad"}
+          <div className="text-xs font-bold uppercase tracking-wide opacity-70">
+            Dart input
+          </div>
+          <div className="text-sm font-bold">
+            {dartInputStyle === "board"
+              ? "Graphical board"
+              : "Numeric dart pad"}
           </div>
         </div>
 
-        <div className={`grid grid-cols-2 rounded-lg border p-1 ${isFullscreen ? "border-white/20 bg-black/20" : "border-[var(--color-panel-border)] bg-[var(--color-panel-soft)]"}`}>
+        <div className="grid grid-cols-2 rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-1">
           <button
             type="button"
-            onClick={() => setDartInputStyle("board")}
-            className={`rounded-md px-3 py-2 text-sm font-bold transition ${
-              dartInputStyle === "board"
-                ? "bg-[var(--color-primary)] text-white shadow"
-                : isFullscreen
-                  ? "text-white/70 hover:bg-white/10 hover:text-white"
-                  : "text-[var(--color-text-muted)] hover:bg-[var(--color-panel-border)] hover:text-[var(--color-text-main)]"
-            }`}
+            onClick={() => {
+              setDartInputStyle("board");
+              setHasAutoOpenedBoard(false);
+            }}
+            className={`rounded-md px-3 py-2 text-sm font-bold transition ${dartInputStyle === "board"
+              ? "bg-[var(--color-primary)] text-white shadow"
+              : "text-[var(--color-text-muted)] hover:bg-[var(--color-panel-border)] hover:text-[var(--color-text-main)]"
+              }`}
             aria-pressed={dartInputStyle === "board"}
           >
             Board
@@ -375,13 +530,10 @@ export function DartEntry({
           <button
             type="button"
             onClick={() => setDartInputStyle("numeric")}
-            className={`rounded-md px-3 py-2 text-sm font-bold transition ${
-              dartInputStyle === "numeric"
-                ? "bg-[var(--color-primary)] text-white shadow"
-                : isFullscreen
-                  ? "text-white/70 hover:bg-white/10 hover:text-white"
-                  : "text-[var(--color-text-muted)] hover:bg-[var(--color-panel-border)] hover:text-[var(--color-text-main)]"
-            }`}
+            className={`rounded-md px-3 py-2 text-sm font-bold transition ${dartInputStyle === "numeric"
+              ? "bg-[var(--color-primary)] text-white shadow"
+              : "text-[var(--color-text-muted)] hover:bg-[var(--color-panel-border)] hover:text-[var(--color-text-main)]"
+              }`}
             aria-pressed={dartInputStyle === "numeric"}
           >
             Numeric
@@ -398,6 +550,10 @@ export function DartEntry({
 
     submitDartTurn(currentDarts);
     setCurrentDarts([]);
+
+    if (isBoardFullscreen && dartInputStyle === "board") {
+      setShowFullscreenScorecard(true);
+    }
   }
 
   function renderDartBoard(sizeClass: string) {
@@ -416,7 +572,9 @@ export function DartEntry({
         />
 
         {boardTargets.map((target) => {
-          const isSelected = currentDarts.some((dart) => dartMatchesTarget(dart, target));
+          const isSelected = currentDarts.some((dart) =>
+            dartMatchesTarget(dart, target),
+          );
 
           return (
             <path
@@ -451,11 +609,10 @@ export function DartEntry({
               addDart(createSpecialDart("outer-bull"));
             }
           }}
-          className={`fill-[#2e7d32] hover:brightness-125 active:brightness-150 transition-[filter,opacity] ${
-            isOuterBullSelected
-              ? "brightness-150 stroke-[#facc15] stroke-[2.6]"
-              : "stroke-[var(--color-background)] stroke-[1]"
-          } ${canAddDart ? "cursor-pointer" : "cursor-not-allowed opacity-40"}`}
+          className={`fill-[#2e7d32] hover:brightness-125 active:brightness-150 transition-[filter,opacity] ${isOuterBullSelected
+            ? "brightness-150 stroke-[#facc15] stroke-[2.6]"
+            : "stroke-[var(--color-background)] stroke-[1]"
+            } ${canAddDart ? "cursor-pointer" : "cursor-not-allowed opacity-40"}`}
         />
 
         <circle
@@ -472,11 +629,10 @@ export function DartEntry({
               addDart(createSpecialDart("bull"));
             }
           }}
-          className={`fill-[#b3261e] hover:brightness-125 active:brightness-150 transition-[filter,opacity] ${
-            isBullSelected
-              ? "brightness-150 stroke-[#facc15] stroke-[2.6]"
-              : "stroke-[var(--color-background)] stroke-[1]"
-          } ${canAddDart ? "cursor-pointer" : "cursor-not-allowed opacity-40"}`}
+          className={`fill-[#b3261e] hover:brightness-125 active:brightness-150 transition-[filter,opacity] ${isBullSelected
+            ? "brightness-150 stroke-[#facc15] stroke-[2.6]"
+            : "stroke-[var(--color-background)] stroke-[1]"
+            } ${canAddDart ? "cursor-pointer" : "cursor-not-allowed opacity-40"}`}
         />
 
         {boardNumbers.map((segment, index) => {
@@ -510,11 +666,10 @@ export function DartEntry({
 
     return (
       <div
-        className={`rounded-2xl border ${
-          isFullscreen
-            ? "border-white/20 bg-neutral-950 p-3"
-            : "border-[var(--color-panel-border)] bg-[var(--color-panel)] p-3"
-        }`}
+        className={`rounded-2xl border ${isFullscreen
+          ? "border-white/20 bg-neutral-950 p-3"
+          : "border-[var(--color-panel-border)] bg-[var(--color-panel)] p-3"
+          }`}
       >
         <div className="mb-3 grid grid-cols-3 gap-2">
           {multiplierOptions.map((option) => (
@@ -522,13 +677,12 @@ export function DartEntry({
               key={option.value}
               type="button"
               onClick={() => setNumericMultiplier(option.value)}
-              className={`rounded-xl border font-black transition ${
-                numericMultiplier === option.value
-                  ? "border-[#facc15] bg-[var(--color-primary)] text-white ring-2 ring-[#facc15]"
-                  : isFullscreen
-                    ? "border-white/20 bg-white/10 text-white hover:bg-white/20"
-                    : "border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] hover:bg-[var(--color-panel-border)]"
-              } ${isFullscreen ? "p-4 text-lg" : compact ? "p-2 text-sm" : "p-3 text-base"}`}
+              className={`rounded-xl border font-black transition ${numericMultiplier === option.value
+                ? "border-[#facc15] bg-[var(--color-primary)] text-white ring-2 ring-[#facc15]"
+                : isFullscreen
+                  ? "border-white/20 bg-white/10 text-white hover:bg-white/20"
+                  : "border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] hover:bg-[var(--color-panel-border)]"
+                } ${isFullscreen ? "p-4 text-lg" : compact ? "p-2 text-sm" : "p-3 text-base"}`}
               aria-pressed={numericMultiplier === option.value}
             >
               {option.label}
@@ -537,32 +691,48 @@ export function DartEntry({
         </div>
 
         <div className="grid grid-cols-5 gap-2">
-          {Array.from({ length: 20 }, (_, index) => index + 1).map((segment) => {
-            const value = numericMultiplier ? segment * numericMultiplier : segment;
-            const prefix = numericMultiplier === 1 ? "S" : numericMultiplier === 2 ? "D" : numericMultiplier === 3 ? "T" : "—";
-            const label = numericMultiplier ? `${prefix}${segment}` : `Segment ${segment}`;
-            const isNumberDisabled = !canAddDart || !numericMultiplier;
+          {Array.from({ length: 20 }, (_, index) => index + 1).map(
+            (segment) => {
+              const value = numericMultiplier
+                ? segment * numericMultiplier
+                : segment;
+              const prefix =
+                numericMultiplier === 1
+                  ? "S"
+                  : numericMultiplier === 2
+                    ? "D"
+                    : numericMultiplier === 3
+                      ? "T"
+                      : "—";
+              const label = numericMultiplier
+                ? `${prefix}${segment}`
+                : `Segment ${segment}`;
+              const isNumberDisabled = !canAddDart || !numericMultiplier;
 
-            return (
-              <button
-                key={segment}
-                type="button"
-                onClick={() => addNumericDart(segment)}
-                disabled={isNumberDisabled}
-                className={`rounded-xl border font-black transition disabled:cursor-not-allowed disabled:opacity-40 ${
-                  isFullscreen
+              return (
+                <button
+                  key={segment}
+                  type="button"
+                  onClick={() => addNumericDart(segment)}
+                  disabled={isNumberDisabled}
+                  className={`rounded-xl border font-black transition disabled:cursor-not-allowed disabled:opacity-40 ${isFullscreen
                     ? "border-white/20 bg-white/10 text-white hover:bg-white/20"
                     : "border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] hover:bg-[var(--color-panel-border)]"
-                } ${isFullscreen ? "p-4 text-xl" : compact ? "p-2 text-base" : "p-3 text-lg"}`}
-                aria-label={numericMultiplier ? `${label}, ${value} points` : `Choose multiplier before segment ${segment}`}
-              >
-                <span className="block">{segment}</span>
-                <span className="block text-[0.65rem] font-bold opacity-70">
-                  {numericMultiplier ? `${label} · ${value}` : "Pick S/D/T"}
-                </span>
-              </button>
-            );
-          })}
+                    } ${isFullscreen ? "p-4 text-xl" : compact ? "p-2 text-base" : "p-3 text-lg"}`}
+                  aria-label={
+                    numericMultiplier
+                      ? `${label}, ${value} points`
+                      : `Choose multiplier before segment ${segment}`
+                  }
+                >
+                  <span className="block">{segment}</span>
+                  <span className="block text-[0.65rem] font-bold opacity-70">
+                    {numericMultiplier ? `${label} · ${value}` : "Pick S/D/T"}
+                  </span>
+                </button>
+              );
+            },
+          )}
         </div>
       </div>
     );
@@ -571,38 +741,147 @@ export function DartEntry({
   function renderTurnStatus(isFullscreen = false) {
     return (
       <div
-        className={`grid gap-2 ${
-          isFullscreen
-            ? "grid-cols-[1fr_auto] xl:grid-cols-[1fr_auto_minmax(220px,1fr)]"
-            : compact
-              ? "grid-cols-[1fr_auto]"
-              : "grid-cols-[1fr_auto_minmax(180px,1fr)] items-stretch"
-        }`}
+        className={`grid gap-2 ${isFullscreen
+          ? "grid-cols-[1fr_auto] xl:grid-cols-[1fr_auto_minmax(220px,1fr)]"
+          : compact
+            ? "grid-cols-[1fr_auto]"
+            : "grid-cols-[1fr_auto_minmax(180px,1fr)] items-stretch"
+          }`}
       >
         <div className="rounded-xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] px-3 py-2">
-          <div className={isFullscreen ? "text-2xl font-black" : compact ? "text-base font-bold" : "text-xl font-bold"}>
+          <div
+            className={
+              isFullscreen
+                ? "text-2xl font-black"
+                : compact
+                  ? "text-base font-bold"
+                  : "text-xl font-bold"
+            }
+          >
             Board Entry
           </div>
-          <div className={isFullscreen ? "text-base text-[var(--color-text-muted)]" : "text-sm text-[var(--color-text-muted)]"}>
+          <div
+            className={
+              isFullscreen
+                ? "text-base text-[var(--color-text-muted)]"
+                : "text-sm text-[var(--color-text-muted)]"
+            }
+          >
             {isTurnReady ? "Ready to submit" : `Dart ${nextDartNumber} of 3`}
           </div>
         </div>
 
         <div className="rounded-xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] px-4 py-2 text-right">
-          <div className="text-xs text-[var(--color-text-muted)]">Turn total</div>
-          <div className={isFullscreen ? "text-6xl font-black leading-none" : compact ? "text-3xl font-black leading-none" : "text-5xl font-black leading-none"}>
+          <div className="text-xs text-[var(--color-text-muted)]">
+            Turn total
+          </div>
+          <div
+            className={
+              isFullscreen
+                ? "text-6xl font-black leading-none"
+                : compact
+                  ? "text-3xl font-black leading-none"
+                  : "text-5xl font-black leading-none"
+            }
+          >
             {turnTotal}
           </div>
         </div>
 
         <div
-          className={`rounded-xl border px-3 py-2 ${getPreviewToneClass(turnPreview.tone)} ${
-            isPreviewAnimated ? "animate-pulse" : ""
-          } ${!isFullscreen && compact ? "col-span-2" : ""}`}
+          className={`rounded-xl border px-3 py-2 ${getPreviewToneClass(turnPreview.tone)} ${isPreviewAnimated ? "animate-pulse" : ""
+            } ${!isFullscreen && compact ? "col-span-2" : ""}`}
         >
-          <div className={isFullscreen ? "text-lg font-black" : "text-sm font-bold"}>{turnPreview.label}</div>
-          <div className={isFullscreen ? "text-sm text-[var(--color-text-muted)]" : "text-xs text-[var(--color-text-muted)]"}>
+          <div
+            className={
+              isFullscreen ? "text-lg font-black" : "text-sm font-bold"
+            }
+          >
+            {turnPreview.label}
+          </div>
+          <div
+            className={
+              isFullscreen
+                ? "text-sm text-[var(--color-text-muted)]"
+                : "text-xs text-[var(--color-text-muted)]"
+            }
+          >
             {turnPreview.detail}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderFullscreenScorecard() {
+    const checkoutSuggestion = getCheckoutSuggestion(currentScore);
+
+    return (
+      <div className="flex h-full min-h-0 items-center justify-center rounded-2xl border border-white/20 bg-neutral-900 p-4 shadow-2xl">
+        <div className="grid w-full max-w-[820px] gap-4 text-center">
+          <div className="rounded-2xl border border-white/20 bg-white/5 p-4">
+            <div className="text-xs font-bold uppercase tracking-[0.2em] text-white/55">
+              Next throw
+            </div>
+            <div className="mt-1 text-4xl font-black leading-tight sm:text-5xl">
+              {currentThrowerName}
+            </div>
+            <div className="mt-1 text-lg font-bold text-white/70">
+              {currentSideName} • Leg {currentLegNumber}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-2xl border border-white/20 bg-white/5 p-4">
+              <div className="text-xs font-bold uppercase tracking-wide text-white/55">
+                Score
+              </div>
+              <div className="text-6xl font-black leading-none sm:text-7xl">
+                {currentScore}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/20 bg-white/5 p-4">
+              <div className="text-xs font-bold uppercase tracking-wide text-white/55">
+                Dart
+              </div>
+              <div className="text-6xl font-black leading-none sm:text-7xl">
+                1
+              </div>
+              <div className="mt-1 text-sm font-bold text-white/60">of 3</div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-white/20 bg-white/5 p-4 text-left">
+            <div className="text-xs font-bold uppercase tracking-wide text-white/55">
+              Status
+            </div>
+            <div className="mt-1 text-lg font-bold text-white/85">
+              {message}
+            </div>
+            <div className="mt-2 text-base text-white/70">
+              {checkoutSuggestion
+                ? `Checkout: ${checkoutSuggestion}`
+                : "No standard checkout suggestion."}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setShowFullscreenScorecard(false)}
+              className="rounded-2xl bg-[var(--color-success)] px-4 py-5 text-2xl font-black hover:bg-[var(--color-success-hover)]"
+            >
+              Next Turn
+            </button>
+
+            <button
+              type="button"
+              onClick={undoLastTurn}
+              className="rounded-2xl bg-[var(--color-warning)] px-4 py-5 text-xl font-black hover:bg-[var(--color-warning-hover)]"
+            >
+              Undo Last Turn
+            </button>
           </div>
         </div>
       </div>
@@ -611,11 +890,25 @@ export function DartEntry({
 
   function renderTurnControls(isFullscreen = false) {
     return (
-      <div className={isFullscreen ? "space-y-3" : compact ? "space-y-2" : "space-y-3"}>
-        <div className={`rounded-xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] ${isFullscreen ? "p-4" : compact ? "p-2" : "p-3"}`}>
+      <div
+        className={
+          isFullscreen ? "space-y-3" : compact ? "space-y-2" : "space-y-3"
+        }
+      >
+        <div
+          className={`rounded-xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] ${isFullscreen ? "p-4" : compact ? "p-2" : "p-3"}`}
+        >
           <div className="mb-2 flex items-baseline justify-between gap-2">
-            <div className={isFullscreen ? "text-lg font-black" : "text-sm font-bold"}>Current darts</div>
-            <div className="text-xs text-[var(--color-text-muted)]">Tap order</div>
+            <div
+              className={
+                isFullscreen ? "text-lg font-black" : "text-sm font-bold"
+              }
+            >
+              Current darts
+            </div>
+            <div className="text-xs text-[var(--color-text-muted)]">
+              Tap order
+            </div>
           </div>
 
           <div className="grid grid-cols-3 gap-2">
@@ -625,14 +918,23 @@ export function DartEntry({
               return (
                 <div
                   key={index}
-                  className={`rounded-xl border px-2 text-center ${
-                    dart
-                      ? "border-[var(--color-success)] bg-[var(--color-panel)]"
-                      : "border-[var(--color-panel-border)] bg-[var(--color-panel-soft)]"
-                  } ${isFullscreen ? "py-4" : compact ? "py-2" : "py-3"}`}
+                  className={`rounded-xl border px-2 text-center ${dart
+                    ? "border-[var(--color-success)] bg-[var(--color-panel)]"
+                    : "border-[var(--color-panel-border)] bg-[var(--color-panel-soft)]"
+                    } ${isFullscreen ? "py-4" : compact ? "py-2" : "py-3"}`}
                 >
-                  <div className="text-xs text-[var(--color-text-muted)]">Dart {index + 1}</div>
-                  <div className={isFullscreen ? "text-3xl font-black" : compact ? "text-lg font-black" : "text-2xl font-black"}>
+                  <div className="text-xs text-[var(--color-text-muted)]">
+                    Dart {index + 1}
+                  </div>
+                  <div
+                    className={
+                      isFullscreen
+                        ? "text-3xl font-black"
+                        : compact
+                          ? "text-lg font-black"
+                          : "text-2xl font-black"
+                    }
+                  >
                     {dart ? getDartLabel(dart) : "—"}
                   </div>
                   <div className="text-xs font-semibold text-[var(--color-text-muted)]">
@@ -648,9 +950,10 @@ export function DartEntry({
           <button
             onClick={() => addDart(createSpecialDart("miss"))}
             disabled={!canAddDart}
-            className={`rounded-xl bg-[var(--color-panel)] hover:bg-[var(--color-panel-border)] disabled:opacity-40 disabled:hover:bg-[var(--color-panel)] border border-[var(--color-panel-border)] font-bold ${
-              specialDartIsSelected(currentDarts, "miss") ? "ring-2 ring-[#facc15]" : ""
-            } ${isFullscreen ? "p-4 text-xl" : compact ? "p-2" : "p-3"}`}
+            className={`rounded-xl bg-[var(--color-panel)] hover:bg-[var(--color-panel-border)] disabled:opacity-40 disabled:hover:bg-[var(--color-panel)] border border-[var(--color-panel-border)] font-bold ${specialDartIsSelected(currentDarts, "miss")
+              ? "ring-2 ring-[#facc15]"
+              : ""
+              } ${isFullscreen ? "p-4 text-xl" : compact ? "p-2" : "p-3"}`}
           >
             Miss
           </button>
@@ -658,9 +961,8 @@ export function DartEntry({
           <button
             onClick={() => addDart(createSpecialDart("outer-bull"))}
             disabled={!canAddDart}
-            className={`rounded-xl bg-[#2e7d32] hover:brightness-125 disabled:opacity-40 text-white font-bold ${
-              isOuterBullSelected ? "ring-2 ring-[#facc15]" : ""
-            } ${isFullscreen ? "p-4 text-xl" : compact ? "p-2" : "p-3"}`}
+            className={`rounded-xl bg-[#2e7d32] hover:brightness-125 disabled:opacity-40 text-white font-bold ${isOuterBullSelected ? "ring-2 ring-[#facc15]" : ""
+              } ${isFullscreen ? "p-4 text-xl" : compact ? "p-2" : "p-3"}`}
           >
             25
           </button>
@@ -668,9 +970,8 @@ export function DartEntry({
           <button
             onClick={() => addDart(createSpecialDart("bull"))}
             disabled={!canAddDart}
-            className={`rounded-xl bg-[#b3261e] hover:brightness-125 disabled:opacity-40 text-white font-bold ${
-              isBullSelected ? "ring-2 ring-[#facc15]" : ""
-            } ${isFullscreen ? "p-4 text-xl" : compact ? "p-2" : "p-3"}`}
+            className={`rounded-xl bg-[#b3261e] hover:brightness-125 disabled:opacity-40 text-white font-bold ${isBullSelected ? "ring-2 ring-[#facc15]" : ""
+              } ${isFullscreen ? "p-4 text-xl" : compact ? "p-2" : "p-3"}`}
           >
             Bull
           </button>
@@ -680,9 +981,8 @@ export function DartEntry({
           <button
             onClick={undoDart}
             disabled={currentDarts.length === 0}
-            className={`rounded-xl bg-[var(--color-warning)] hover:bg-[var(--color-warning-hover)] disabled:opacity-40 font-bold ${
-              isFullscreen ? "p-4 text-lg" : compact ? "p-2" : "p-3"
-            }`}
+            className={`rounded-xl bg-[var(--color-warning)] hover:bg-[var(--color-warning-hover)] disabled:opacity-40 font-bold ${isFullscreen ? "p-4 text-lg" : compact ? "p-2" : "p-3"
+              }`}
           >
             Undo Dart
           </button>
@@ -690,9 +990,8 @@ export function DartEntry({
           <button
             onClick={clearDarts}
             disabled={currentDarts.length === 0}
-            className={`rounded-xl bg-[var(--color-panel-border)] hover:bg-[var(--color-panel)] disabled:opacity-40 font-bold ${
-              isFullscreen ? "p-4 text-lg" : compact ? "p-2" : "p-3"
-            }`}
+            className={`rounded-xl bg-[var(--color-panel-border)] hover:bg-[var(--color-panel)] disabled:opacity-40 font-bold ${isFullscreen ? "p-4 text-lg" : compact ? "p-2" : "p-3"
+              }`}
           >
             Clear Turn
           </button>
@@ -701,18 +1000,20 @@ export function DartEntry({
         <button
           onClick={handleSubmitTurn}
           disabled={currentDarts.length === 0}
-          className={`w-full rounded-xl bg-[var(--color-success)] hover:bg-[var(--color-success-hover)] disabled:opacity-40 font-bold ${
-            isFullscreen ? "p-5 text-2xl" : compact ? "p-2 text-base" : "p-3 text-lg"
-          }`}
+          className={`w-full rounded-xl bg-[var(--color-success)] hover:bg-[var(--color-success-hover)] disabled:opacity-40 font-bold ${isFullscreen
+            ? "p-5 text-2xl"
+            : compact
+              ? "p-2 text-base"
+              : "p-3 text-lg"
+            }`}
         >
           {currentDarts.length === 0 ? "Submit Turn" : `Submit ${turnTotal}`}
         </button>
 
         <button
           onClick={undoLastTurn}
-          className={`w-full rounded-xl bg-[var(--color-warning)] hover:bg-[var(--color-warning-hover)] font-bold ${
-            isFullscreen ? "p-4 text-lg" : compact ? "p-2" : "p-3"
-          }`}
+          className={`w-full rounded-xl bg-[var(--color-warning)] hover:bg-[var(--color-warning-hover)] font-bold ${isFullscreen ? "p-4 text-lg" : compact ? "p-2" : "p-3"
+            }`}
         >
           Undo Last Turn
         </button>
@@ -722,11 +1023,12 @@ export function DartEntry({
 
   return (
     <section
-      className={`rounded-2xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] mb-4 ${
-        compact ? "p-3" : "p-6"
-      }`}
+      className={`rounded-2xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] mb-4 ${compact ? "p-3" : "p-6"
+        }`}
     >
-      <div className={compact ? "text-base mb-2" : "text-xl mb-4"}>{message}</div>
+      <div className={compact ? "text-base mb-2" : "text-xl mb-4"}>
+        {message}
+      </div>
 
       {isMatchComplete && (
         <div className="rounded-2xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-4 mb-4">
@@ -797,16 +1099,24 @@ export function DartEntry({
             }
           >
             {dartInputStyle === "board" ? (
-              <div className={`rounded-2xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] ${compact ? "p-1" : "p-2"}`}>
-                <div className="mb-2 flex justify-end">
+              <div
+                className={`rounded-2xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] ${compact ? "p-1" : "p-2"}`}
+              >
+                <div className="mb-2 flex flex-wrap justify-end gap-2">
+                  {compact && renderAutoFullscreenToggle()}
                   <button
-                    onClick={() => setIsBoardFullscreen(true)}
+                    onClick={() => {
+                      setShowFullscreenScorecard(false);
+                      setIsBoardFullscreen(true);
+                    }}
                     className="rounded-lg bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] px-3 py-1 text-xs font-bold hover:bg-[var(--color-panel-border)]"
                   >
                     Full screen board
                   </button>
                 </div>
-                {renderDartBoard(compact ? "w-full max-w-[315px]" : "w-full max-w-[380px]")}
+                {renderDartBoard(
+                  compact ? "w-full max-w-[315px]" : "w-full max-w-[380px]",
+                )}
               </div>
             ) : (
               renderNumericDartInput()
@@ -818,35 +1128,182 @@ export function DartEntry({
       )}
 
       {isBoardFullscreen && !isLegComplete && !isMatchComplete && (
-        <div className="fixed inset-0 z-[90] overflow-auto bg-black/95 p-3 text-white">
-          <div className="mx-auto flex min-h-full max-w-7xl flex-col gap-3">
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-white/20 bg-neutral-950 p-3 shadow-2xl">
-              <div>
-                <div className="text-2xl font-black">Full Screen Board</div>
-                <div className="text-sm text-white/70">{message}</div>
-              </div>
-              <button
-                onClick={() => setIsBoardFullscreen(false)}
-                className="rounded-xl bg-white/10 px-4 py-3 text-base font-bold hover:bg-white/20"
-              >
-                Exit full screen
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              {renderDartInputStyleToggle(true)}
-              {renderTurnStatus(true)}
-            </div>
-
-            <div className="grid flex-1 grid-cols-1 gap-3 lg:grid-cols-[minmax(360px,1fr)_380px]">
-              <div className="flex items-center justify-center rounded-2xl border border-white/20 bg-neutral-950 p-2 shadow-2xl">
-                {dartInputStyle === "board"
-                  ? renderDartBoard("h-[min(72vh,760px)] max-h-full w-full max-w-[min(92vw,760px)]")
-                  : renderNumericDartInput(true)}
+        <div className="fixed inset-0 z-[90] h-[100dvh] overflow-hidden bg-neutral-950 p-2 text-white">
+          <div className="mx-auto grid h-full max-w-[1600px] grid-rows-[auto_minmax(0,1fr)] gap-2 overflow-hidden">
+            <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-2xl border border-white/20 bg-neutral-900 px-3 py-2 shadow-2xl">
+              <div className="min-w-0">
+                <div className="truncate text-sm font-black sm:text-lg">
+                  {message}
+                </div>
+                <div className="truncate text-xs text-white/65 sm:text-sm">
+                  {currentScore} remaining •{" "}
+                  {isTurnReady
+                    ? "Ready to submit"
+                    : `Dart ${nextDartNumber} of 3`}{" "}
+                  • Turn {turnTotal}
+                  {turnPreview.detail ? ` • ${turnPreview.detail}` : ""}
+                </div>
               </div>
 
-              <div className="rounded-2xl border border-white/20 bg-neutral-950 p-3 shadow-2xl">
-                {renderTurnControls(true)}
+              <div className="flex items-center gap-2">
+                {compact && renderAutoFullscreenToggle(true)}
+                <button
+                  onClick={() => {
+                    setShowFullscreenScorecard(false);
+                    setIsBoardFullscreen(false);
+                    setHasAutoOpenedBoard(false);
+                  }}
+                  className="rounded-lg bg-white/10 px-3 py-2 text-sm font-bold hover:bg-white/20"
+                >
+                  Exit
+                </button>
+              </div>
+            </div>
+
+            <div className="grid min-h-0 grid-cols-[minmax(0,1fr)_minmax(210px,270px)] gap-2 overflow-hidden max-[680px]:grid-cols-[minmax(0,1fr)_190px]">
+              <div className="min-h-0 overflow-hidden rounded-2xl border border-white/20 bg-neutral-900 p-2 shadow-2xl">
+                {showFullscreenScorecard ? (
+                  renderFullscreenScorecard()
+                ) : dartInputStyle === "board" ? (
+                  <div className="flex h-full min-h-0 items-center justify-center overflow-hidden">
+                    {renderDartBoard("h-full max-h-full w-auto max-w-full")}
+                  </div>
+                ) : (
+                  <div className="h-full min-h-0 overflow-y-auto">
+                    {renderNumericDartInput(true)}
+                  </div>
+                )}
+              </div>
+
+              <div className="grid min-h-0 grid-rows-[auto_auto_auto_auto_minmax(0,1fr)_auto] gap-2 overflow-hidden rounded-2xl border border-white/20 bg-neutral-900 p-2 shadow-2xl">
+                {!showFullscreenScorecard && renderDartInputStyleToggle(true)}
+
+                <div
+                  className={`rounded-xl border px-2 py-2 ${getPreviewToneClass(turnPreview.tone)} ${isPreviewAnimated ? "animate-pulse" : ""
+                    }`}
+                >
+                  <div className="text-lg font-black leading-tight">
+                    {turnPreview.label}
+                  </div>
+                  <div className="text-xs text-[var(--color-text-muted)]">
+                    {turnPreview.detail}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-xl border border-white/15 bg-white/5 px-2 py-2 text-center">
+                    <div className="text-[0.65rem] font-bold uppercase tracking-wide text-white/60">
+                      Dart
+                    </div>
+                    <div className="text-2xl font-black leading-none">
+                      {isTurnReady ? "✓" : nextDartNumber}
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-white/15 bg-white/5 px-2 py-2 text-center">
+                    <div className="text-[0.65rem] font-bold uppercase tracking-wide text-white/60">
+                      Turn
+                    </div>
+                    <div className="text-3xl font-black leading-none">
+                      {turnTotal}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-1">
+                  {[0, 1, 2].map((index) => {
+                    const dart = currentDarts[index];
+
+                    return (
+                      <div
+                        key={index}
+                        className={`rounded-lg border px-1 py-2 text-center ${dart
+                          ? "border-[var(--color-success)] bg-white/10"
+                          : "border-white/15 bg-white/5"
+                          }`}
+                      >
+                        <div className="text-[0.65rem] text-white/55">
+                          D{index + 1}
+                        </div>
+                        <div className="text-base font-black leading-tight">
+                          {dart ? getDartLabel(dart) : "—"}
+                        </div>
+                        <div className="text-[0.65rem] font-semibold text-white/55">
+                          {dart ? dart.score : ""}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="grid grid-cols-3 gap-1">
+                  <button
+                    onClick={() => addDart(createSpecialDart("miss"))}
+                    disabled={!canAddDart}
+                    className={`rounded-lg border border-white/15 bg-white/5 px-1 py-2 text-sm font-bold hover:bg-white/10 disabled:opacity-40 ${specialDartIsSelected(currentDarts, "miss")
+                      ? "ring-2 ring-[#facc15]"
+                      : ""
+                      }`}
+                  >
+                    Miss
+                  </button>
+
+                  <button
+                    onClick={() => addDart(createSpecialDart("outer-bull"))}
+                    disabled={!canAddDart}
+                    className={`rounded-lg bg-[#2e7d32] px-1 py-2 text-sm font-bold text-white hover:brightness-125 disabled:opacity-40 ${isOuterBullSelected ? "ring-2 ring-[#facc15]" : ""
+                      }`}
+                  >
+                    25
+                  </button>
+
+                  <button
+                    onClick={() => addDart(createSpecialDart("bull"))}
+                    disabled={!canAddDart}
+                    className={`rounded-lg bg-[#b3261e] px-1 py-2 text-sm font-bold text-white hover:brightness-125 disabled:opacity-40 ${isBullSelected ? "ring-2 ring-[#facc15]" : ""
+                      }`}
+                  >
+                    Bull
+                  </button>
+                </div>
+
+                <div className="min-h-0" />
+
+                <div className="grid gap-2">
+                  <button
+                    onClick={handleSubmitTurn}
+                    disabled={currentDarts.length === 0}
+                    className="w-full rounded-xl bg-[var(--color-success)] px-2 py-4 text-xl font-black hover:bg-[var(--color-success-hover)] disabled:opacity-40"
+                  >
+                    {currentDarts.length === 0
+                      ? "Submit"
+                      : `Submit ${turnTotal}`}
+                  </button>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={undoDart}
+                      disabled={currentDarts.length === 0}
+                      className="rounded-xl bg-[var(--color-warning)] px-2 py-3 text-sm font-bold hover:bg-[var(--color-warning-hover)] disabled:opacity-40"
+                    >
+                      Undo Dart
+                    </button>
+
+                    <button
+                      onClick={clearDarts}
+                      disabled={currentDarts.length === 0}
+                      className="rounded-xl bg-white/10 px-2 py-3 text-sm font-bold hover:bg-white/20 disabled:opacity-40"
+                    >
+                      Clear Turn
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={undoLastTurn}
+                    className="rounded-xl bg-white/10 px-2 py-2 text-xs font-bold text-white/75 hover:bg-white/20"
+                  >
+                    Undo Last Turn
+                  </button>
+                </div>
               </div>
             </div>
           </div>
