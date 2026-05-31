@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.3.0-beta.1
+
+### Added
+- Graphical dartboard input.
+- Full-screen board mode for tablet-style play.
+- Full-screen post-scoring card.
+- Checkout suggestions that update during dart entry.
+
+### Changed
+- Improved setup defaults for blank team and player names.
+- Improved compact turn-score input for touch devices.
+- Improved dummy-player flow in dart entry mode.
+
+### Fixed
+- Fixed checkout flow leaving full-screen mode too early.
+- Fixed post-submit card being skipped before dummy turns.
+- Fixed full layout scroll issue on match-complete screens.
+
 ## Unreleased
 
 ### Added
