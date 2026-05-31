@@ -292,18 +292,18 @@ export default function Home() {
 
       setTeamOneMemberNames(
         parsedMatch.teamOneMemberNames ??
-          [
-            parsedMatch.playerOneName ?? "Player 1",
-            parsedMatch.teamOnePlayerTwoName ?? "Player 1B",
-          ].slice(0, loadedSideOneSize),
+        [
+          parsedMatch.playerOneName ?? "Player 1",
+          parsedMatch.teamOnePlayerTwoName ?? "Player 1B",
+        ].slice(0, loadedSideOneSize),
       );
 
       setTeamTwoMemberNames(
         parsedMatch.teamTwoMemberNames ??
-          [
-            parsedMatch.playerTwoName ?? "Player 2",
-            parsedMatch.teamTwoPlayerTwoName ?? "Player 2B",
-          ].slice(0, loadedSideTwoSize),
+        [
+          parsedMatch.playerTwoName ?? "Player 2",
+          parsedMatch.teamTwoPlayerTwoName ?? "Player 2B",
+        ].slice(0, loadedSideTwoSize),
       );
 
       setSides(
@@ -867,9 +867,8 @@ export default function Home() {
         },
         isLegComplete: false,
         needsDoubleOutConfirmation: false,
-        message: `${
-          turnWithDarts.throwerName ?? turnWithDarts.playerName
-        } busts with ${getDartSummary(darts)}. Final dart was not a double.`,
+        message: `${turnWithDarts.throwerName ?? turnWithDarts.playerName
+          } busts with ${getDartSummary(darts)}. Final dart was not a double.`,
       };
     }
 
@@ -878,9 +877,8 @@ export default function Home() {
         ...resultWithDarts,
         isLegComplete: true,
         needsDoubleOutConfirmation: false,
-        message: `${
-          resultWithDarts.turn.throwerName ?? resultWithDarts.turn.playerName
-        } wins the leg!`,
+        message: `${resultWithDarts.turn.throwerName ?? resultWithDarts.turn.playerName
+          } wins the leg!`,
       };
     }
 
@@ -1362,9 +1360,8 @@ export default function Home() {
 
     return (
       <div
-        className={`mb-3 flex items-center justify-between gap-2 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] ${
-          shouldUseGameModeShell ? "p-2" : "p-3"
-        }`}
+        className={`mb-3 flex items-center justify-between gap-2 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] ${shouldUseGameModeShell ? "p-2" : "p-3"
+          }`}
       >
         <div>
           <div className="text-xs font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
@@ -1379,11 +1376,10 @@ export default function Home() {
           <button
             type="button"
             onClick={() => setScoreEntryMode("turn")}
-            className={`rounded-lg px-3 py-2 text-sm font-bold transition ${
-              !isBoardMode
+            className={`rounded-lg px-3 py-2 text-sm font-bold transition ${!isBoardMode
                 ? "bg-[var(--color-primary)] text-white shadow"
                 : "text-[var(--color-text-muted)] hover:bg-[var(--color-panel-border)] hover:text-[var(--color-text-main)]"
-            }`}
+              }`}
             aria-pressed={!isBoardMode}
           >
             Turn
@@ -1392,11 +1388,10 @@ export default function Home() {
           <button
             type="button"
             onClick={() => setScoreEntryMode("dart")}
-            className={`rounded-lg px-3 py-2 text-sm font-bold transition ${
-              isBoardMode
+            className={`rounded-lg px-3 py-2 text-sm font-bold transition ${isBoardMode
                 ? "bg-[var(--color-primary)] text-white shadow"
                 : "text-[var(--color-text-muted)] hover:bg-[var(--color-panel-border)] hover:text-[var(--color-text-main)]"
-            }`}
+              }`}
             aria-pressed={isBoardMode}
           >
             Darts
@@ -1453,6 +1448,12 @@ export default function Home() {
         }
         currentLegNumber={currentLegNumber}
         finishRule={finishRule}
+        fullscreenScoreCards={sides.map((side, index) => ({
+          id: side.id,
+          name: side.name,
+          score: side.score,
+          isCurrent: index === currentSideIndex,
+        }))}
         submitDartTurn={submitDartTurn}
         undoLastTurn={undoLastTurn}
         startNextLeg={startNextLeg}
@@ -1525,29 +1526,29 @@ export default function Home() {
         browser:
           typeof window === "undefined" || typeof navigator === "undefined"
             ? {
-                userAgent: "Unavailable during server prerender",
-                language: "Unavailable during server prerender",
-                screen: {
-                  width: null,
-                  height: null,
-                },
-                viewport: {
-                  width: null,
-                  height: null,
-                },
-              }
-            : {
-                userAgent: navigator.userAgent,
-                language: navigator.language,
-                screen: {
-                  width: window.screen.width,
-                  height: window.screen.height,
-                },
-                viewport: {
-                  width: window.innerWidth,
-                  height: window.innerHeight,
-                },
+              userAgent: "Unavailable during server prerender",
+              language: "Unavailable during server prerender",
+              screen: {
+                width: null,
+                height: null,
               },
+              viewport: {
+                width: null,
+                height: null,
+              },
+            }
+            : {
+              userAgent: navigator.userAgent,
+              language: navigator.language,
+              screen: {
+                width: window.screen.width,
+                height: window.screen.height,
+              },
+              viewport: {
+                width: window.innerWidth,
+                height: window.innerHeight,
+              },
+            },
       },
       null,
       2,
@@ -1774,9 +1775,8 @@ export default function Home() {
 
   return (
     <main
-      className={`min-h-screen bg-[var(--color-app-bg)] text-[var(--color-text-main)] ${
-        shouldUseGameModeShell ? "p-3 sm:p-4" : "p-6"
-      } ${themeName === "firehall" ? "theme-firehall" : ""}`}
+      className={`min-h-screen bg-[var(--color-app-bg)] text-[var(--color-text-main)] ${shouldUseGameModeShell ? "p-3 sm:p-4" : "p-6"
+        } ${themeName === "firehall" ? "theme-firehall" : ""}`}
     >
       <div className="mx-auto max-w-4xl">
         {shouldUseGameModeShell ? (
