@@ -129,8 +129,8 @@ export default function Home() {
   // A side can be one player, a doubles pair, or a larger team.
   // The side owns the score and legs won; members determine throw order.
   const [sides, setSides] = useState<MatchSide[]>([
-    createTeamSide("side-1", "Player 1-A", ["Player 1-A"], 501),
-    createTeamSide("side-2", "Player 1-B", ["Player 1-B"], 501),
+    createTeamSide("side-1", "Player 1", ["Player 1"], 501),
+    createTeamSide("side-2", "Player 2", ["Player 2"], 501),
   ]);
 
   // Active match progress.
@@ -413,6 +413,10 @@ export default function Home() {
     return `Player ${memberIndex + 1}-${suffix}`;
   }
 
+  function getDefaultSinglesPlayerName(sideNumber: 1 | 2) {
+    return sideNumber === 1 ? "Player 1" : "Player 2";
+  }
+
   function resolveMemberNames(
     memberNames: string[],
     sideNumber: 1 | 2,
@@ -523,17 +527,13 @@ export default function Home() {
   function startNewGame() {
     const isSinglesMatch = sideOneSize === 1 && sideTwoSize === 1;
 
-    const resolvedTeamOneMemberNames = resolveMemberNames(
-      teamOneMemberNames,
-      1,
-      sideOneSize,
-    );
+    const resolvedTeamOneMemberNames = isSinglesMatch
+      ? [teamOneMemberNames[0]?.trim() || getDefaultSinglesPlayerName(1)]
+      : resolveMemberNames(teamOneMemberNames, 1, sideOneSize);
 
-    const resolvedTeamTwoMemberNames = resolveMemberNames(
-      teamTwoMemberNames,
-      2,
-      sideTwoSize,
-    );
+    const resolvedTeamTwoMemberNames = isSinglesMatch
+      ? [teamTwoMemberNames[0]?.trim() || getDefaultSinglesPlayerName(2)]
+      : resolveMemberNames(teamTwoMemberNames, 2, sideTwoSize);
 
     const sideOneName = isSinglesMatch
       ? resolvedTeamOneMemberNames[0]
@@ -627,8 +627,8 @@ export default function Home() {
     localStorage.removeItem(savedMatchKey);
 
     const resetSides: MatchSide[] = [
-      createTeamSide("side-1", "Player 1-A", ["Player 1-A"], 501),
-      createTeamSide("side-2", "Player 1-B", ["Player 1-B"], 501),
+      createTeamSide("side-1", "Player 1", ["Player 1"], 501),
+      createTeamSide("side-2", "Player 2", ["Player 2"], 501),
     ];
 
     setStartingScore(501);
@@ -667,7 +667,7 @@ export default function Home() {
     setIsGameModeActive(false);
     setIsGameMenuOpen(false);
     setIsClearSavedConfirmationVisible(false);
-    setMessage("Saved match cleared. Player 1-A to throw.");
+    setMessage("Saved match cleared. Player 1 to throw.");
   }
 
   function clearSavedMatch() {
@@ -1500,6 +1500,9 @@ export default function Home() {
         viewFinishedGame={handleViewFinishedGame}
         isLegComplete={isLegComplete}
         isMatchComplete={isMatchComplete}
+        isCurrentThrowerDummy={isCurrentThrowerDummy()}
+        dummyScore={dummyScore}
+        submitDummyScore={submitDummyScore}
       />
     );
   }
@@ -1949,9 +1952,7 @@ export default function Home() {
                       : "order-2"
                 }
               >
-                {scoreEntryMode === "dart" && !isCurrentThrowerDummy()
-                  ? renderDartEntry()
-                  : renderScoreEntry()}
+                {scoreEntryMode === "dart" ? renderDartEntry() : renderScoreEntry()}
               </div>
 
               <div

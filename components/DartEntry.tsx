@@ -22,6 +22,9 @@ type DartEntryProps = {
   viewFinishedGame: () => void;
   isLegComplete: boolean;
   isMatchComplete: boolean;
+  isCurrentThrowerDummy: boolean;
+  dummyScore: number;
+  submitDummyScore: () => void;
 };
 
 type TurnPreview = {
@@ -327,6 +330,9 @@ export function DartEntry({
   viewFinishedGame,
   isLegComplete,
   isMatchComplete,
+  isCurrentThrowerDummy,
+  dummyScore,
+  submitDummyScore,
 }: DartEntryProps) {
   const [currentDarts, setCurrentDarts] = useState<DartThrow[]>([]);
   const [isBoardFullscreen, setIsBoardFullscreen] = useState(() => {
@@ -390,6 +396,10 @@ export function DartEntry({
     !isLegComplete &&
     !isMatchComplete;
 
+  const shouldShowBoardFullscreen =
+    isBoardFullscreen &&
+    ((!isLegComplete && !isMatchComplete) || showFullscreenScorecard);
+
 
   useEffect(() => {
     if (!shouldAutoOpenBoard || hasAutoOpenedBoard || isBoardFullscreen) {
@@ -410,7 +420,7 @@ export function DartEntry({
       String(isBoardFullscreen),
     );
 
-    if (!isBoardFullscreen) {
+    if (!shouldShowBoardFullscreen) {
       return;
     }
 
@@ -424,7 +434,7 @@ export function DartEntry({
       document.body.style.overflow = originalBodyOverflow;
       document.documentElement.style.overflow = originalHtmlOverflow;
     };
-  }, [isBoardFullscreen]);
+  }, [isBoardFullscreen, shouldShowBoardFullscreen]);
 
   function setAutoFullscreenPreference(enabled: boolean) {
     setAutoFullscreenBoard(enabled);
@@ -959,6 +969,50 @@ export function DartEntry({
     );
   }
 
+  function renderDummyTurnPrompt(isFullscreen = false) {
+    return (
+      <div
+        className={`rounded-2xl border ${isFullscreen
+          ? "border-white/20 bg-white/5 p-6 text-white"
+          : "border-[var(--color-panel-border)] bg-[var(--color-panel)] p-4"
+          }`}
+      >
+        <div
+          className={
+            isFullscreen
+              ? "text-3xl font-black leading-tight"
+              : "text-lg font-bold"
+          }
+        >
+          Dummy player turn
+        </div>
+
+        <p
+          className={
+            isFullscreen
+              ? "mt-2 text-lg font-bold text-white/70"
+              : "mt-2 text-[var(--color-text-muted)]"
+          }
+        >
+          This slot will automatically score{" "}
+          <span className={isFullscreen ? "text-white" : "text-[var(--color-text-main)]"}>
+            {dummyScore}
+          </span>
+          .
+        </p>
+
+        <button
+          type="button"
+          onClick={submitDummyScore}
+          className={`mt-4 w-full rounded-xl bg-[var(--color-accent)] font-black hover:bg-[var(--color-accent-hover)] ${isFullscreen ? "px-4 py-5 text-2xl" : "p-4 text-xl"
+            }`}
+        >
+          Apply Dummy Score
+        </button>
+      </div>
+    );
+  }
+
   function renderTurnControls(isFullscreen = false) {
     return (
       <div
@@ -1169,7 +1223,9 @@ export function DartEntry({
                 : "grid grid-cols-[minmax(260px,380px)_1fr] gap-5 items-start"
             }
           >
-            {dartInputStyle === "board" ? (
+            {isCurrentThrowerDummy ? (
+              renderDummyTurnPrompt()
+            ) : dartInputStyle === "board" ? (
               <div
                 className={`rounded-2xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] ${compact ? "p-1" : "p-2"}`}
               >
@@ -1193,12 +1249,12 @@ export function DartEntry({
               renderNumericDartInput()
             )}
 
-            {renderTurnControls()}
+            {!isCurrentThrowerDummy && renderTurnControls()}
           </div>
         </div>
       )}
 
-      {isBoardFullscreen && ((!isLegComplete && !isMatchComplete) || showFullscreenScorecard) && (
+      {shouldShowBoardFullscreen && (
         <div className="fixed inset-0 z-[90] h-[100dvh] overflow-hidden bg-neutral-950 p-2 text-white">
           <div className="mx-auto grid h-full max-w-[1600px] grid-rows-[auto_minmax(0,1fr)] gap-2 overflow-hidden">
             <div className="shrink-0 rounded-2xl border border-white/20 bg-neutral-900 px-4 py-2 shadow-2xl">
@@ -1242,6 +1298,12 @@ export function DartEntry({
               <div className="min-h-0 overflow-hidden rounded-2xl border border-white/20 bg-neutral-900 p-2 shadow-2xl">
                 {showFullscreenScorecard ? (
                   renderFullscreenScorecard()
+                ) : isCurrentThrowerDummy ? (
+                  <div className="flex h-full min-h-0 items-center justify-center overflow-y-auto p-3">
+                    <div className="w-full max-w-xl">
+                      {renderDummyTurnPrompt(true)}
+                    </div>
+                  </div>
                 ) : dartInputStyle === "board" ? (
                   <div className="flex h-full min-h-0 items-center justify-center overflow-hidden">
                     {renderDartBoard("h-full max-h-full w-auto max-w-full")}
@@ -1257,56 +1319,62 @@ export function DartEntry({
 
 
                 <div className="grid gap-2">
-                  <div className="grid grid-cols-4 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => addDart(createSpecialDart("miss"))}
-                      disabled={!canAddDart}
-                      className={`rounded-xl border border-white/15 bg-white/5 px-2 py-3 text-sm font-black hover:bg-white/10 disabled:opacity-40 ${specialDartIsSelected(currentDarts, "miss")
-                        ? "ring-2 ring-[#facc15]"
-                        : ""
-                        }`}
-                    >
-                      Miss
-                    </button>
+                  {!isCurrentThrowerDummy && (
+                    <div className="grid grid-cols-4 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => addDart(createSpecialDart("miss"))}
+                        disabled={!canAddDart}
+                        className={`rounded-xl border border-white/15 bg-white/5 px-2 py-3 text-sm font-black hover:bg-white/10 disabled:opacity-40 ${specialDartIsSelected(currentDarts, "miss")
+                          ? "ring-2 ring-[#facc15]"
+                          : ""
+                          }`}
+                      >
+                        Miss
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={handleSubmitTurn}
-                      disabled={currentDarts.length === 0}
-                      className="col-span-2 rounded-xl bg-[var(--color-success)] px-2 py-3 text-xl font-black hover:bg-[var(--color-success-hover)] disabled:opacity-40"
-                    >
-                      {currentDarts.length === 0 ? "Submit" : `Submit ${turnTotal}`}
-                    </button>
+                      <button
+                        type="button"
+                        onClick={handleSubmitTurn}
+                        disabled={currentDarts.length === 0}
+                        className="col-span-2 rounded-xl bg-[var(--color-success)] px-2 py-3 text-xl font-black hover:bg-[var(--color-success-hover)] disabled:opacity-40"
+                      >
+                        {currentDarts.length === 0 ? "Submit" : `Submit ${turnTotal}`}
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={undoDart}
-                      disabled={currentDarts.length === 0}
-                      className="rounded-xl bg-[var(--color-warning)] px-2 py-3 text-sm font-black hover:bg-[var(--color-warning-hover)] disabled:opacity-40"
-                    >
-                      Undo
-                    </button>
-                  </div>
+                      <button
+                        type="button"
+                        onClick={undoDart}
+                        disabled={currentDarts.length === 0}
+                        className="rounded-xl bg-[var(--color-warning)] px-2 py-3 text-sm font-black hover:bg-[var(--color-warning-hover)] disabled:opacity-40"
+                      >
+                        Undo
+                      </button>
+                    </div>
+                  )}
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={clearDarts}
-                      disabled={currentDarts.length === 0}
-                      className="rounded-xl bg-white/10 px-2 py-2 text-sm font-bold hover:bg-white/20 disabled:opacity-40"
-                    >
-                      Clear Turn
-                    </button>
+                  {!isCurrentThrowerDummy && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={clearDarts}
+                        disabled={currentDarts.length === 0}
+                        className="rounded-xl bg-white/10 px-2 py-2 text-sm font-bold hover:bg-white/20 disabled:opacity-40"
+                      >
+                        Clear Turn
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={undoLastTurn}
-                      className="rounded-xl bg-white/10 px-2 py-2 text-sm font-bold text-white/75 hover:bg-white/20"
-                    >
-                      Undo Last Turn
-                    </button>
-                  </div>
+                      <button
+                        type="button"
+                        onClick={undoLastTurn}
+                        className="rounded-xl bg-white/10 px-2 py-2 text-sm font-bold text-white/75 hover:bg-white/20"
+                      >
+                        Undo Last Turn
+                      </button>
+                    </div>
+
+
+                  )}
 
                   <div className="grid grid-cols-2 gap-2">
                     {fullscreenScoreCards.map((card) => (

@@ -251,7 +251,7 @@ export function GameSetup({
               <input
                 className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
                 value={teamOneMemberNames[0] ?? ""}
-                placeholder="Player 1-A"
+                placeholder="Player 1"
                 onChange={(event) =>
                   setTeamOneMemberNames([event.target.value])
                 }
@@ -265,7 +265,7 @@ export function GameSetup({
               <input
                 className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
                 value={teamTwoMemberNames[0] ?? ""}
-                placeholder="Player 1-B"
+                placeholder="Player 2"
                 onChange={(event) =>
                   setTeamTwoMemberNames([event.target.value])
                 }
