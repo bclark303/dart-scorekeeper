@@ -43,6 +43,9 @@ type FullscreenScoreCard = {
 const AUTO_FULLSCREEN_BOARD_STORAGE_KEY =
   "dart-scorekeeper-auto-fullscreen-board";
 
+const FULLSCREEN_BOARD_ACTIVE_STORAGE_KEY =
+  "dart-scorekeeper-fullscreen-board-active";
+
 type BoardTarget = {
   segment: number;
   multiplier: 1 | 2 | 3;
@@ -324,7 +327,16 @@ export function DartEntry({
   isMatchComplete,
 }: DartEntryProps) {
   const [currentDarts, setCurrentDarts] = useState<DartThrow[]>([]);
-  const [isBoardFullscreen, setIsBoardFullscreen] = useState(false);
+  const [isBoardFullscreen, setIsBoardFullscreen] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    return (
+      window.sessionStorage.getItem(FULLSCREEN_BOARD_ACTIVE_STORAGE_KEY) ===
+      "true"
+    );
+  });
   const [autoFullscreenBoard, setAutoFullscreenBoard] = useState(() => {
     if (typeof window === "undefined") {
       return false;
@@ -384,6 +396,11 @@ export function DartEntry({
   }, [hasAutoOpenedBoard, isBoardFullscreen, shouldAutoOpenBoard]);
 
   useEffect(() => {
+    window.sessionStorage.setItem(
+      FULLSCREEN_BOARD_ACTIVE_STORAGE_KEY,
+      String(isBoardFullscreen),
+    );
+
     if (!isBoardFullscreen) {
       return;
     }
