@@ -1377,8 +1377,8 @@ export default function Home() {
             type="button"
             onClick={() => setScoreEntryMode("turn")}
             className={`rounded-lg px-3 py-2 text-sm font-bold transition ${!isBoardMode
-                ? "bg-[var(--color-primary)] text-white shadow"
-                : "text-[var(--color-text-muted)] hover:bg-[var(--color-panel-border)] hover:text-[var(--color-text-main)]"
+              ? "bg-[var(--color-primary)] text-white shadow"
+              : "text-[var(--color-text-muted)] hover:bg-[var(--color-panel-border)] hover:text-[var(--color-text-main)]"
               }`}
             aria-pressed={!isBoardMode}
           >
@@ -1389,8 +1389,8 @@ export default function Home() {
             type="button"
             onClick={() => setScoreEntryMode("dart")}
             className={`rounded-lg px-3 py-2 text-sm font-bold transition ${isBoardMode
-                ? "bg-[var(--color-primary)] text-white shadow"
-                : "text-[var(--color-text-muted)] hover:bg-[var(--color-panel-border)] hover:text-[var(--color-text-main)]"
+              ? "bg-[var(--color-primary)] text-white shadow"
+              : "text-[var(--color-text-muted)] hover:bg-[var(--color-panel-border)] hover:text-[var(--color-text-main)]"
               }`}
             aria-pressed={isBoardMode}
           >
@@ -1451,6 +1451,7 @@ export default function Home() {
         fullscreenScoreCards={sides.map((side, index) => ({
           id: side.id,
           name: side.name,
+          throwerName: getCurrentThrowerName(side),
           score: side.score,
           isCurrent: index === currentSideIndex,
         }))}

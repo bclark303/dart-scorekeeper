@@ -35,6 +35,7 @@ type DartInputStyle = "board" | "numeric";
 type FullscreenScoreCard = {
   id: string;
   name: string;
+  throwerName: string;
   score: number;
   isCurrent: boolean;
 };
@@ -1201,6 +1202,7 @@ export function DartEntry({
 
               <div className="grid max-h-[38dvh] min-h-0 grid-rows-[auto_auto_auto_auto_auto] gap-2 overflow-hidden rounded-2xl border border-white/20 bg-neutral-900 p-2 shadow-2xl min-[1100px]:max-h-none min-[1100px]:grid-rows-[auto_auto_auto_auto_1fr]">
 
+
                 <div className="grid gap-2">
                   <div className="grid grid-cols-4 gap-2">
                     <button
@@ -1254,7 +1256,68 @@ export function DartEntry({
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
-                    {renderAutoFullscreenToggle(true)}
+                    {fullscreenScoreCards.map((card) => (
+                      <div
+                        key={card.id}
+                        className={`rounded-2xl border px-3 py-3 text-center ${card.isCurrent
+                          ? "border-[var(--color-primary)] bg-[var(--color-primary)]/25 ring-2 ring-[#facc15]/70"
+                          : "border-white/15 bg-white/5"
+                          }`}
+                      >
+                        <div className="truncate text-xs font-black uppercase tracking-wide text-white/60">
+                          {card.name}
+                        </div>
+
+                        {card.throwerName !== card.name && (
+                          <div className="truncate text-sm font-bold text-white/75">
+                            {card.throwerName}
+                          </div>
+                        )}
+
+                        <div className={`${card.throwerName !== card.name ? "mt-1" : "mt-2"} text-5xl font-black leading-none`}>
+                          {card.score}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-2">
+                    <label className="flex cursor-pointer items-center justify-center gap-1 rounded-lg border border-white/15 bg-white/5 px-2 py-2 text-xs font-bold text-white/80 hover:bg-white/10">
+                      <input
+                        type="checkbox"
+                        checked={autoFullscreenBoard}
+                        onChange={(event) =>
+                          setAutoFullscreenPreference(event.target.checked)
+                        }
+                        className="h-4 w-4 accent-[var(--color-primary)]"
+                      />
+                      Auto
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDartInputStyle("board");
+                        setHasAutoOpenedBoard(false);
+                      }}
+                      className={`rounded-lg border px-2 py-2 text-xs font-bold ${dartInputStyle === "board"
+                        ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
+                        : "border-white/15 bg-white/5 text-white/75 hover:bg-white/10"
+                        }`}
+                    >
+                      Board
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setDartInputStyle("numeric")}
+                      className={`rounded-lg border px-2 py-2 text-xs font-bold ${dartInputStyle === "numeric"
+                        ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
+                        : "border-white/15 bg-white/5 text-white/75 hover:bg-white/10"
+                        }`}
+                    >
+                      Numeric
+                    </button>
 
                     <button
                       type="button"
@@ -1270,38 +1333,8 @@ export function DartEntry({
                   </div>
                 </div>
 
-                {!showFullscreenScorecard && renderDartInputStyleToggle(true)}
 
-                <div
-                  className={`rounded-xl border px-2 py-2 ${getPreviewToneClass(turnPreview.tone)} ${isPreviewAnimated ? "animate-pulse" : ""
-                    }`}
-                >
-                  <div className="text-lg font-black leading-tight">
-                    {turnPreview.label}
-                  </div>
-                  <div className="text-xs text-[var(--color-text-muted)]">
-                    {turnPreview.detail}
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  {fullscreenScoreCards.map((card) => (
-                    <div
-                      key={card.id}
-                      className={`rounded-xl border px-2 py-2 text-center ${card.isCurrent
-                          ? "border-[var(--color-accent)] bg-[var(--color-accent)]/20"
-                          : "border-white/15 bg-white/5"
-                        }`}
-                    >
-                      <div className="truncate text-[0.65rem] font-bold uppercase tracking-wide text-white/60">
-                        {card.name}
-                      </div>
-                      <div className="text-3xl font-black leading-none">
-                        {card.score}
-                      </div>
-                    </div>
-                  ))}
-                </div>
 
 
               </div>
