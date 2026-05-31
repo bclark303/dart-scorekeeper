@@ -112,30 +112,25 @@ export default function Home() {
   // Legacy/simple name fields.
   // These mostly exist to load older saved matches while the app transitions
   // to teamOneMemberNames/teamTwoMemberNames.
-  const [playerOneName, setPlayerOneName] = useState("Player 1");
-  const [playerTwoName, setPlayerTwoName] = useState("Player 2");
-  const [teamOneName, setTeamOneName] = useState("Team 1");
-  const [teamTwoName, setTeamTwoName] = useState("Team 2");
-  const [teamOnePlayerTwoName, setTeamOnePlayerTwoName] = useState("Player 1B");
-  const [teamTwoPlayerTwoName, setTeamTwoPlayerTwoName] = useState("Player 2B");
-
+  const [playerOneName, setPlayerOneName] = useState("");
+  const [playerTwoName, setPlayerTwoName] = useState("");
+  const [teamOneName, setTeamOneName] = useState("");
+  const [teamTwoName, setTeamTwoName] = useState("");
+  const [teamOnePlayerTwoName, setTeamOnePlayerTwoName] = useState("");
+  const [teamTwoPlayerTwoName, setTeamTwoPlayerTwoName] = useState("");
   // Current setup member names.
   // These arrays are now the main source for creating singles, doubles,
   // and larger team sides.
-  const [teamOneMemberNames, setTeamOneMemberNames] = useState<string[]>([
-    "Player 1",
-  ]);
+  const [teamOneMemberNames, setTeamOneMemberNames] = useState<string[]>([""]);
 
-  const [teamTwoMemberNames, setTeamTwoMemberNames] = useState<string[]>([
-    "Player 2",
-  ]);
+  const [teamTwoMemberNames, setTeamTwoMemberNames] = useState<string[]>([""]);
 
   // Active match sides.
   // A side can be one player, a doubles pair, or a larger team.
   // The side owns the score and legs won; members determine throw order.
   const [sides, setSides] = useState<MatchSide[]>([
-    createTeamSide("side-1", "Player 1", ["Player 1"], 501),
-    createTeamSide("side-2", "Player 2", ["Player 2"], 501),
+    createTeamSide("side-1", "Player 1-A", ["Player 1-A"], 501),
+    createTeamSide("side-2", "Player 1-B", ["Player 1-B"], 501),
   ]);
 
   // Active match progress.
@@ -409,12 +404,31 @@ export default function Home() {
     message,
   ]);
 
+  function getDefaultTeamName(sideNumber: 1 | 2) {
+    return sideNumber === 1 ? "Team A" : "Team B";
+  }
+
+  function getDefaultMemberName(sideNumber: 1 | 2, memberIndex: number) {
+    const suffix = sideNumber === 1 ? "A" : "B";
+    return `Player ${memberIndex + 1}-${suffix}`;
+  }
+
+  function resolveMemberNames(
+    memberNames: string[],
+    sideNumber: 1 | 2,
+    sideSize: TeamSize,
+  ) {
+    return Array.from({ length: sideSize }, (_, index) => {
+      return memberNames[index]?.trim() || getDefaultMemberName(sideNumber, index);
+    });
+  }
+
   function resizeSideOneMembers(size: TeamSize) {
     setSideOneSize(size);
 
     setTeamOneMemberNames((currentNames) =>
       Array.from({ length: size }, (_, index) => {
-        return currentNames[index] ?? `Team 1 Player ${index + 1}`;
+        return currentNames[index] ?? "";
       }),
     );
 
@@ -428,7 +442,7 @@ export default function Home() {
 
     setTeamTwoMemberNames((currentNames) =>
       Array.from({ length: size }, (_, index) => {
-        return currentNames[index] ?? `Team 2 Player ${index + 1}`;
+        return currentNames[index] ?? "";
       }),
     );
 
@@ -509,17 +523,39 @@ export default function Home() {
   function startNewGame() {
     const isSinglesMatch = sideOneSize === 1 && sideTwoSize === 1;
 
+    const resolvedTeamOneMemberNames = resolveMemberNames(
+      teamOneMemberNames,
+      1,
+      sideOneSize,
+    );
+
+    const resolvedTeamTwoMemberNames = resolveMemberNames(
+      teamTwoMemberNames,
+      2,
+      sideTwoSize,
+    );
+
     const sideOneName = isSinglesMatch
-      ? teamOneMemberNames[0]?.trim() || "Player 1"
-      : teamOneName.trim() || "Team 1";
+      ? resolvedTeamOneMemberNames[0]
+      : teamOneName.trim() || getDefaultTeamName(1);
 
     const sideTwoName = isSinglesMatch
-      ? teamTwoMemberNames[0]?.trim() || "Player 2"
-      : teamTwoName.trim() || "Team 2";
+      ? resolvedTeamTwoMemberNames[0]
+      : teamTwoName.trim() || getDefaultTeamName(2);
 
     let newSides: MatchSide[] = [
-      createTeamSide("side-1", sideOneName, teamOneMemberNames, startingScore),
-      createTeamSide("side-2", sideTwoName, teamTwoMemberNames, startingScore),
+      createTeamSide(
+        "side-1",
+        sideOneName,
+        resolvedTeamOneMemberNames,
+        startingScore,
+      ),
+      createTeamSide(
+        "side-2",
+        sideTwoName,
+        resolvedTeamTwoMemberNames,
+        startingScore,
+      ),
     ];
 
     if (rotationMode === "dummy" && sideOneSize !== sideTwoSize) {
@@ -591,8 +627,8 @@ export default function Home() {
     localStorage.removeItem(savedMatchKey);
 
     const resetSides: MatchSide[] = [
-      createTeamSide("side-1", "Player 1", ["Player 1"], 501),
-      createTeamSide("side-2", "Player 2", ["Player 2"], 501),
+      createTeamSide("side-1", "Player 1-A", ["Player 1-A"], 501),
+      createTeamSide("side-2", "Player 1-B", ["Player 1-B"], 501),
     ];
 
     setStartingScore(501);
@@ -604,14 +640,14 @@ export default function Home() {
     setDummyScore(0);
     setSideOneSize(1);
     setSideTwoSize(1);
-    setPlayerOneName("Player 1");
-    setPlayerTwoName("Player 2");
-    setTeamOneName("Team 1");
-    setTeamTwoName("Team 2");
-    setTeamOnePlayerTwoName("Player 1B");
-    setTeamTwoPlayerTwoName("Player 2B");
-    setTeamOneMemberNames(["Player 1"]);
-    setTeamTwoMemberNames(["Player 2"]);
+    setPlayerOneName("");
+    setPlayerTwoName("");
+    setTeamOneName("");
+    setTeamTwoName("");
+    setTeamOnePlayerTwoName("");
+    setTeamTwoPlayerTwoName("");
+    setTeamOneMemberNames([""]);
+    setTeamTwoMemberNames([""]);
     setSides(resetSides);
     setCurrentSideIndex(0);
     setStartingSideIndex(0);
@@ -631,7 +667,7 @@ export default function Home() {
     setIsGameModeActive(false);
     setIsGameMenuOpen(false);
     setIsClearSavedConfirmationVisible(false);
-    setMessage("Saved match cleared. Player 1 to throw.");
+    setMessage("Saved match cleared. Player 1-A to throw.");
   }
 
   function clearSavedMatch() {
@@ -1455,6 +1491,7 @@ export default function Home() {
           score: side.score,
           isCurrent: index === currentSideIndex,
         }))}
+        lastTurn={turnHistory[0] ?? null}
         submitDartTurn={submitDartTurn}
         undoLastTurn={undoLastTurn}
         startNextLeg={startNextLeg}

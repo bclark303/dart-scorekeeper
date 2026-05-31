@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { DartThrow, FinishRule, getCheckoutSuggestion } from "@/lib/scoring";
+import { DartThrow, FinishRule, Turn, getCheckoutSuggestion } from "@/lib/scoring";
 import { getDartLabel } from "@/lib/darts";
 
 type DartEntryProps = {
@@ -13,6 +13,7 @@ type DartEntryProps = {
   currentLegNumber: number;
   finishRule: FinishRule;
   fullscreenScoreCards: FullscreenScoreCard[];
+  lastTurn: Turn | null;
   submitDartTurn: (darts: DartThrow[]) => void;
   undoLastTurn: () => void;
   startNextLeg: () => void;
@@ -317,6 +318,7 @@ export function DartEntry({
   currentLegNumber,
   finishRule,
   fullscreenScoreCards,
+  lastTurn,
   submitDartTurn,
   undoLastTurn,
   startNextLeg,
@@ -353,6 +355,11 @@ export function DartEntry({
   );
   const [showFullscreenScorecard, setShowFullscreenScorecard] = useState(false);
   const turnTotal = currentDarts.reduce((total, dart) => total + dart.score, 0);
+  const remainingAfterCurrentDarts = currentScore - turnTotal;
+  const activeCheckoutSuggestion =
+    remainingAfterCurrentDarts > 1
+      ? getCheckoutSuggestion(remainingAfterCurrentDarts)
+      : null;
   const canAddDart = currentDarts.length < 3;
   const nextDartNumber = Math.min(currentDarts.length + 1, 3);
   const isTurnReady = currentDarts.length === 3;
@@ -364,11 +371,13 @@ export function DartEntry({
   );
 
   const fullscreenStatusText =
-    turnPreview.tone === "danger" || turnPreview.tone === "good"
+    turnPreview.tone === "danger"
       ? turnPreview.label
-      : getCheckoutSuggestion(currentScore)
-        ? `CO: ${getCheckoutSuggestion(currentScore)}`
-        : "CO: —";
+      : activeCheckoutSuggestion
+        ? `CO: ${activeCheckoutSuggestion}`
+        : turnPreview.tone === "good"
+          ? turnPreview.label
+          : "CO: —";
 
   const isOuterBullSelected = specialDartIsSelected(currentDarts, "outer-bull");
   const isBullSelected = specialDartIsSelected(currentDarts, "bull");
@@ -849,55 +858,79 @@ export function DartEntry({
   }
 
   function renderFullscreenScorecard() {
-    const checkoutSuggestion = getCheckoutSuggestion(currentScore);
+    const lastThrowerName =
+      lastTurn?.throwerName ?? lastTurn?.playerName ?? "Last player";
+    const lastDartSummary = lastTurn?.darts?.length
+      ? lastTurn.darts.map(getDartLabel).join(" + ")
+      : null;
+
+    const whatHappened = lastTurn
+      ? lastTurn.isCheckout
+        ? `${lastThrowerName} checked out with ${lastTurn.scoreEntered}.`
+        : lastTurn.isBust
+          ? `${lastThrowerName} busts with ${lastTurn.scoreEntered}.`
+          : `${lastThrowerName} scored ${lastTurn.scoreEntered}.`
+      : message;
+
+    const scoreChange = lastTurn
+      ? lastTurn.isBust
+        ? `Score stayed at ${lastTurn.scoreBefore}`
+        : `${lastTurn.scoreBefore} → ${lastTurn.scoreAfter}`
+      : "";
 
     return (
       <div className="flex h-full min-h-0 items-center justify-center rounded-2xl border border-white/20 bg-neutral-900 p-4 shadow-2xl">
         <div className="grid w-full max-w-[820px] gap-4 text-center">
           <div className="rounded-2xl border border-white/20 bg-white/5 p-4">
             <div className="text-xs font-bold uppercase tracking-[0.2em] text-white/55">
-              Next throw
+              What happened
+            </div>
+            <div className="mt-1 text-3xl font-black leading-tight sm:text-4xl">
+              {whatHappened}
+            </div>
+            {lastDartSummary && (
+              <div className="mt-2 text-base font-bold text-white/65">
+                {lastDartSummary}
+              </div>
+            )}
+            {scoreChange && (
+              <div className="mt-2 text-lg font-bold text-white/75">
+                {scoreChange}
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            {fullscreenScoreCards.map((scoreCard) => (
+              <div
+                key={scoreCard.id}
+                className={`rounded-2xl border p-4 ${scoreCard.isCurrent
+                  ? "border-[var(--color-success)] bg-[var(--color-success)]/20"
+                  : "border-white/20 bg-white/5"
+                  }`}
+              >
+                <div className="text-xs font-bold uppercase tracking-wide text-white/55">
+                  {scoreCard.name}
+                </div>
+                <div className="text-5xl font-black leading-none sm:text-6xl">
+                  {scoreCard.score}
+                </div>
+                <div className="mt-1 text-sm font-bold text-white/60">
+                  {scoreCard.throwerName}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-2xl border border-white/20 bg-white/5 p-4">
+            <div className="text-xs font-bold uppercase tracking-wide text-white/55">
+              Throws next
             </div>
             <div className="mt-1 text-4xl font-black leading-tight sm:text-5xl">
               {currentThrowerName}
             </div>
             <div className="mt-1 text-lg font-bold text-white/70">
               {currentSideName} • Leg {currentLegNumber}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-white/20 bg-white/5 p-4">
-              <div className="text-xs font-bold uppercase tracking-wide text-white/55">
-                Score
-              </div>
-              <div className="text-6xl font-black leading-none sm:text-7xl">
-                {currentScore}
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-white/20 bg-white/5 p-4">
-              <div className="text-xs font-bold uppercase tracking-wide text-white/55">
-                Dart
-              </div>
-              <div className="text-6xl font-black leading-none sm:text-7xl">
-                1
-              </div>
-              <div className="mt-1 text-sm font-bold text-white/60">of 3</div>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-white/20 bg-white/5 p-4 text-left">
-            <div className="text-xs font-bold uppercase tracking-wide text-white/55">
-              Status
-            </div>
-            <div className="mt-1 text-lg font-bold text-white/85">
-              {message}
-            </div>
-            <div className="mt-2 text-base text-white/70">
-              {checkoutSuggestion
-                ? `Checkout: ${checkoutSuggestion}`
-                : "No standard checkout suggestion."}
             </div>
           </div>
 
@@ -912,7 +945,10 @@ export function DartEntry({
 
             <button
               type="button"
-              onClick={undoLastTurn}
+              onClick={() => {
+                undoLastTurn();
+                setShowFullscreenScorecard(false);
+              }}
               className="rounded-2xl bg-[var(--color-warning)] px-4 py-5 text-xl font-black hover:bg-[var(--color-warning-hover)]"
             >
               Undo Last Turn
@@ -1162,7 +1198,7 @@ export function DartEntry({
         </div>
       )}
 
-      {isBoardFullscreen && !isLegComplete && !isMatchComplete && (
+      {isBoardFullscreen && ((!isLegComplete && !isMatchComplete) || showFullscreenScorecard) && (
         <div className="fixed inset-0 z-[90] h-[100dvh] overflow-hidden bg-neutral-950 p-2 text-white">
           <div className="mx-auto grid h-full max-w-[1600px] grid-rows-[auto_minmax(0,1fr)] gap-2 overflow-hidden">
             <div className="shrink-0 rounded-2xl border border-white/20 bg-neutral-900 px-4 py-2 shadow-2xl">

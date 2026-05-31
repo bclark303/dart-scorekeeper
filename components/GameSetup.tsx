@@ -88,7 +88,7 @@ export function GameSetup({
         <div className="grid grid-cols-1 sm:grid-cols-5 lg:grid-cols-4 xl:grid-cols-8 gap-4">
           <label className="block">
             <span className="block text-[var(--color-text-muted)] mb-2">
-              Team 1 Size
+              Team A Size
             </span>
             <select
               className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
@@ -107,7 +107,7 @@ export function GameSetup({
 
           <label className="block">
             <span className="block text-[var(--color-text-muted)] mb-2">
-              Team 2 Size
+              Team B Size
             </span>
             <select
               className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
@@ -251,6 +251,7 @@ export function GameSetup({
               <input
                 className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
                 value={teamOneMemberNames[0] ?? ""}
+                placeholder="Player 1-A"
                 onChange={(event) =>
                   setTeamOneMemberNames([event.target.value])
                 }
@@ -264,6 +265,7 @@ export function GameSetup({
               <input
                 className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
                 value={teamTwoMemberNames[0] ?? ""}
+                placeholder="Player 1-B"
                 onChange={(event) =>
                   setTeamTwoMemberNames([event.target.value])
                 }
@@ -273,7 +275,7 @@ export function GameSetup({
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-4">
-              <h4 className="font-bold mb-3">Team 1</h4>
+              <h4 className="font-bold mb-3">Team A</h4>
 
               <div className="grid grid-cols-1 gap-4">
                 <label className="block">
@@ -283,6 +285,7 @@ export function GameSetup({
                   <input
                     className="w-full rounded-xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] p-3"
                     value={teamOneName}
+                    placeholder="Team A"
                     onChange={(event) => setTeamOneName(event.target.value)}
                   />
                 </label>
@@ -295,6 +298,7 @@ export function GameSetup({
                     <input
                       className="w-full rounded-xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] p-3"
                       value={memberName}
+                      placeholder={`Player ${index + 1}-A`}
                       onChange={(event) => {
                         const updatedNames = [...teamOneMemberNames];
                         updatedNames[index] = event.target.value;
@@ -307,7 +311,7 @@ export function GameSetup({
             </div>
 
             <div className="rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-4">
-              <h4 className="font-bold mb-3">Team 2</h4>
+              <h4 className="font-bold mb-3">Team B</h4>
 
               <div className="grid grid-cols-1 gap-4">
                 <label className="block">
@@ -317,6 +321,7 @@ export function GameSetup({
                   <input
                     className="w-full rounded-xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] p-3"
                     value={teamTwoName}
+                    placeholder="Team B"
                     onChange={(event) => setTeamTwoName(event.target.value)}
                   />
                 </label>
@@ -329,6 +334,7 @@ export function GameSetup({
                     <input
                       className="w-full rounded-xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] p-3"
                       value={memberName}
+                      placeholder={`Player ${index + 1}-B`}
                       onChange={(event) => {
                         const updatedNames = [...teamTwoMemberNames];
                         updatedNames[index] = event.target.value;
