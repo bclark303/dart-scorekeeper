@@ -223,12 +223,11 @@ export function DatabaseSetupPanel({
           <button
             type="button"
             onClick={() => setProvider("sqlite")}
-            disabled={status ? !status.capabilities.canUseLocalSqlite : false}
             className={`rounded-xl border p-3 text-left font-bold ${
               provider === "sqlite"
                 ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
                 : "border-[var(--color-panel-border)] bg-[var(--color-panel-soft)]"
-            } disabled:cursor-not-allowed disabled:opacity-40`}
+            }`}
           >
             Local SQLite
             <span className="mt-1 block text-xs font-normal opacity-80">
@@ -238,12 +237,11 @@ export function DatabaseSetupPanel({
           <button
             type="button"
             onClick={() => setProvider("turso")}
-            disabled={status ? !status.capabilities.canUseTurso : false}
             className={`rounded-xl border p-3 text-left font-bold ${
               provider === "turso"
                 ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
                 : "border-[var(--color-panel-border)] bg-[var(--color-panel-soft)]"
-            } disabled:cursor-not-allowed disabled:opacity-40`}
+            }`}
           >
             Turso / libSQL
             <span className="mt-1 block text-xs font-normal opacity-80">
@@ -253,12 +251,11 @@ export function DatabaseSetupPanel({
           <button
             type="button"
             onClick={() => setProvider("d1")}
-            disabled={status ? !status.capabilities.canUseD1 : false}
             className={`rounded-xl border p-3 text-left font-bold ${
               provider === "d1"
                 ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
                 : "border-[var(--color-panel-border)] bg-[var(--color-panel-soft)]"
-            } disabled:cursor-not-allowed disabled:opacity-40`}
+            }`}
           >
             Cloudflare D1
             <span className="mt-1 block text-xs font-normal opacity-80">
@@ -330,7 +327,7 @@ export function DatabaseSetupPanel({
         </div>
       )}
 
-      {status?.runtime === "vercel" && (
+      {status?.runtime === "vercel" && provider === "turso" && (
         <div className="mb-5 rounded-xl border border-sky-500/40 bg-sky-500/10 p-4">
           <div className="font-bold text-sky-100">Vercel deployment secrets</div>
           <p className="mt-1 text-sm text-sky-100/80">
@@ -342,7 +339,7 @@ export function DatabaseSetupPanel({
         </div>
       )}
 
-      {status?.runtime === "cloudflare" && (
+      {status?.runtime === "cloudflare" && provider === "d1" && (
         <div className="mb-5 rounded-xl border border-sky-500/40 bg-sky-500/10 p-4">
           <div className="font-bold text-sky-100">Cloudflare deployment binding</div>
           <p className="mt-1 text-sm text-sky-100/80">
