@@ -21,24 +21,36 @@ function noStoreJson(body: unknown, init?: ResponseInit) {
   return Response.json(body, { ...init, headers });
 }
 
-async function requireUser(request: Request) {
+async function getAuthenticatedUser(request: Request) {
   try {
     const session = await getRequestSession(request);
-    return session?.user ?? null;
+    return {
+      user: session?.user ?? null,
+      unavailable: false,
+    };
   } catch (error) {
     console.error("Authentication service unavailable during sync.", error);
-    return null;
+    return {
+      user: null,
+      unavailable: true,
+    };
   }
 }
 
+function authFailureResponse(unavailable: boolean) {
+  return unavailable
+    ? noStoreJson({ error: "Account service is unavailable." }, { status: 503 })
+    : noStoreJson({ error: "Authentication required." }, { status: 401 });
+}
+
 export async function GET(request: Request) {
-  const user = await requireUser(request);
-  if (!user) {
-    return noStoreJson({ error: "Authentication required." }, { status: 401 });
+  const authState = await getAuthenticatedUser(request);
+  if (!authState.user) {
+    return authFailureResponse(authState.unavailable);
   }
 
   try {
-    const matches = await listX01MatchArchivesForUser(user.id, 100);
+    const matches = await listX01MatchArchivesForUser(authState.user.id, 100);
     return noStoreJson({
       matches,
       serverTime: Date.now(),
@@ -50,9 +62,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const user = await requireUser(request);
-  if (!user) {
-    return noStoreJson({ error: "Authentication required." }, { status: 401 });
+  const authState = await getAuthenticatedUser(request);
+  if (!authState.user) {
+    return authFailureResponse(authState.unavailable);
   }
 
   const contentLength = Number(request.headers.get("content-length") ?? "0");
@@ -78,7 +90,7 @@ export async function POST(request: Request) {
 
   for (const archive of archives) {
     try {
-      await saveX01MatchArchiveForUser(user.id, archive);
+      await saveX01MatchArchiveForUser(authState.user.id, archive);
       accepted.push(archive.id);
     } catch (error) {
       if (error instanceof MatchOwnershipError) {
