@@ -24,7 +24,11 @@ function describeAuthError(error: unknown) {
 }
 
 export function AccountSyncPanel() {
-  const { data: session, isPending: isSessionPending } = authClient.useSession();
+  const {
+    data: session,
+    isPending: isSessionPending,
+    error: sessionError,
+  } = authClient.useSession();
   const [authMode, setAuthMode] = useState<AuthMode>("sign-in");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -147,7 +151,7 @@ export function AccountSyncPanel() {
           </p>
         </div>
 
-        {!isSessionPending && (
+        {!isSessionPending && !sessionError && (
           <div className="rounded-full border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] px-3 py-1.5 text-xs font-bold">
             {session?.user ? "Signed in" : "Local only"}
           </div>
@@ -160,7 +164,23 @@ export function AccountSyncPanel() {
         </div>
       )}
 
-      {!isSessionPending && session?.user && (
+      {!isSessionPending && sessionError && (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
+          <div className="font-bold text-amber-100">Account service unavailable</div>
+          <p className="mt-1 text-sm text-amber-100/80">
+            Scoring still works normally and completed matches remain queued on
+            this device. Server backup and cross-device sync will resume when the
+            account service is available.
+          </p>
+          {pendingCount > 0 && (
+            <p className="mt-2 text-sm text-amber-100/80">
+              {pendingCount} completed {pendingCount === 1 ? "match is" : "matches are"} safely waiting locally.
+            </p>
+          )}
+        </div>
+      )}
+
+      {!isSessionPending && !sessionError && session?.user && (
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-4">
@@ -205,7 +225,7 @@ export function AccountSyncPanel() {
         </div>
       )}
 
-      {!isSessionPending && !session?.user && (
+      {!isSessionPending && !sessionError && !session?.user && (
         <div className="space-y-4">
           <div className="flex w-fit rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-1">
             <button
@@ -308,13 +328,13 @@ export function AccountSyncPanel() {
         </div>
       )}
 
-      {statusMessage && !errorMessage && (
+      {statusMessage && !errorMessage && !sessionError && (
         <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
           {statusMessage}
         </div>
       )}
 
-      {errorMessage && (
+      {errorMessage && !sessionError && (
         <div className="mt-4 rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
           {errorMessage}
         </div>
