@@ -48,7 +48,7 @@ async function run() {
     completedAt: now + 10,
     settings: {
       startingScore: 301,
-      finishRule: "double-out",
+      finishRule: "double_out",
       bestOfLegs: 1,
       scoreEntryMode: "dart",
       rotationMode: "independent",
@@ -104,7 +104,7 @@ async function run() {
             dartsThrown: 3,
             isBust: false,
             isCheckout: false,
-            finishRule: "double-out",
+            finishRule: "double_out",
             recordedAt: now + 5,
             darts: [
               {
@@ -141,7 +141,7 @@ async function run() {
             dartsThrown: 3,
             isBust: false,
             isCheckout: true,
-            finishRule: "double-out",
+            finishRule: "double_out",
             recordedAt: now + 10,
             darts: [
               {
@@ -181,7 +181,7 @@ async function run() {
 
   assert.ok(firstSummary, "Saved X01 match should appear in recent summaries.");
   assert.equal(firstSummary.startingScore, 301);
-  assert.equal(firstSummary.finishRule, "double-out");
+  assert.equal(firstSummary.finishRule, "double_out");
   assert.equal(firstSummary.bestOfLegs, 1);
   assert.equal(firstSummary.winnerSideId, SIDE_ONE_ID);
 
