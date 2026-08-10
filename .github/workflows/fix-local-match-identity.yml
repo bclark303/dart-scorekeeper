@@ -1,0 +1,59 @@
+name: Fix local match identity purity
+
+on:
+  push:
+    branches:
+      - agent/local-match-identity
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Patch page identity helper usage
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("app/page.tsx")
+          text = path.read_text()
+
+          def replace_once(old: str, new: str) -> None:
+              global text
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"Expected exactly one match, found {count}: {old!r}")
+              text = text.replace(old, new, 1)
+
+          replace_once(
+              'import { createMatchId } from "@/lib/persistence";',
+              'import { createMatchId, createMatchIdentity } from "@/lib/persistence";',
+          )
+
+          replace_once(
+              '    const newMatchId = createMatchId();\n'
+              '    const newMatchCreatedAt = Date.now();\n'
+              '    setMatchId(newMatchId);\n'
+              '    setMatchCreatedAt(newMatchCreatedAt);',
+              '    const newMatchIdentity = createMatchIdentity();\n'
+              '    setMatchId(newMatchIdentity.id);\n'
+              '    setMatchCreatedAt(newMatchIdentity.createdAt);',
+          )
+
+          path.write_text(text)
+
+      - name: Remove one-time workflow
+        run: git rm .github/workflows/fix-local-match-identity.yml
+
+      - name: Commit fix
+        run: |
+          git add app/page.tsx
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Fix match identity purity lint"
+          git push origin HEAD:${GITHUB_REF_NAME}
