@@ -8,7 +8,7 @@ const databaseUrl =
   process.env.DATABASE_URL ?? "file:./data/dart-scorekeeper.db";
 
 export default defineConfig({
-  schema: "./lib/db/schema.ts",
+  schema: ["./lib/db/schema.ts", "./lib/db/auth-schema.ts"],
   out: "./drizzle",
   dialect: "turso",
   dbCredentials: {
