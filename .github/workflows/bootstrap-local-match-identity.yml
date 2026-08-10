@@ -1,0 +1,118 @@
+name: Bootstrap local match identity
+
+on:
+  push:
+    branches:
+      - agent/local-match-identity
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Wire durable match identity
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("app/page.tsx")
+          text = path.read_text()
+
+          def replace_once(old: str, new: str) -> None:
+              global text
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"Expected exactly one match for patch marker, found {count}: {old[:80]!r}")
+              text = text.replace(old, new, 1)
+
+          replace_once(
+              'import { APP_VERSION } from "@/lib/appInfo";\n',
+              'import { APP_VERSION } from "@/lib/appInfo";\nimport { createMatchId } from "@/lib/persistence";\n',
+          )
+
+          replace_once(
+              '  const [isGameMenuOpen, setIsGameMenuOpen] = useState(false);\n',
+              '  const [isGameMenuOpen, setIsGameMenuOpen] = useState(false);\n\n'
+              '  // Durable local-first match identity. This ID is created in the browser,\n'
+              '  // survives refreshes, and will later be reused for idempotent sync.\n'
+              '  const [matchId, setMatchId] = useState("");\n'
+              '  const [matchCreatedAt, setMatchCreatedAt] = useState<number | null>(null);\n',
+          )
+
+          replace_once(
+              '      const parsedMatch = JSON.parse(savedMatch) as SavedMatchState;\n\n'
+              '      setStartingScore(parsedMatch.startingScore);\n',
+              '      const parsedMatch = JSON.parse(savedMatch) as SavedMatchState;\n\n'
+              '      // Older local saves predate durable match IDs. Assign one once during\n'
+              '      // load so subsequent saves/sync retries refer to the same match.\n'
+              '      setMatchId(parsedMatch.matchId ?? createMatchId());\n'
+              '      setMatchCreatedAt(parsedMatch.matchCreatedAt ?? Date.now());\n\n'
+              '      setStartingScore(parsedMatch.startingScore);\n',
+          )
+
+          replace_once(
+              '    const matchState: SavedMatchState = {\n'
+              '      startingScore,\n',
+              '    const matchState: SavedMatchState = {\n'
+              '      matchId: matchId || undefined,\n'
+              '      matchCreatedAt: matchCreatedAt ?? undefined,\n'
+              '      startingScore,\n',
+          )
+
+          replace_once(
+              '    hasLoadedSavedMatch,\n'
+              '    startingScore,\n',
+              '    hasLoadedSavedMatch,\n'
+              '    matchId,\n'
+              '    matchCreatedAt,\n'
+              '    startingScore,\n',
+          )
+
+          replace_once(
+              '  function startNewGame() {\n'
+              '    const isSinglesMatch = sideOneSize === 1 && sideTwoSize === 1;\n',
+              '  function startNewGame() {\n'
+              '    const newMatchId = createMatchId();\n'
+              '    const newMatchCreatedAt = Date.now();\n'
+              '    setMatchId(newMatchId);\n'
+              '    setMatchCreatedAt(newMatchCreatedAt);\n\n'
+              '    const isSinglesMatch = sideOneSize === 1 && sideTwoSize === 1;\n',
+          )
+
+          replace_once(
+              '    setIsGameModeActive(false);\n'
+              '    setIsGameMenuOpen(false);\n'
+              '    setIsClearSavedConfirmationVisible(false);\n',
+              '    setIsGameModeActive(false);\n'
+              '    setIsGameMenuOpen(false);\n'
+              '    setMatchId("");\n'
+              '    setMatchCreatedAt(null);\n'
+              '    setIsClearSavedConfirmationVisible(false);\n',
+          )
+
+          replace_once(
+              '        match: {\n'
+              '          currentLegNumber,\n',
+              '        match: {\n'
+              '          matchId: matchId || null,\n'
+              '          matchCreatedAt,\n'
+              '          currentLegNumber,\n',
+          )
+
+          path.write_text(text)
+
+      - name: Remove one-time bootstrap workflow
+        run: git rm .github/workflows/bootstrap-local-match-identity.yml
+
+      - name: Commit patch
+        run: |
+          git add app/page.tsx
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Add durable local match identity"
+          git push origin HEAD:${GITHUB_REF_NAME}
