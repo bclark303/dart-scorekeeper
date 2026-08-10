@@ -4,16 +4,16 @@ A local-first X01 dart scoring app built with Next.js.
 
 ## Current Version
 
-v0.2.0
+v0.4.0-alpha.1
 
 ## In Development
 
-v0.3.0 — graphical dartboard input and full-screen/tablet scoring refinements.
+v0.4.0 — portable persistence foundation plus graphical dartboard/full-screen scoring refinements.
 
 Current development branch:
 
 ```text
-feature/graphical-input
+agent/portable-persistence-foundation
 ```
 
 ## Current Features
@@ -21,7 +21,7 @@ feature/graphical-input
 - 301 / 501 / 701 X01 scoring
 - Straight-out and double-out finishes
 - Total-turn score entry
-- Dart-by-dart score entry
+- Dart-by-dart graphical score entry
 - Singles, doubles, and larger team matches
 - Uneven team sizes
 - Dummy-score rotation for missing players
@@ -30,28 +30,26 @@ feature/graphical-input
 - Dart details in history
 - Compact / full scoring layouts
 - Game Mode compact navigation during active matches
-- Hamburger menu access to setup, settings, stats, history, and feedback during a match
-- Safety confirmation before clearing saved match/app settings
-- Theme and branding settings
+- Full-screen/tablet dartboard mode
 - Local browser save/resume
+- Theme and branding settings
 - Feedback form with diagnostics
 
-## In-Progress Features
+## Portable Persistence Foundation
 
-- Graphical dartboard input
-- Full-screen/tablet board mode
-- Full-screen post-scoring summary card
-- Cleaner setup defaults for teams and players
+The application is being structured so hosting and database providers remain replaceable.
 
-## Known Limitations
+- SQLite is the canonical database dialect.
+- Drizzle owns schema/migrations.
+- Persistence is accessed through `lib/db/repositories/` rather than directly from UI code.
+- `libSQL` is the current adapter and supports both local `file:` databases and remote Turso.
+- Production does not silently fall back to a local database file.
+- Docker/self-hosting uses a persistent `/data` volume.
+- A future Cloudflare D1 implementation can be added behind the adapter boundary.
 
-- X01 is the only supported game type right now.
-- Graphical dartboard input is still in development.
-- Full-screen/tablet board mode is still being refined.
-- No league, tournament, or backend sync yet.
-- Match data is stored only in the current browser/device.
-- Clearing browser data may erase saved matches.
-- Feedback submission requires an internet connection.
+See `docs/architecture/persistence.md` for the portability contract.
+
+The initial `app_metadata` table is deliberately small: it proves the full persistence path before the player/match/league schema is designed.
 
 ## Local Development
 
@@ -61,85 +59,96 @@ Install dependencies:
 npm install
 ```
 
+Copy the environment example if you want explicit local settings:
+
+```powershell
+Copy-Item .env.example .env.local
+```
+
+Without a production `DATABASE_URL`, local development defaults to:
+
+```text
+file:./data/dart-scorekeeper.db
+```
+
+Generate and apply database migrations:
+
+```powershell
+npm run db:generate
+npm run db:migrate
+```
+
 Run the dev server:
 
 ```powershell
 npm run dev
 ```
 
-Run the dev server on the local network for tablet testing:
+Run on the local network for tablet testing:
 
 ```powershell
 npm run dev -- --hostname 0.0.0.0
 ```
 
-Or bind to a specific LAN IP:
-
-```powershell
-npx next dev -H 192.168.2.152
-```
-
-Build for production:
-
-```powershell
-npm run build
-```
-
-Run lint checks:
+Build and lint:
 
 ```powershell
 npm run lint
+npm run build
 ```
 
-## Feedback Form Setup
+Database connectivity can be checked at:
 
-Create a `.env.local` file in the project root:
+```text
+/api/health/db
+```
+
+The endpoint never returns database credentials.
+
+## Vercel + Turso
+
+Vercel remains the current hosted deployment target. Configure these server-side environment variables when remote persistence is enabled:
+
+```env
+DB_PROVIDER=libsql
+DATABASE_URL=libsql://your-database.turso.io
+DATABASE_AUTH_TOKEN=your-token
+```
+
+Optional tester feedback:
 
 ```env
 NEXT_PUBLIC_FEEDBACK_ENDPOINT=https://formspree.io/f/your-form-id
 ```
 
-Do not commit `.env.local`.
+Do not expose database credentials through `NEXT_PUBLIC_*` variables.
 
-The project `.gitignore` should include:
+## Docker / Local Hosting
 
-```text
-.env*.local
+A Docker portability target is included from the beginning:
+
+```powershell
+docker compose up --build
 ```
 
-## Deployment Notes
+The Compose profile stores the SQLite/libSQL database in a named persistent volume mounted at `/data` and applies committed migrations before the app starts.
 
-This app can be deployed to Vercel as a Next.js project.
+## Known Limitations
 
-Required environment variable on Vercel:
-
-```text
-NEXT_PUBLIC_FEEDBACK_ENDPOINT
-```
-
-Set it to the Formspree endpoint used for tester feedback.
+- X01 is the only supported game type right now.
+- The persistent backend is foundation-only; active match data still lives in browser storage.
+- No player/league/tournament database model has been introduced yet.
+- Offline synchronization beyond existing browser save/resume is not implemented yet.
+- Feedback submission requires an internet connection.
 
 ## Tester Notes
 
-For v0.2.0 testing, focus on:
+Current scoring tests should focus on:
 
-- Game Mode compact navigation
-- Compact scoring layout on tablets/phones
-- Hamburger menu access during active matches
-- Total-turn score entry
-- Dart-by-dart score entry
-- Undo behavior
-- Checkouts
-- Team rotation
-- Uneven teams
-- Dummy-score rotation
-- Feedback form submissions
-
-For the v0.3.0 graphical-input branch, also focus on:
-
+- Full-screen board Exit behavior, including when Auto is enabled
+- Full-screen state across normal and dummy turns
 - Graphical dartboard input
-- Full-screen board mode
-- Full-screen state persistence across turns
-- Checkout suggestions during graphical dart entry
-- Post-scoring card behavior after normal scores, busts, and checkouts
-- Team/player default naming from blank setup fields
+- Checkout suggestions and checkout completion
+- Undo behavior
+- Team rotation and uneven teams
+- Local browser save/resume
