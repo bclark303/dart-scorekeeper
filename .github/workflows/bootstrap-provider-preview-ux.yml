@@ -1,0 +1,76 @@
+name: Bootstrap provider preview usability polish
+
+on:
+  push:
+    branches:
+      - agent/database-setup-preview
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: agent/database-setup-preview
+
+      - name: Keep all provider cards inspectable in preview
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("components/DatabaseSetupPanel.tsx")
+          text = path.read_text()
+
+          for line in [
+            '            disabled={status ? !status.capabilities.canUseLocalSqlite : false}\n',
+            '            disabled={status ? !status.capabilities.canUseTurso : false}\n',
+            '            disabled={status ? !status.capabilities.canUseD1 : false}\n',
+          ]:
+            assert line in text, f"Provider disabled marker changed: {line.strip()}"
+            text = text.replace(line, "")
+
+          text = text.replace(
+            '            } disabled:cursor-not-allowed disabled:opacity-40`}',
+            '            }`}',
+          )
+
+          old_sqlite_help = '''          <p className="mt-2 text-xs text-[var(--color-text-muted)]">
+            Use a path on a persistent volume. Vercel local files are intentionally
+            disabled because its runtime filesystem is not durable application storage.
+          </p>'''
+          new_sqlite_help = '''          <p className="mt-2 text-xs text-[var(--color-text-muted)]">
+            {status?.runtime === "vercel"
+              ? "Local SQLite is shown for comparison, but Vercel does not provide a durable application filesystem. Choose Turso/libSQL for Vercel storage."
+              : "Use a path on a persistent volume. Docker defaults to file:/data/dart-scorekeeper.db."}
+          </p>'''
+          assert text.count(old_sqlite_help) == 1, "SQLite help marker changed"
+          text = text.replace(old_sqlite_help, new_sqlite_help)
+
+          text = text.replace(
+            '{status?.runtime === "vercel" && (',
+            '{status?.runtime === "vercel" && provider === "turso" && (',
+            1,
+          )
+          text = text.replace(
+            '{status?.runtime === "cloudflare" && (',
+            '{status?.runtime === "cloudflare" && provider === "d1" && (',
+            1,
+          )
+
+          path.write_text(text)
+
+      - name: Remove one-time workflow
+        run: rm .github/workflows/bootstrap-provider-preview-ux.yml
+
+      - name: Commit preview polish
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add components/DatabaseSetupPanel.tsx .github/workflows/bootstrap-provider-preview-ux.yml
+          git commit -m 'Keep database providers inspectable in preview'
+          git push
