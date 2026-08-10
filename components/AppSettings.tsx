@@ -95,14 +95,16 @@ export function AppSettings({
             <h3 className="text-xl font-bold mb-3">What to Test</h3>
 
             <ul className="list-disc pl-5 space-y-2 text-[var(--color-text-muted)]">
-              <li>Total-turn X01 scoring</li>
-              <li>Dart-by-dart X01 scoring</li>
+              <li>Total-turn and graphical dart-by-dart X01 scoring</li>
+              <li>Graphical dartboard hit areas, doubles, triples, bull, and misses</li>
               <li>Straight-out and double-out finishes</li>
-              <li>Singles, doubles, and larger team matches</li>
-              <li>Uneven teams and dummy-score rotation</li>
-              <li>Undo Last Turn, especially after checkouts</li>
-              <li>Compact and Full scoring layouts</li>
-              <li>Feedback button and diagnostics preview</li>
+              <li>Checkout suggestions while entering darts</li>
+              <li>Full-screen/tablet board mode, including the Exit button with Auto enabled</li>
+              <li>Full-screen score cards and post-scoring summary behavior</li>
+              <li>Singles, doubles, larger teams, uneven teams, and dummy-score rotation</li>
+              <li>Undo Last Turn, especially after busts and checkouts</li>
+              <li>Saved-match resume after refreshing or reopening the app</li>
+              <li>Game Mode navigation, Compact/Full layouts, settings, and feedback</li>
             </ul>
           </div>
 
@@ -111,10 +113,11 @@ export function AppSettings({
 
             <ul className="list-disc pl-5 space-y-2 text-[var(--color-text-muted)]">
               <li>X01 is the only supported game type right now.</li>
-              <li>No graphical dartboard input yet.</li>
-              <li>No league, tournament, or backend sync yet.</li>
-              <li>Match data is stored only in this browser on this device.</li>
+              <li>The new database layer is foundation-only; matches are not syncing to it yet.</li>
+              <li>No player accounts, league management, tournaments, or shared statistics yet.</li>
+              <li>Active and saved match data still lives in this browser on this device.</li>
               <li>Clearing browser data may erase saved matches.</li>
+              <li>Offline cross-device synchronization is not implemented yet.</li>
               <li>Feedback submission requires an internet connection.</li>
             </ul>
           </div>
@@ -125,9 +128,10 @@ export function AppSettings({
 
           <p className="text-[var(--color-text-muted)]">
             When reporting a bug, include what you were trying to do, what
-            happened, and whether you can make it happen again. The feedback
-            form includes app diagnostics automatically, but a short description
-            still helps a lot.
+            happened, and whether you can make it happen again. For scoring or
+            full-screen issues, include the game type, score/layout mode, and
+            the last few darts or actions if possible. The feedback form includes
+            app diagnostics automatically, but a short description still helps a lot.
           </p>
         </div>
       </section>
