@@ -10,7 +10,10 @@ import {
   type ServerStorageMode,
 } from "@/lib/serverStorageMode";
 import { syncCompletedMatches } from "@/lib/sync/client";
-import type { DatabaseSetupStatus } from "@/lib/setup/contracts";
+import {
+  DATABASE_SETUP_CHANGED_EVENT,
+  type DatabaseSetupStatus,
+} from "@/lib/setup/contracts";
 
 /**
  * Fire-and-forget completed-match synchronization.
@@ -40,22 +43,28 @@ export function SyncCoordinator() {
 
     let cancelled = false;
 
-    void fetch("/api/setup/database/status", { cache: "no-store" })
-      .then(async (response) => {
-        if (!response.ok) return null;
-        return (await response.json()) as DatabaseSetupStatus;
-      })
-      .then((status) => {
-        if (!cancelled) {
-          setDatabaseReady(Boolean(status?.account.ready));
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setDatabaseReady(false);
-      });
+    const checkDatabase = () => {
+      void fetch("/api/setup/database/status", { cache: "no-store" })
+        .then(async (response) => {
+          if (!response.ok) return null;
+          return (await response.json()) as DatabaseSetupStatus;
+        })
+        .then((status) => {
+          if (!cancelled) {
+            setDatabaseReady(Boolean(status?.account.ready));
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setDatabaseReady(false);
+        });
+    };
+
+    checkDatabase();
+    window.addEventListener(DATABASE_SETUP_CHANGED_EVENT, checkDatabase);
 
     return () => {
       cancelled = true;
+      window.removeEventListener(DATABASE_SETUP_CHANGED_EVENT, checkDatabase);
     };
   }, [mode]);
 
