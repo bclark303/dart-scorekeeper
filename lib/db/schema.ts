@@ -44,8 +44,9 @@ export const players = sqliteTable(
 /**
  * Provider-neutral match envelope shared by every future game type.
  *
- * Game-specific settings and turn data live in separate tables so adding
- * Cricket, Killer, Half-It, etc. does not force those games into X01 columns.
+ * createdByUserId stores the Better Auth user that owns the synchronized copy.
+ * It is deliberately not a database foreign key: auth remains a replaceable
+ * boundary and the application schema stays portable if auth providers change.
  */
 export const matches = sqliteTable(
   "matches",
@@ -54,6 +55,7 @@ export const matches = sqliteTable(
     gameType: text("game_type").notNull(),
     status: text("status").notNull(),
     winnerSideId: text("winner_side_id"),
+    createdByUserId: text("created_by_user_id"),
     createdAt: integer("created_at").notNull(),
     startedAt: integer("started_at"),
     updatedAt: integer("updated_at").notNull(),
@@ -63,6 +65,7 @@ export const matches = sqliteTable(
     index("matches_game_type_idx").on(table.gameType),
     index("matches_status_idx").on(table.status),
     index("matches_completed_at_idx").on(table.completedAt),
+    index("matches_created_by_user_id_idx").on(table.createdByUserId),
   ],
 );
 
