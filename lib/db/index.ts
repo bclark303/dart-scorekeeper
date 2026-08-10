@@ -11,9 +11,12 @@ export {
   getPlayerById,
   listPlayers,
   listRecentX01MatchSummaries,
+  listX01MatchArchivesForUser,
+  MatchOwnershipError,
   pingDatabase,
   savePlayer,
   saveX01MatchArchive,
+  saveX01MatchArchiveForUser,
   setAppMetadata,
   type SavePlayerInput,
 } from "./repositories";
