@@ -95,20 +95,24 @@ export function AppSettings({
             <h3 className="text-xl font-bold mb-3">What to Test</h3>
 
             <ul className="list-disc pl-5 space-y-2 text-[var(--color-text-muted)]">
+              <li>Local Only is the default and scoring/history work without any account or sync requests</li>
+              <li>Switching to Connected Storage reveals database setup; switching back hides it and stops automatic sync</li>
+              <li>Database runtime/status/provider cards are understandable on Vercel and self-hosted/Docker installs</li>
+              <li>Docker/self-hosted setup token, Local SQLite test, Initialize &amp; save, and restart persistence</li>
+              <li>Docker/self-hosted Turso URL/token testing and switching from local SQLite to Turso</li>
+              <li>Vercel explains the required Turso/libSQL environment variables without attempting to store deployment secrets in the browser</li>
+              <li>Cloudflare D1 appears as a binding-based setup path rather than a URL/token form</li>
+              <li>Create/sign into an account after a healthy Connected Storage setup, sync a completed match, then confirm it appears in another signed-in browser</li>
+              <li>Finish a match offline, reconnect, and confirm the pending archive synchronizes when Connected Storage is enabled</li>
               <li>Total-turn and graphical dart-by-dart X01 scoring</li>
               <li>Graphical dartboard hit areas, doubles, triples, bull, and misses</li>
               <li>Straight-out and double-out finishes</li>
               <li>Checkout suggestions while entering darts</li>
               <li>Full-screen/tablet board mode, including the Exit button with Auto enabled</li>
-              <li>Full-screen score cards and post-scoring summary behavior</li>
               <li>Singles, doubles, larger teams, uneven teams, and dummy-score rotation</li>
               <li>Undo Last Turn, especially after busts and checkouts</li>
               <li>Saved-match resume after refreshing or reopening the app</li>
-              <li>Complete a match, then replay/clear/refresh and confirm normal scoring still behaves correctly</li>
-              <li>Create/sign into an account, sync a completed match, then confirm it appears in another signed-in browser</li>
-              <li>Finish a match offline, reconnect, and confirm the pending archive synchronizes</li>
               <li>History tab completed-match archive, including expandable leg/turn details</li>
-              <li>Game Mode navigation, Compact/Full layouts, settings, and feedback</li>
             </ul>
           </div>
 
@@ -117,11 +121,13 @@ export function AppSettings({
 
             <ul className="list-disc pl-5 space-y-2 text-[var(--color-text-muted)]">
               <li>X01 is the only supported game type right now.</li>
-              <li>Completed matches synchronize across devices only while signed in; signed-out scoring remains device-local.</li>
-              <li>No player accounts, league management, tournaments, or shared statistics yet.</li>
-              <li>Active match state and completed-match archives still live only in this browser on this device.</li>
-              <li>Clearing browser/site data may erase locally saved matches and archives.</li>
-              <li>Offline cross-device synchronization is not implemented yet.</li>
+              <li>This preview implements in-app persistent database configuration only for self-hosted/Docker installs.</li>
+              <li>Vercel still requires database/auth values to be saved as project environment variables and redeployed.</li>
+              <li>Cloudflare D1 requires a Worker binding; the D1 database adapter is represented in this preview but is not active yet.</li>
+              <li>App accounts currently own synchronization data; long-lived dart-player profiles are not linked to accounts yet.</li>
+              <li>Active match state remains device-local even when Connected Storage is enabled.</li>
+              <li>Clearing browser/site data may erase locally saved active matches and any archives that have not synchronized.</li>
+              <li>Email verification and password-reset email are not configured yet.</li>
               <li>Feedback submission requires an internet connection.</li>
             </ul>
           </div>
@@ -131,11 +137,11 @@ export function AppSettings({
           <h3 className="text-xl font-bold mb-2">Feedback Tips</h3>
 
           <p className="text-[var(--color-text-muted)]">
-            When reporting a bug, include what you were trying to do, what
-            happened, and whether you can make it happen again. For scoring or
-            full-screen issues, include the game type, score/layout mode, and
-            the last few darts or actions if possible. The feedback form includes
-            app diagnostics automatically, but a short description still helps a lot.
+            For this preview, please pay particular attention to whether Local
+            Only versus Connected Storage is obvious and whether database setup
+            feels like normal app configuration rather than server administration.
+            When reporting a scoring bug, include what you were trying to do,
+            what happened, and whether you can make it happen again.
           </p>
         </div>
       </section>
