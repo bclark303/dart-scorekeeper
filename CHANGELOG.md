@@ -3,6 +3,14 @@
 ## Unreleased
 
 ### Added
+- Portable persistence foundation for v0.4.0.
+- SQLite-compatible Drizzle schema and migration tooling.
+- Provider boundary under `lib/db/adapters/` and repository boundary under `lib/db/repositories/`.
+- Local `file:` SQLite/libSQL development configuration.
+- Provider-neutral database health endpoint at `/api/health/db`.
+- Docker and Compose self-hosting target with a persistent `/data` volume.
+- Persistence architecture documentation and ESLint guardrails against provider imports outside `lib/db`.
+- CI portability check that generates/applies migrations against a local database before lint/build validation.
 - Graphical dartboard input work for v0.3.0.
 - Full-screen/tablet board mode refinements.
 - Full-screen score cards.
@@ -11,6 +19,9 @@
 - Session storage persistence for full-screen board state across dummy turns.
 
 ### Changed
+- Updated development version to v0.4.0-alpha.1.
+- Enabled Next.js standalone output so the same app can run as a normal Node/Docker deployment.
+- Production database configuration now requires an explicit `DATABASE_URL`; local-file fallback is development-only.
 - Improved full-screen board header readability.
 - Moved full-screen action controls higher for tablet use.
 - Moved Auto / Board / Numeric / Exit controls to the bottom row.
@@ -21,6 +32,7 @@
 - Default names now use Team A / Team B and Player 1-A / Player 1-B style naming.
 
 ### Fixed
+- Full-screen board Exit now remains exited when Auto full screen is enabled.
 - Duplicate player name display on full-screen score cards.
 - Full-screen board mode returning to normal mode after dummy-score turns.
 - LAN testing issue caused by direct `crypto.randomUUID()` usage.

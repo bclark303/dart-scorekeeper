@@ -1445,7 +1445,7 @@ export function DartEntry({
                       onClick={() => {
                         setShowFullscreenScorecard(false);
                         setIsBoardFullscreen(false);
-                        setHasAutoOpenedBoard(false);
+                        setHasAutoOpenedBoard(true);
                       }}
                       className="rounded-lg border border-white/15 bg-white/5 px-2 py-2 text-xs font-bold text-white/75 hover:bg-white/10"
                     >

@@ -1,0 +1,52 @@
+name: Portable persistence check
+
+on:
+  push:
+    branches:
+      - agent/portable-persistence-foundation
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      DB_PROVIDER: libsql
+      DATABASE_URL: file:./data/ci.db
+      DATABASE_AUTH_TOKEN: ""
+      NEXT_TELEMETRY_DISABLED: "1"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Prepare local database directory
+        run: mkdir -p data
+
+      - name: Verify Drizzle migrations are committed
+        run: |
+          npm run db:generate
+          git diff --exit-code -- drizzle/
+
+      - name: Apply migrations to local SQLite/libSQL
+        run: npm run db:migrate
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build Next.js
+        run: npm run build
+
+      - name: Build Docker portability target
+        run: docker build -t dart-scorekeeper-portability .
