@@ -8,6 +8,7 @@ import {
   markLocalX01MatchArchiveSynced,
   markLocalX01MatchArchiveSyncError,
   queueLocalX01MatchArchive,
+  storeSyncedLocalX01MatchArchive,
   type X01MatchArchive,
 } from "@/lib/persistence";
 
@@ -83,8 +84,6 @@ async function run() {
   assert.equal((await listLocalX01MatchArchives()).length, 1);
   assert.equal((await listPendingLocalX01MatchArchives()).length, 1);
 
-  // A repeated completion effect/reload must return the original queue record
-  // rather than replacing it or creating a duplicate.
   const repeated = await queueLocalX01MatchArchive({
     ...archive,
     updatedAt: 9999,
@@ -103,7 +102,6 @@ async function run() {
   assert.equal(failed.lastSyncError, "temporary failure");
   assert.equal((await listPendingLocalX01MatchArchives()).length, 1);
 
-  // A completion-effect retry after an error must preserve that error state.
   const repeatedAfterError = await queueLocalX01MatchArchive(archive);
   assert.equal(repeatedAfterError.syncStatus, "error");
   assert.equal(repeatedAfterError.lastSyncError, "temporary failure");
@@ -118,10 +116,34 @@ async function run() {
   assert.equal(synced.lastSyncError, null);
   assert.equal((await listPendingLocalX01MatchArchives()).length, 0);
 
-  // A completed-match reload after sync must not push the record back to pending.
   const repeatedAfterSync = await queueLocalX01MatchArchive(archive);
   assert.equal(repeatedAfterSync.syncStatus, "synced");
   assert.equal((await listLocalX01MatchArchives()).length, 1);
+
+  const remoteMatchId = "match-downloaded-from-server";
+  const remoteArchive: X01MatchArchive = {
+    ...archive,
+    id: remoteMatchId,
+    winnerSideId: `${remoteMatchId}:side:side-1`,
+    sides: archive.sides.map((side, index) => ({
+      ...side,
+      id: `${remoteMatchId}:side:side-${index + 1}`,
+      participants: side.participants.map((participant, participantIndex) => ({
+        ...participant,
+        id: `${remoteMatchId}:participant:${index}-${participantIndex}`,
+      })),
+    })),
+    legs: [],
+  };
+
+  await storeSyncedLocalX01MatchArchive(remoteArchive, 5000);
+  const downloaded = await getLocalX01MatchArchive(remoteMatchId);
+  assert.ok(downloaded);
+  assert.equal(downloaded.syncStatus, "synced");
+  assert.equal(downloaded.syncedAt, 5000);
+  assert.equal(downloaded.archive.id, remoteMatchId);
+  assert.equal((await listLocalX01MatchArchives()).length, 2);
+  assert.equal((await listPendingLocalX01MatchArchives()).length, 0);
 
   console.log("Local IndexedDB archive contract test passed.");
 }
