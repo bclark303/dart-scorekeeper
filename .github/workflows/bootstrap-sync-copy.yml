@@ -26,39 +26,19 @@ jobs:
           path = Path("components/LocalMatchHistory.tsx")
           text = path.read_text()
 
-          old_import = '''import {
-            listLocalX01MatchArchives,
-            type LocalX01MatchArchiveRecord,
-          } from "@/lib/persistence";'''
-          new_import = '''import {
-            listLocalX01MatchArchives,
-            LOCAL_ARCHIVE_CHANGED_EVENT,
-            type LocalX01MatchArchiveRecord,
-          } from "@/lib/persistence";'''
-          assert text.count(old_import) == 1, "History import marker changed"
-          text = text.replace(old_import, new_import)
+          marker = '  listLocalX01MatchArchives,\n'
+          assert text.count(marker) == 1, "History import marker changed"
+          text = text.replace(
+            marker,
+            marker + '  LOCAL_ARCHIVE_CHANGED_EVENT,\n',
+            1,
+          )
 
-          old_effect = '''  useEffect(() => {
-            let cancelled = false;
+          function_start = text.index("export function LocalMatchHistory()")
+          effect_start = text.index("  useEffect(() => {", function_start)
+          effect_end_marker = "\n  }, []);"
+          effect_end = text.index(effect_end_marker, effect_start) + len(effect_end_marker)
 
-            void listLocalX01MatchArchives()
-              .then((localRecords) => {
-                if (cancelled) return;
-                setRecords(localRecords);
-                setLoadError("");
-                setIsLoading(false);
-              })
-              .catch((error) => {
-                if (cancelled) return;
-                console.error("Could not load local completed-match history.", error);
-                setLoadError("Completed match history could not be loaded from this browser.");
-                setIsLoading(false);
-              });
-
-            return () => {
-              cancelled = true;
-            };
-          }, []);'''
           new_effect = '''  useEffect(() => {
             let cancelled = false;
 
@@ -73,14 +53,19 @@ jobs:
                 .catch((error) => {
                   if (cancelled) return;
                   console.error("Could not load local completed-match history.", error);
-                  setLoadError("Completed match history could not be loaded from this browser.");
+                  setLoadError(
+                    "Completed match history could not be loaded from this browser.",
+                  );
                   setIsLoading(false);
                 });
             };
 
             const handleArchiveChange = () => loadHistory();
             loadHistory();
-            window.addEventListener(LOCAL_ARCHIVE_CHANGED_EVENT, handleArchiveChange);
+            window.addEventListener(
+              LOCAL_ARCHIVE_CHANGED_EVENT,
+              handleArchiveChange,
+            );
 
             return () => {
               cancelled = true;
@@ -90,8 +75,7 @@ jobs:
               );
             };
           }, []);'''
-          assert text.count(old_effect) == 1, "History effect marker changed"
-          text = text.replace(old_effect, new_effect)
+          text = text[:effect_start] + new_effect + text[effect_end:]
 
           text = text.replace(
             "Completed matches saved on this device. Server synchronization is not enabled yet.",
