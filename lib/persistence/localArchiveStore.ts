@@ -86,12 +86,13 @@ async function readArchiveRecord(
 
   try {
     const transaction = database.transaction(MATCH_ARCHIVE_STORE, "readonly");
+    const transactionCompleted = transactionAsPromise(transaction);
     const request = transaction
       .objectStore(MATCH_ARCHIVE_STORE)
       .get(matchId) as IDBRequest<LocalX01MatchArchiveRecord | undefined>;
 
     const record = await requestAsPromise(request);
-    await transactionAsPromise(transaction);
+    await transactionCompleted;
 
     return record ?? null;
   } finally {
@@ -132,8 +133,9 @@ export async function queueLocalX01MatchArchive(
 
   try {
     const transaction = database.transaction(MATCH_ARCHIVE_STORE, "readwrite");
+    const transactionCompleted = transactionAsPromise(transaction);
     transaction.objectStore(MATCH_ARCHIVE_STORE).put(record);
-    await transactionAsPromise(transaction);
+    await transactionCompleted;
   } finally {
     database.close();
   }
@@ -154,12 +156,13 @@ export async function listLocalX01MatchArchives(): Promise<
 
   try {
     const transaction = database.transaction(MATCH_ARCHIVE_STORE, "readonly");
+    const transactionCompleted = transactionAsPromise(transaction);
     const request = transaction
       .objectStore(MATCH_ARCHIVE_STORE)
       .getAll() as IDBRequest<LocalX01MatchArchiveRecord[]>;
 
     const records = await requestAsPromise(request);
-    await transactionAsPromise(transaction);
+    await transactionCompleted;
 
     return records.sort((left, right) => right.queuedAt - left.queuedAt);
   } finally {
@@ -188,6 +191,7 @@ export async function markLocalX01MatchArchiveSynced(
 
   try {
     const transaction = database.transaction(MATCH_ARCHIVE_STORE, "readwrite");
+    const transactionCompleted = transactionAsPromise(transaction);
     transaction.objectStore(MATCH_ARCHIVE_STORE).put({
       ...existing,
       syncStatus: "synced",
@@ -196,7 +200,7 @@ export async function markLocalX01MatchArchiveSynced(
       syncedAt,
       lastSyncError: null,
     } satisfies LocalX01MatchArchiveRecord);
-    await transactionAsPromise(transaction);
+    await transactionCompleted;
   } finally {
     database.close();
   }
@@ -217,6 +221,7 @@ export async function markLocalX01MatchArchiveSyncError(
 
   try {
     const transaction = database.transaction(MATCH_ARCHIVE_STORE, "readwrite");
+    const transactionCompleted = transactionAsPromise(transaction);
     transaction.objectStore(MATCH_ARCHIVE_STORE).put({
       ...existing,
       syncStatus: "error",
@@ -224,7 +229,7 @@ export async function markLocalX01MatchArchiveSyncError(
       lastSyncAttemptAt: attemptedAt,
       lastSyncError: message,
     } satisfies LocalX01MatchArchiveRecord);
-    await transactionAsPromise(transaction);
+    await transactionCompleted;
   } finally {
     database.close();
   }
