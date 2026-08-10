@@ -1,0 +1,85 @@
+name: Bootstrap auth UI integration
+
+on:
+  push:
+    branches:
+      - agent/auth-sync
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: agent/auth-sync
+
+      - name: Wire account and sync UI
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("app/page.tsx")
+          text = path.read_text()
+
+          old_import = 'import { AppSettings } from "@/components/AppSettings";'
+          new_import = '''import { AppSettings } from "@/components/AppSettings";
+          import { AccountSyncPanel } from "@/components/AccountSyncPanel";
+          import { SyncCoordinator } from "@/components/SyncCoordinator";'''
+          assert text.count(old_import) == 1, "AppSettings import marker changed"
+          text = text.replace(old_import, new_import)
+
+          old_main = '''    >
+                <div className="mx-auto max-w-4xl">'''
+          new_main = '''    >
+                <SyncCoordinator />
+                <div className="mx-auto max-w-4xl">'''
+          assert text.count(old_main) == 1, "main wrapper marker changed"
+          text = text.replace(old_main, new_main)
+
+          old_app = '''        {activeView === "app" && (
+                    <AppSettings
+                      brandName={brandName}
+                      themeName={themeName}
+                      refreshBehavior={refreshBehavior}
+                      defaultScoreLayout={defaultScoreLayout}
+                      setBrandName={setBrandName}
+                      setThemeName={setThemeName}
+                      setRefreshBehavior={setRefreshBehavior}
+                      setDefaultScoreLayout={setDefaultScoreLayout}
+                    />
+                  )}'''
+          new_app = '''        {activeView === "app" && (
+                    <>
+                      <AccountSyncPanel />
+                      <AppSettings
+                        brandName={brandName}
+                        themeName={themeName}
+                        refreshBehavior={refreshBehavior}
+                        defaultScoreLayout={defaultScoreLayout}
+                        setBrandName={setBrandName}
+                        setThemeName={setThemeName}
+                        setRefreshBehavior={setRefreshBehavior}
+                        setDefaultScoreLayout={setDefaultScoreLayout}
+                      />
+                    </>
+                  )}'''
+          assert text.count(old_app) == 1, "App view marker changed"
+          text = text.replace(old_app, new_app)
+
+          path.write_text(text)
+
+      - name: Remove one-time workflow
+        run: rm .github/workflows/bootstrap-auth-ui.yml
+
+      - name: Commit integration
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/page.tsx .github/workflows/bootstrap-auth-ui.yml
+          git commit -m 'Wire account and sync UI' || exit 0
+          git push
