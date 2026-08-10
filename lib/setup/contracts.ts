@@ -1,3 +1,6 @@
+export const DATABASE_SETUP_CHANGED_EVENT =
+  "dart-scorekeeper:database-setup-changed";
+
 export type DatabaseSetupRuntime =
   | "vercel"
   | "cloudflare"
