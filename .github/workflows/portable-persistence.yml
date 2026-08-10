@@ -3,7 +3,10 @@ name: Portable persistence check
 on:
   push:
     branches:
-      - agent/portable-persistence-foundation
+      - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
