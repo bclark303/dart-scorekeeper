@@ -36,7 +36,7 @@ import { PlayerCard } from "@/components/PlayerCard";
 import { useEffect, useState } from "react";
 import { CurrentTurnBanner } from "@/components/CurrentTurnBanner";
 import { AppSettings } from "@/components/AppSettings";
-import { AccountSyncPanel } from "@/components/AccountSyncPanel";
+import { ServerStorageSection } from "@/components/ServerStorageSection";
 import { SyncCoordinator } from "@/components/SyncCoordinator";
 import {
   DartThrow,
@@ -1986,7 +1986,7 @@ export default function Home() {
 
         {activeView === "app" && (
           <>
-            <AccountSyncPanel />
+            <ServerStorageSection />
             <AppSettings
               brandName={brandName}
               themeName={themeName}
