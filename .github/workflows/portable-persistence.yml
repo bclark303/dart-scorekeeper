@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   verify:
@@ -26,18 +26,18 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
-      # npm install is intentional until this foundation run commits the
-      # refreshed lockfile. Once generated artifacts are committed, later runs
-      # should produce no dependency diff.
-      - name: Install dependencies
-        run: npm install
+      - name: Install locked dependencies
+        run: npm ci
 
       - name: Prepare local database directory
         run: mkdir -p data
 
-      - name: Generate Drizzle migrations
-        run: npm run db:generate
+      - name: Verify Drizzle migrations are committed
+        run: |
+          npm run db:generate
+          git diff --exit-code -- drizzle/
 
       - name: Apply migrations to local SQLite/libSQL
         run: npm run db:migrate
@@ -50,16 +50,3 @@ jobs:
 
       - name: Build Docker portability target
         run: docker build -t dart-scorekeeper-portability .
-
-      - name: Commit generated lockfile and migrations
-        if: github.event_name == 'push'
-        run: |
-          git add package-lock.json drizzle/
-          if git diff --cached --quiet; then
-            echo "Generated persistence files are already current."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Commit persistence lockfile and migrations"
-          git push origin HEAD:${GITHUB_REF_NAME}
