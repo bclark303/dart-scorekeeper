@@ -15,6 +15,8 @@
 - X01 persistence tables for match settings, legs, turns, and individual darts.
 - Transactional/idempotent X01 archive repository and recent-match summary query.
 - Durable local-first match IDs and creation timestamps that survive browser refresh/resume.
+- Executable database repository contract test against a real local SQLite/libSQL database.
+- Browser IndexedDB completed-match archive queue with pending/synced/error metadata for future synchronization.
 - Graphical dartboard input work for v0.3.0.
 - Full-screen/tablet board mode refinements.
 - Full-screen score cards.
@@ -28,6 +30,8 @@
 - Production database configuration now requires an explicit `DATABASE_URL`; local-file fallback is development-only.
 - Historical match participants are modeled separately from optional long-lived player profiles so guest/dummy play and name snapshots remain valid.
 - Older browser saves are assigned a durable match identity on load, preparing them for future idempotent synchronization.
+- Completed matches are copied to a separate immutable browser archive while active scoring remains localStorage-driven and network-independent.
+- Persistence CI now executes real repository writes/reads before lint, production build, and Docker validation.
 - Improved full-screen board header readability.
 - Moved full-screen action controls higher for tablet use.
 - Moved Auto / Board / Numeric / Exit controls to the bottom row.
