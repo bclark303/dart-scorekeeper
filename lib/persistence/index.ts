@@ -17,9 +17,11 @@ export {
   getLocalX01MatchArchive,
   listLocalX01MatchArchives,
   listPendingLocalX01MatchArchives,
+  LOCAL_ARCHIVE_CHANGED_EVENT,
   markLocalX01MatchArchiveSynced,
   markLocalX01MatchArchiveSyncError,
   queueLocalX01MatchArchive,
+  storeSyncedLocalX01MatchArchive,
   type LocalArchiveSyncStatus,
   type LocalX01MatchArchiveRecord,
 } from "./localArchiveStore";
