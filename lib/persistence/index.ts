@@ -10,4 +10,10 @@ export type {
   X01MatchSummary,
 } from "./contracts";
 export { buildCompletedX01MatchArchive } from "./x01Archive";
-export { createMatchChildId, createMatchId, createPortableId } from "./ids";
+export {
+  createMatchChildId,
+  createMatchId,
+  createMatchIdentity,
+  createPortableId,
+  type MatchIdentity,
+} from "./ids";
