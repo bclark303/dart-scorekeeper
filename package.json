@@ -12,6 +12,7 @@
     "db:test": "tsx scripts/db-contract-test.ts",
     "local:test": "tsx scripts/local-archive-contract-test.ts",
     "auth:test": "tsx scripts/auth-sync-contract-test.ts",
+    "setup:test": "tsx scripts/database-setup-contract-test.ts",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
