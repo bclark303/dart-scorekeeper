@@ -48,6 +48,9 @@ jobs:
       - name: Exercise database repository contract
         run: npm run db:test
 
+      - name: Exercise browser archive queue contract
+        run: npm run local:test
+
       - name: Lint
         run: npm run lint
 
