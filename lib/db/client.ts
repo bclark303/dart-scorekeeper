@@ -11,3 +11,11 @@ export function getDatabase(): AppDatabase {
   database ??= createDatabase();
   return database;
 }
+
+/**
+ * Drop the cached Drizzle wrapper after a self-hosted database configuration
+ * change. The next request creates a connection from the new runtime config.
+ */
+export function resetDatabaseConnection() {
+  database = undefined;
+}
