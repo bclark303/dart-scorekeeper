@@ -105,6 +105,7 @@ export function AppSettings({
               <li>Undo Last Turn, especially after busts and checkouts</li>
               <li>Saved-match resume after refreshing or reopening the app</li>
               <li>Complete a match, then replay/clear/refresh and confirm normal scoring still behaves correctly</li>
+              <li>History tab completed-match archive, including expandable leg/turn details</li>
               <li>Game Mode navigation, Compact/Full layouts, settings, and feedback</li>
             </ul>
           </div>
