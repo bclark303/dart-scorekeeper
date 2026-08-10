@@ -21,7 +21,7 @@ async function run() {
   const bootstrapDb = `file:${join(root, "bootstrap.db")}`;
   const configuredDb = `file:${join(root, "configured.db")}`;
 
-  process.env.NODE_ENV = "production";
+  Object.assign(process.env, { NODE_ENV: "production" });
   process.env.DART_SCOREKEEPER_SELF_HOSTED = "1";
   process.env.DART_SCOREKEEPER_CONFIG_FILE = configPath;
   process.env.DB_PROVIDER = "libsql";
