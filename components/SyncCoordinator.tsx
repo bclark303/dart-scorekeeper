@@ -37,7 +37,6 @@ export function SyncCoordinator() {
 
   useEffect(() => {
     if (mode !== "connected") {
-      setDatabaseReady(false);
       return;
     }
 
