@@ -36,6 +36,8 @@ import { PlayerCard } from "@/components/PlayerCard";
 import { useEffect, useState } from "react";
 import { CurrentTurnBanner } from "@/components/CurrentTurnBanner";
 import { AppSettings } from "@/components/AppSettings";
+import { AccountSyncPanel } from "@/components/AccountSyncPanel";
+import { SyncCoordinator } from "@/components/SyncCoordinator";
 import {
   DartThrow,
   FinishRule,
@@ -1893,6 +1895,7 @@ export default function Home() {
       className={`min-h-screen bg-[var(--color-app-bg)] text-[var(--color-text-main)] ${shouldUseGameModeShell ? "p-3 sm:p-4" : "p-6"
         } ${themeName === "firehall" ? "theme-firehall" : ""}`}
     >
+      <SyncCoordinator />
       <div className="mx-auto max-w-4xl">
         {shouldUseGameModeShell ? (
           renderGameModeHeader()
@@ -1982,16 +1985,19 @@ export default function Home() {
         )}
 
         {activeView === "app" && (
-          <AppSettings
-            brandName={brandName}
-            themeName={themeName}
-            refreshBehavior={refreshBehavior}
-            defaultScoreLayout={defaultScoreLayout}
-            setBrandName={setBrandName}
-            setThemeName={setThemeName}
-            setRefreshBehavior={setRefreshBehavior}
-            setDefaultScoreLayout={setDefaultScoreLayout}
-          />
+          <>
+            <AccountSyncPanel />
+            <AppSettings
+              brandName={brandName}
+              themeName={themeName}
+              refreshBehavior={refreshBehavior}
+              defaultScoreLayout={defaultScoreLayout}
+              setBrandName={setBrandName}
+              setThemeName={setThemeName}
+              setRefreshBehavior={setRefreshBehavior}
+              setDefaultScoreLayout={setDefaultScoreLayout}
+            />
+          </>
         )}
 
         {activeView === "score" && (
