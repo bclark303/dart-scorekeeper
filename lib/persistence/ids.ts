@@ -15,6 +15,23 @@ export function createMatchId(): string {
   return createPortableId("match");
 }
 
+export type MatchIdentity = {
+  id: string;
+  createdAt: number;
+};
+
+/**
+ * Create the durable identity and its creation timestamp together outside the
+ * React component. This keeps identity generation as a persistence concern and
+ * avoids time/random generation in component render scope.
+ */
+export function createMatchIdentity(): MatchIdentity {
+  return {
+    id: createMatchId(),
+    createdAt: Date.now(),
+  };
+}
+
 /**
  * Current UI side/member IDs are intentionally simple and repeat each game.
  * Namespace them under the durable match ID before persistence so database IDs
