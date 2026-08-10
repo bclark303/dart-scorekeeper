@@ -19,7 +19,7 @@ import {
 
 import { FeedbackModal } from "@/components/FeedbackModal";
 import { APP_VERSION } from "@/lib/appInfo";
-import { createMatchId } from "@/lib/persistence";
+import { createMatchId, createMatchIdentity } from "@/lib/persistence";
 import { DartEntry } from "@/components/DartEntry";
 import { ScoreEntry } from "@/components/ScoreEntry";
 import { GameSetup } from "@/components/GameSetup";
@@ -540,10 +540,9 @@ export default function Home() {
   }
 
   function startNewGame() {
-    const newMatchId = createMatchId();
-    const newMatchCreatedAt = Date.now();
-    setMatchId(newMatchId);
-    setMatchCreatedAt(newMatchCreatedAt);
+    const newMatchIdentity = createMatchIdentity();
+    setMatchId(newMatchIdentity.id);
+    setMatchCreatedAt(newMatchIdentity.createdAt);
 
     const isSinglesMatch = sideOneSize === 1 && sideTwoSize === 1;
 
