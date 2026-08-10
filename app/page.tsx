@@ -19,6 +19,7 @@ import {
 
 import { FeedbackModal } from "@/components/FeedbackModal";
 import { APP_VERSION } from "@/lib/appInfo";
+import { createMatchId } from "@/lib/persistence";
 import { DartEntry } from "@/components/DartEntry";
 import { ScoreEntry } from "@/components/ScoreEntry";
 import { GameSetup } from "@/components/GameSetup";
@@ -108,6 +109,11 @@ export default function Home() {
   const [activeView, setActiveView] = useState<AppView>("score");
   const [isGameModeActive, setIsGameModeActive] = useState(false);
   const [isGameMenuOpen, setIsGameMenuOpen] = useState(false);
+
+  // Durable local-first match identity. This ID is created in the browser,
+  // survives refreshes, and will later be reused for idempotent sync.
+  const [matchId, setMatchId] = useState("");
+  const [matchCreatedAt, setMatchCreatedAt] = useState<number | null>(null);
 
   // Legacy/simple name fields.
   // These mostly exist to load older saved matches while the app transitions
@@ -236,6 +242,11 @@ export default function Home() {
     try {
       const parsedMatch = JSON.parse(savedMatch) as SavedMatchState;
 
+      // Older local saves predate durable match IDs. Assign one once during
+      // load so subsequent saves/sync retries refer to the same match.
+      setMatchId(parsedMatch.matchId ?? createMatchId());
+      setMatchCreatedAt(parsedMatch.matchCreatedAt ?? Date.now());
+
       setStartingScore(parsedMatch.startingScore);
       setFinishRule(parsedMatch.finishRule);
       setBestOfLegs(parsedMatch.bestOfLegs);
@@ -336,6 +347,8 @@ export default function Home() {
     }
 
     const matchState: SavedMatchState = {
+      matchId: matchId || undefined,
+      matchCreatedAt: matchCreatedAt ?? undefined,
       startingScore,
       finishRule,
       bestOfLegs,
@@ -368,6 +381,8 @@ export default function Home() {
     localStorage.setItem(savedMatchKey, JSON.stringify(matchState));
   }, [
     hasLoadedSavedMatch,
+    matchId,
+    matchCreatedAt,
     startingScore,
     finishRule,
     bestOfLegs,
@@ -525,6 +540,11 @@ export default function Home() {
   }
 
   function startNewGame() {
+    const newMatchId = createMatchId();
+    const newMatchCreatedAt = Date.now();
+    setMatchId(newMatchId);
+    setMatchCreatedAt(newMatchCreatedAt);
+
     const isSinglesMatch = sideOneSize === 1 && sideTwoSize === 1;
 
     const resolvedTeamOneMemberNames = isSinglesMatch
@@ -666,6 +686,8 @@ export default function Home() {
     setPendingDartsUsedTurn(null);
     setIsGameModeActive(false);
     setIsGameMenuOpen(false);
+    setMatchId("");
+    setMatchCreatedAt(null);
     setIsClearSavedConfirmationVisible(false);
     setMessage("Saved match cleared. Player 1 to throw.");
   }
@@ -1545,6 +1567,8 @@ export default function Home() {
           dummyScore,
         },
         match: {
+          matchId: matchId || null,
+          matchCreatedAt,
           currentLegNumber,
           currentSideIndex,
           isLegComplete,
