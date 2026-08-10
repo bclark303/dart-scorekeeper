@@ -1,0 +1,50 @@
+name: Bootstrap database setup preview integration
+
+on:
+  push:
+    branches:
+      - agent/database-setup-preview
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: agent/database-setup-preview
+
+      - name: Wire server storage section into App page
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("app/page.tsx")
+          text = path.read_text()
+
+          old_import = 'import { AccountSyncPanel } from "@/components/AccountSyncPanel";'
+          new_import = 'import { ServerStorageSection } from "@/components/ServerStorageSection";'
+          assert text.count(old_import) == 1, "AccountSyncPanel import marker changed"
+          text = text.replace(old_import, new_import)
+
+          old_component = "            <AccountSyncPanel />"
+          new_component = "            <ServerStorageSection />"
+          assert text.count(old_component) == 1, "AccountSyncPanel render marker changed"
+          text = text.replace(old_component, new_component)
+
+          path.write_text(text)
+
+      - name: Remove one-time workflow
+        run: rm .github/workflows/bootstrap-database-setup-preview.yml
+
+      - name: Commit integration
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/page.tsx .github/workflows/bootstrap-database-setup-preview.yml
+          git commit -m 'Wire database setup preview into App page'
+          git push
