@@ -35,70 +35,35 @@ export type RotationMode = "independent" | "dummy";
  * How scores are entered during a match.
  *
  * turn:
- *   Current mode. Enter one total score for the full turn.
+ *   Enter one total score for the full turn.
  *
  * dart:
- *   Future mode. Enter each dart individually.
+ *   Enter each dart individually on the graphical board.
  */
 export type ScoreEntryMode = "turn" | "dart";
 
-/**
- * Visual theme options.
- * These map to CSS classes/variables in globals.css.
- */
+/** Visual theme options. */
 export type ThemeName = "default" | "firehall";
 
-/**
- * Controls which tab the app opens after a browser refresh.
- *
- * score:
- *   Always reopen on the Score tab.
- *
- * last:
- *   Reopen whichever tab was active when the app was last saved.
- */
+/** Controls which tab the app opens after a browser refresh. */
 export type RefreshBehavior = "score" | "last";
 
-/**
- * Preferred scoring layout when the app loads.
- *
- * compact:
- *   Better for tablets/phones during live scoring.
- *
- * full:
- *   Shows more detail and works better on laptops/desktops.
- */
+/** Preferred scoring layout when the app loads. */
 export type DefaultScoreLayout = "compact" | "full";
 
-/**
- * Older player-shaped match participant.
- * Kept temporarily for migration from older localStorage saves.
- */
+/** Older player-shaped match participant kept for saved-match compatibility. */
 export type MatchPlayer = Player & {
   legsWon: number;
 };
 
-/**
- * A person/slot on a side.
- *
- * isDummy is used when a team is short a player but the missing
- * slot should still count as a turn with an automatic score.
- */
+/** A person/slot on a side. */
 export type TeamMember = {
   id: string;
   name: string;
   isDummy?: boolean;
 };
 
-/**
- * A side is what actually competes in a match.
- *
- * In singles, a side has one member.
- * In doubles/team play, a side has multiple members.
- *
- * The side owns the score and legs won.
- * The members only determine who is throwing.
- */
+/** A side is what actually competes in a match. */
 export type MatchSide = {
   id: string;
   name: string;
@@ -108,12 +73,7 @@ export type MatchSide = {
   currentMemberIndex: number;
 };
 
-/**
- * Calculated stats for a side.
- *
- * These are not stored directly in match state.
- * They are calculated from turns whenever the UI needs them.
- */
+/** Calculated stats for a side. */
 export type PlayerStats = {
   pointsScored: number;
   dartsThrown: number;
@@ -125,13 +85,7 @@ export type PlayerStats = {
   busts: number;
 };
 
-/**
- * A completed leg snapshot.
- *
- * The active/current leg uses turnHistory in page.tsx.
- * Once a leg is won, those turns are copied here so the full match
- * history can survive when the next leg starts.
- */
+/** A completed leg snapshot. */
 export type CompletedLeg = {
   legNumber: number;
   winnerId: string;
@@ -142,8 +96,9 @@ export type CompletedLeg = {
 /**
  * Local browser save shape.
  *
- * This is what gets saved into localStorage so a match can survive
- * a refresh, browser close, or dev-server restart.
+ * matchId/matchCreatedAt are optional for compatibility with saves created
+ * before persistent match identities were introduced. A future sync step can
+ * assign them to an older save before archiving it.
  */
 export type SavedMatchState = {
   startingScore: StartingScore;
@@ -156,6 +111,8 @@ export type SavedMatchState = {
   defaultScoreLayout: DefaultScoreLayout;
   activeView?: "score" | "game" | "app" | "stats" | "history";
   isGameModeActive?: boolean;
+  matchId?: string;
+  matchCreatedAt?: number;
 
   // Current team/side setup.
   sideOneSize: TeamSize;
@@ -180,7 +137,6 @@ export type SavedMatchState = {
   message: string;
 
   // Legacy compatibility fields from older saved matches.
-  // Keep these optional so old localStorage saves do not break.
   matchType?: MatchType;
   teamSize?: TeamSize;
   playerOneName?: string;
@@ -192,12 +148,7 @@ export type SavedMatchState = {
   startingPlayerIndex?: number;
 };
 
-/**
- * Creates a match side from a side name and a list of member names.
- *
- * This is now the main helper for singles, doubles, and larger teams.
- * A singles side is just a team side with one member.
- */
+/** Creates a match side from a side name and a list of member names. */
 export function createTeamSide(
   sideId: string,
   sideName: string,
