@@ -12,5 +12,8 @@ export {
 } from "./players";
 export {
   listRecentX01MatchSummaries,
+  listX01MatchArchivesForUser,
+  MatchOwnershipError,
   saveX01MatchArchive,
+  saveX01MatchArchiveForUser,
 } from "./matches";

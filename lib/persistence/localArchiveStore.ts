@@ -4,15 +4,11 @@ const LOCAL_PERSISTENCE_DATABASE = "dart-scorekeeper-local";
 const LOCAL_PERSISTENCE_VERSION = 1;
 const MATCH_ARCHIVE_STORE = "matchArchives";
 
+export const LOCAL_ARCHIVE_CHANGED_EVENT =
+  "dart-scorekeeper-local-archive-changed";
+
 export type LocalArchiveSyncStatus = "pending" | "synced" | "error";
 
-/**
- * Browser-local durable record for a completed match.
- *
- * The archive itself is provider-neutral. Sync metadata belongs only to the
- * local queue so a future server/Turso/D1 implementation can change without
- * changing the stored match contract.
- */
 export type LocalX01MatchArchiveRecord = {
   id: string;
   gameType: "x01";
@@ -24,6 +20,12 @@ export type LocalX01MatchArchiveRecord = {
   syncedAt: number | null;
   lastSyncError: string | null;
 };
+
+function notifyArchiveChanged() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(LOCAL_ARCHIVE_CHANGED_EVENT));
+  }
+}
 
 function assertIndexedDbAvailable() {
   if (typeof indexedDB === "undefined") {
@@ -100,13 +102,6 @@ async function readArchiveRecord(
   }
 }
 
-/**
- * Queue a completed archive exactly once.
- *
- * Completed matches are immutable snapshots. If the same durable match ID is
- * seen again after a refresh/effect retry, the existing record wins instead
- * of resetting sync state or creating a duplicate.
- */
 export async function queueLocalX01MatchArchive(
   archive: X01MatchArchive,
 ): Promise<LocalX01MatchArchiveRecord> {
@@ -140,7 +135,44 @@ export async function queueLocalX01MatchArchive(
     database.close();
   }
 
+  notifyArchiveChanged();
   return record;
+}
+
+/**
+ * Merge a server-owned completed archive into this browser as already synced.
+ * Existing local metadata is retained where useful, while the server snapshot
+ * becomes the local immutable archive for that durable match ID.
+ */
+export async function storeSyncedLocalX01MatchArchive(
+  archive: X01MatchArchive,
+  syncedAt = Date.now(),
+): Promise<void> {
+  const existing = await readArchiveRecord(archive.id);
+  const record: LocalX01MatchArchiveRecord = {
+    id: archive.id,
+    gameType: "x01",
+    archive,
+    syncStatus: "synced",
+    queuedAt: existing?.queuedAt ?? archive.completedAt ?? syncedAt,
+    updatedAt: syncedAt,
+    lastSyncAttemptAt: syncedAt,
+    syncedAt,
+    lastSyncError: null,
+  };
+
+  const database = await openLocalPersistenceDatabase();
+
+  try {
+    const transaction = database.transaction(MATCH_ARCHIVE_STORE, "readwrite");
+    const transactionCompleted = transactionAsPromise(transaction);
+    transaction.objectStore(MATCH_ARCHIVE_STORE).put(record);
+    await transactionCompleted;
+  } finally {
+    database.close();
+  }
+
+  notifyArchiveChanged();
 }
 
 export async function getLocalX01MatchArchive(
@@ -204,6 +236,8 @@ export async function markLocalX01MatchArchiveSynced(
   } finally {
     database.close();
   }
+
+  notifyArchiveChanged();
 }
 
 export async function markLocalX01MatchArchiveSyncError(
@@ -233,4 +267,6 @@ export async function markLocalX01MatchArchiveSyncError(
   } finally {
     database.close();
   }
+
+  notifyArchiveChanged();
 }

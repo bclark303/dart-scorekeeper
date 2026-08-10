@@ -105,6 +105,8 @@ export function AppSettings({
               <li>Undo Last Turn, especially after busts and checkouts</li>
               <li>Saved-match resume after refreshing or reopening the app</li>
               <li>Complete a match, then replay/clear/refresh and confirm normal scoring still behaves correctly</li>
+              <li>Create/sign into an account, sync a completed match, then confirm it appears in another signed-in browser</li>
+              <li>Finish a match offline, reconnect, and confirm the pending archive synchronizes</li>
               <li>History tab completed-match archive, including expandable leg/turn details</li>
               <li>Game Mode navigation, Compact/Full layouts, settings, and feedback</li>
             </ul>
@@ -115,7 +117,7 @@ export function AppSettings({
 
             <ul className="list-disc pl-5 space-y-2 text-[var(--color-text-muted)]">
               <li>X01 is the only supported game type right now.</li>
-              <li>Completed matches are archived locally for future sync, but they are not uploaded to a server yet.</li>
+              <li>Completed matches synchronize across devices only while signed in; signed-out scoring remains device-local.</li>
               <li>No player accounts, league management, tournaments, or shared statistics yet.</li>
               <li>Active match state and completed-match archives still live only in this browser on this device.</li>
               <li>Clearing browser/site data may erase locally saved matches and archives.</li>

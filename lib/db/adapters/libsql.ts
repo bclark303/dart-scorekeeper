@@ -1,6 +1,7 @@
 import type { DatabaseConfig } from "../config";
 import { drizzle } from "drizzle-orm/libsql";
-import * as schema from "../schema";
+import * as appSchema from "../schema";
+import * as authSchema from "../auth-schema";
 
 /**
  * Current database implementation.
@@ -9,8 +10,8 @@ import * as schema from "../schema";
  * - `file:` URLs for local development and Docker/self-hosting.
  * - remote `libsql:`/HTTPS URLs for Turso on Vercel.
  *
- * If we later move to Cloudflare D1, that implementation belongs beside this
- * file and callers above the adapter layer should not need to change.
+ * Better Auth shares this same Drizzle connection and SQLite-compatible schema,
+ * so moving from Vercel/Turso to local Docker does not change auth storage.
  */
 export function createLibSqlDatabase(config: DatabaseConfig) {
   return drizzle({
@@ -18,7 +19,10 @@ export function createLibSqlDatabase(config: DatabaseConfig) {
       url: config.url,
       authToken: config.authToken,
     },
-    schema,
+    schema: {
+      ...appSchema,
+      ...authSchema,
+    },
   });
 }
 

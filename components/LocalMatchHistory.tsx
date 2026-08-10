@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import {
   listLocalX01MatchArchives,
+  LOCAL_ARCHIVE_CHANGED_EVENT,
   type LocalX01MatchArchiveRecord,
 } from "@/lib/persistence";
 
@@ -44,8 +45,9 @@ export function LocalMatchHistory() {
   const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
-    let cancelled = false;
+  let cancelled = false;
 
+  const loadHistory = () => {
     void listLocalX01MatchArchives()
       .then((localRecords) => {
         if (cancelled) return;
@@ -56,14 +58,28 @@ export function LocalMatchHistory() {
       .catch((error) => {
         if (cancelled) return;
         console.error("Could not load local completed-match history.", error);
-        setLoadError("Completed match history could not be loaded from this browser.");
+        setLoadError(
+          "Completed match history could not be loaded from this browser.",
+        );
         setIsLoading(false);
       });
+  };
 
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const handleArchiveChange = () => loadHistory();
+  loadHistory();
+  window.addEventListener(
+    LOCAL_ARCHIVE_CHANGED_EVENT,
+    handleArchiveChange,
+  );
+
+  return () => {
+    cancelled = true;
+    window.removeEventListener(
+      LOCAL_ARCHIVE_CHANGED_EVENT,
+      handleArchiveChange,
+    );
+  };
+}, []);
 
   return (
     <section className="mb-8 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5 sm:p-6">
@@ -71,7 +87,7 @@ export function LocalMatchHistory() {
         <div>
           <h2 className="text-2xl font-bold">Completed Match Archive</h2>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-            Completed matches saved on this device. Server synchronization is not enabled yet.
+            Completed matches saved on this device. Signed-in accounts synchronize this archive across devices.
           </p>
         </div>
 

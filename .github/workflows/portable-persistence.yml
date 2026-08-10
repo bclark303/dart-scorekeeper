@@ -19,6 +19,8 @@ jobs:
       DB_PROVIDER: libsql
       DATABASE_URL: file:./data/ci.db
       DATABASE_AUTH_TOKEN: ""
+      BETTER_AUTH_SECRET: ci-only-dart-scorekeeper-auth-secret-123456789
+      BETTER_AUTH_URL: http://localhost:3000
       NEXT_TELEMETRY_DISABLED: "1"
 
     steps:
@@ -50,6 +52,9 @@ jobs:
 
       - name: Exercise browser archive queue contract
         run: npm run local:test
+
+      - name: Exercise authentication and sync ownership contract
+        run: npm run auth:test
 
       - name: Lint
         run: npm run lint
