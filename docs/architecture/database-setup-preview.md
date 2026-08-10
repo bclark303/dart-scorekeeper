@@ -9,7 +9,7 @@ Each browser chooses one of two modes:
 - **Local Only** — the default. The app does not initialize account/session checks or automatic server synchronization. Active scoring, saved-match resume, and completed-match IndexedDB history remain available.
 - **Connected Storage** — enables the Database Setup panel and, once the server database is healthy, Account & Sync.
 
-The choice is stored in browser localStorage because it describes how that device should behave. It does not change or delete server data.
+The choice is stored in browser localStorage because it describes how that device should behave. It does not change or delete server data. Switching back to Local Only immediately suppresses account-aware automatic synchronization even if a database remains configured on the server.
 
 ## Provider behavior
 
