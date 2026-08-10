@@ -30,6 +30,7 @@ import { ScoreEntry } from "@/components/ScoreEntry";
 import { GameSetup } from "@/components/GameSetup";
 import { MatchSummary } from "@/components/MatchSummary";
 import { CompletedLegs } from "@/components/CompletedLegs";
+import { LocalMatchHistory } from "@/components/LocalMatchHistory";
 import { TurnHistory } from "@/components/TurnHistory";
 import { PlayerCard } from "@/components/PlayerCard";
 import { useEffect, useState } from "react";
@@ -2057,6 +2058,7 @@ export default function Home() {
 
         {activeView === "history" && (
           <>
+            <LocalMatchHistory />
             <TurnHistory turns={turnHistory} />
             <CompletedLegs completedLegs={completedLegs} />
           </>
