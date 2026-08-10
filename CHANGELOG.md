@@ -11,6 +11,10 @@
 - Docker and Compose self-hosting target with a persistent `/data` volume.
 - Persistence architecture documentation and ESLint guardrails against provider imports outside `lib/db`.
 - CI portability check that generates/applies migrations against a local database before lint/build validation.
+- Provider-neutral player, match, side, and participant persistence model.
+- X01 persistence tables for match settings, legs, turns, and individual darts.
+- Transactional/idempotent X01 archive repository and recent-match summary query.
+- Durable local-first match IDs and creation timestamps that survive browser refresh/resume.
 - Graphical dartboard input work for v0.3.0.
 - Full-screen/tablet board mode refinements.
 - Full-screen score cards.
@@ -22,6 +26,8 @@
 - Updated development version to v0.4.0-alpha.1.
 - Enabled Next.js standalone output so the same app can run as a normal Node/Docker deployment.
 - Production database configuration now requires an explicit `DATABASE_URL`; local-file fallback is development-only.
+- Historical match participants are modeled separately from optional long-lived player profiles so guest/dummy play and name snapshots remain valid.
+- Older browser saves are assigned a durable match identity on load, preparing them for future idempotent synchronization.
 - Improved full-screen board header readability.
 - Moved full-screen action controls higher for tablet use.
 - Moved Auto / Board / Numeric / Exit controls to the bottom row.
