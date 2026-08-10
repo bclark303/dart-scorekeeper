@@ -11,6 +11,7 @@
     "db:migrate": "node scripts/migrate.mjs",
     "db:test": "tsx scripts/db-contract-test.ts",
     "local:test": "tsx scripts/local-archive-contract-test.ts",
+    "auth:test": "tsx scripts/auth-sync-contract-test.ts",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
