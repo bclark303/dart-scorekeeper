@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 
 import { getDatabase } from "@/lib/db/client";
+import { getRuntimeAuthSecret } from "@/lib/db/runtimeConfig";
 import * as authSchema from "@/lib/db/auth-schema";
 
 function getAuthBaseUrl() {
@@ -17,10 +18,15 @@ function getAuthBaseUrl() {
   };
 }
 
+function getAuthSecret() {
+  return process.env.BETTER_AUTH_SECRET?.trim() || getRuntimeAuthSecret();
+}
+
 function createAuth() {
   return betterAuth({
     appName: "Dart Scorekeeper",
     baseURL: getAuthBaseUrl(),
+    secret: getAuthSecret(),
     database: drizzleAdapter(getDatabase(), {
       provider: "sqlite",
       schema: authSchema,
@@ -48,6 +54,10 @@ let authInstance: DartScorekeeperAuth | undefined;
 export function getAuth(): DartScorekeeperAuth {
   authInstance ??= createAuth();
   return authInstance;
+}
+
+export function resetAuth() {
+  authInstance = undefined;
 }
 
 export async function getRequestSession(request: Request) {
