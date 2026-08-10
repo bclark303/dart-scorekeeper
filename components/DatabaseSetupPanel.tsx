@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import type {
-  DatabaseConnectionDraft,
-  DatabaseSetupActionResponse,
-  DatabaseSetupProvider,
-  DatabaseSetupStatus,
+import {
+  DATABASE_SETUP_CHANGED_EVENT,
+  type DatabaseConnectionDraft,
+  type DatabaseSetupActionResponse,
+  type DatabaseSetupProvider,
+  type DatabaseSetupStatus,
 } from "@/lib/setup/contracts";
 
 type DatabaseSetupPanelProps = {
@@ -78,6 +79,7 @@ export function DatabaseSetupPanel({
       const nextStatus = (await response.json()) as DatabaseSetupStatus;
       setStatus(nextStatus);
       onStatusChange?.(nextStatus);
+      window.dispatchEvent(new Event(DATABASE_SETUP_CHANGED_EVENT));
 
       if (nextStatus.current.provider !== "unknown") {
         setProvider(nextStatus.current.provider);
@@ -133,6 +135,7 @@ export function DatabaseSetupPanel({
       if (result.status) {
         setStatus(result.status);
         onStatusChange?.(result.status);
+        window.dispatchEvent(new Event(DATABASE_SETUP_CHANGED_EVENT));
       } else {
         await refreshStatus();
       }
