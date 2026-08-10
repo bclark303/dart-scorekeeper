@@ -17,6 +17,7 @@
 - Durable local-first match IDs and creation timestamps that survive browser refresh/resume.
 - Executable database repository contract test against a real local SQLite/libSQL database.
 - Browser IndexedDB completed-match archive queue with pending/synced/error metadata for future synchronization.
+- Completed-match History view with local sync status, matchup/result summary, and expandable leg/turn details.
 - Graphical dartboard input work for v0.3.0.
 - Full-screen/tablet board mode refinements.
 - Full-screen score cards.
