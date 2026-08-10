@@ -99,8 +99,43 @@ export function DatabaseSetupPanel({
   }, [onStatusChange]);
 
   useEffect(() => {
-    void refreshStatus();
-  }, [refreshStatus]);
+  let cancelled = false;
+
+  void fetch("/api/setup/database/status", { cache: "no-store" })
+    .then(async (response) => {
+      if (!response.ok) {
+        throw new Error("Database setup status request failed.");
+      }
+      return (await response.json()) as DatabaseSetupStatus;
+    })
+    .then((nextStatus) => {
+      if (cancelled) return;
+      setStatus(nextStatus);
+      setIsLoadingStatus(false);
+      onStatusChange?.(nextStatus);
+      window.dispatchEvent(new Event(DATABASE_SETUP_CHANGED_EVENT));
+
+      if (nextStatus.current.provider !== "unknown") {
+        setProvider(nextStatus.current.provider);
+      } else if (nextStatus.runtime === "cloudflare") {
+        setProvider("d1");
+      } else if (nextStatus.runtime === "self-hosted") {
+        setProvider("sqlite");
+      }
+    })
+    .catch((error) => {
+      if (cancelled) return;
+      console.error("Could not load database setup status.", error);
+      setStatus(null);
+      setIsLoadingStatus(false);
+      onStatusChange?.(null);
+      setActionError("Database setup status could not be loaded.");
+    });
+
+  return () => {
+    cancelled = true;
+  };
+}, [onStatusChange]);
 
   const draft = useMemo<DatabaseConnectionDraft>(() => {
     switch (provider) {
