@@ -3,14 +3,36 @@ import type { X01MatchArchive } from "./contracts";
 import { createMatchChildId } from "./ids";
 
 /**
- * Convert the current browser save into the provider-neutral archive contract.
+ * Only the match/domain fields required to build a completed X01 archive.
+ *
+ * SavedMatchState contains UI/navigation/preferences too, but those do not
+ * belong in the persistent match contract. Keeping this source narrow prevents
+ * server/database concerns from absorbing unrelated app settings.
+ */
+export type CompletedX01MatchSource = Pick<
+  SavedMatchState,
+  | "matchId"
+  | "matchCreatedAt"
+  | "startingScore"
+  | "finishRule"
+  | "bestOfLegs"
+  | "scoreEntryMode"
+  | "rotationMode"
+  | "dummyScore"
+  | "sides"
+  | "completedLegs"
+  | "isMatchComplete"
+>;
+
+/**
+ * Convert the current browser match into the provider-neutral archive contract.
  *
  * The scorer keeps newest turns/legs first for UI convenience. Persistence is
  * normalized into chronological leg/turn order so ordering remains explicit
  * and queryable in SQL.
  */
 export function buildCompletedX01MatchArchive(
-  state: SavedMatchState,
+  state: CompletedX01MatchSource,
   completedAt = Date.now(),
 ): X01MatchArchive {
   if (!state.isMatchComplete) {

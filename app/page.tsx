@@ -19,7 +19,12 @@ import {
 
 import { FeedbackModal } from "@/components/FeedbackModal";
 import { APP_VERSION } from "@/lib/appInfo";
-import { createMatchId, createMatchIdentity } from "@/lib/persistence";
+import {
+  buildCompletedX01MatchArchive,
+  createMatchId,
+  createMatchIdentity,
+  queueLocalX01MatchArchive,
+} from "@/lib/persistence";
 import { DartEntry } from "@/components/DartEntry";
 import { ScoreEntry } from "@/components/ScoreEntry";
 import { GameSetup } from "@/components/GameSetup";
@@ -417,6 +422,51 @@ export default function Home() {
     isLegComplete,
     isMatchComplete,
     message,
+  ]);
+
+  // Completed matches are copied into a separate IndexedDB archive queue.
+  // Active scoring remains localStorage-driven and never waits for IndexedDB
+  // or a network request. The durable match ID makes repeated effect/load runs
+  // safe because queueLocalX01MatchArchive only stores each completed match once.
+  useEffect(() => {
+    if (!hasLoadedSavedMatch || !isMatchComplete || !matchId) {
+      return;
+    }
+
+    try {
+      const archive = buildCompletedX01MatchArchive({
+        matchId,
+        matchCreatedAt: matchCreatedAt ?? undefined,
+        startingScore,
+        finishRule,
+        bestOfLegs,
+        scoreEntryMode,
+        rotationMode,
+        dummyScore,
+        sides,
+        completedLegs,
+        isMatchComplete,
+      });
+
+      void queueLocalX01MatchArchive(archive).catch((error) => {
+        console.error("Could not queue completed match in IndexedDB.", error);
+      });
+    } catch (error) {
+      console.error("Could not build completed match archive.", error);
+    }
+  }, [
+    hasLoadedSavedMatch,
+    isMatchComplete,
+    matchId,
+    matchCreatedAt,
+    startingScore,
+    finishRule,
+    bestOfLegs,
+    scoreEntryMode,
+    rotationMode,
+    dummyScore,
+    sides,
+    completedLegs,
   ]);
 
   function getDefaultTeamName(sideNumber: 1 | 2) {

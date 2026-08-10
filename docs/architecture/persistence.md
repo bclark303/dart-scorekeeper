@@ -106,15 +106,34 @@ match-<uuid>:turn:<local-turn-id>
 match-<uuid>:dart:<local-dart-id>
 ```
 
-This lets a completed local match be retried/synchronized safely without generating duplicate database rows. Older browser saves may not yet contain a durable match ID; compatibility fields remain optional until the scorer assigns one during the sync integration step.
+This lets a completed local match be retried/synchronized safely without generating duplicate database rows. Older browser saves are assigned a durable match ID when loaded, so future saves and archive retries keep the same identity.
 
 ## Archive contract
 
-Database-specific row types do not leak into game/UI code. `lib/persistence/contracts.ts` defines the provider-neutral archive model, and `lib/persistence/x01Archive.ts` converts a completed browser save into that model.
+Database-specific row types do not leak into game/UI code. `lib/persistence/contracts.ts` defines the provider-neutral archive model, and `lib/persistence/x01Archive.ts` converts the completed match fields required by persistence into that model.
 
 The match repository saves the archive transactionally. Saving the same durable match ID again replaces the child snapshot, making synchronization retries idempotent.
 
-The current persistence phase does **not** automatically upload matches yet. Active scoring remains browser-local until the sync/API and security rules are added.
+### Browser completed-match queue
+
+Active scoring continues to use the existing browser save path and never waits for IndexedDB or a network request.
+
+When a match becomes complete, the app builds a provider-neutral X01 archive and stores it in IndexedDB through `lib/persistence/localArchiveStore.ts`.
+
+Each local record contains:
+
+- the immutable completed X01 archive
+- a `pending`, `synced`, or `error` sync status
+- queue/update timestamps
+- the most recent sync-attempt timestamp/error
+
+The durable match ID is the IndexedDB key. Re-running the completion effect or reloading an already-completed match therefore returns the existing record instead of creating a duplicate or resetting its sync state.
+
+Clearing/resetting the current match does not delete completed archives. The current-match localStorage save and the completed-match archive queue are intentionally separate concerns.
+
+The current persistence phase does **not** automatically upload matches yet. Completed archives remain local and pending until the sync API and write-authorization rules are added.
+
+`npm run local:test` executes this queue in Node with `fake-indexeddb`. The contract test verifies one-record-per-match behavior, preservation of sync errors across completion retries, the pending-to-synced transition, and that a completed-match reload cannot push an already-synced archive back to pending.
 
 ## Schema and migration rules
 
@@ -138,6 +157,8 @@ Current repositories include:
 - transactional X01 match archive save
 - lightweight recent X01 match summaries
 
+`npm run db:test` exercises the real repository layer against a temporary local SQLite/libSQL database. It verifies player upsert/archive behavior and a complete X01 archive, including retrying the same durable match ID without duplicating the match.
+
 ## Production safety
 
 A production process does **not** silently fall back to a local SQLite file. `DATABASE_URL` must be explicitly configured in production. This prevents a Vercel deployment from accidentally treating its ephemeral filesystem as durable storage.
@@ -150,10 +171,12 @@ No unauthenticated public write endpoint is exposed for match/player persistence
 
 A persistence change is considered portable when all of the following still work:
 
-1. Drizzle migration generation succeeds.
+1. Drizzle migration generation succeeds with no uncommitted drift.
 2. Migrations apply to a local `file:` database.
-3. Lint and Next.js production build succeed.
-4. The Docker image builds and starts with a persistent `/data` volume.
-5. No client code imports a provider SDK or database adapter.
+3. The database repository contract test passes against that database.
+4. The browser IndexedDB archive-queue contract test passes.
+5. Lint and the Next.js production build succeed.
+6. The Docker image builds with the same application/database code path.
+7. No client code imports a database provider SDK or database adapter.
 
 Vercel/Turso is the current hosted target, but the application must remain deployable without Vercel.

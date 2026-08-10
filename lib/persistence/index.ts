@@ -9,7 +9,20 @@ export type {
   X01MatchArchive,
   X01MatchSummary,
 } from "./contracts";
-export { buildCompletedX01MatchArchive } from "./x01Archive";
+export {
+  buildCompletedX01MatchArchive,
+  type CompletedX01MatchSource,
+} from "./x01Archive";
+export {
+  getLocalX01MatchArchive,
+  listLocalX01MatchArchives,
+  listPendingLocalX01MatchArchives,
+  markLocalX01MatchArchiveSynced,
+  markLocalX01MatchArchiveSyncError,
+  queueLocalX01MatchArchive,
+  type LocalArchiveSyncStatus,
+  type LocalX01MatchArchiveRecord,
+} from "./localArchiveStore";
 export {
   createMatchChildId,
   createMatchId,
