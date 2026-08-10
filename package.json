@@ -9,6 +9,7 @@
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node scripts/migrate.mjs",
+    "db:test": "tsx scripts/db-contract-test.ts",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
@@ -27,6 +28,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
+    "tsx": "4.23.1",
     "typescript": "^5"
   }
 }

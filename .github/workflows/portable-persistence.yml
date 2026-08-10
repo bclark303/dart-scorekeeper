@@ -45,6 +45,9 @@ jobs:
       - name: Apply migrations to local SQLite/libSQL
         run: npm run db:migrate
 
+      - name: Exercise database repository contract
+        run: npm run db:test
+
       - name: Lint
         run: npm run lint
 
