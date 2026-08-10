@@ -133,6 +133,8 @@ Clearing/resetting the current match does not delete completed archives. The cur
 
 The current persistence phase does **not** automatically upload matches yet. Completed archives remain local and pending until the sync API and write-authorization rules are added.
 
+`npm run local:test` executes this queue in Node with `fake-indexeddb`. The contract test verifies one-record-per-match behavior, preservation of sync errors across completion retries, the pending-to-synced transition, and that a completed-match reload cannot push an already-synced archive back to pending.
+
 ## Schema and migration rules
 
 - Define persisted tables in `lib/db/schema.ts` (split into schema modules later when needed).
@@ -171,9 +173,10 @@ A persistence change is considered portable when all of the following still work
 
 1. Drizzle migration generation succeeds with no uncommitted drift.
 2. Migrations apply to a local `file:` database.
-3. The repository contract test passes against that database.
-4. Lint and the Next.js production build succeed.
-5. The Docker image builds with the same application/database code path.
-6. No client code imports a database provider SDK or database adapter.
+3. The database repository contract test passes against that database.
+4. The browser IndexedDB archive-queue contract test passes.
+5. Lint and the Next.js production build succeed.
+6. The Docker image builds with the same application/database code path.
+7. No client code imports a database provider SDK or database adapter.
 
 Vercel/Turso is the current hosted target, but the application must remain deployable without Vercel.
