@@ -54,12 +54,12 @@ function requireBoolean(value: unknown, field: string) {
   return value;
 }
 
-function requireEnum<T extends string>(
+function requireEnum<T extends string | number>(
   value: unknown,
   field: string,
   allowed: readonly T[],
 ): T {
-  if (typeof value !== "string" || !allowed.includes(value as T)) {
+  if (!allowed.includes(value as T)) {
     throw new Error(`${field} is invalid.`);
   }
   return value as T;
@@ -76,7 +76,7 @@ function parseArchive(raw: unknown): X01MatchArchive {
     throw new Error("Match sides are invalid.");
   }
 
-  const parsedSides = sides.map((rawSide, sideIndex) => {
+  const parsedSides = sides.map((rawSide) => {
     if (!isRecord(rawSide)) throw new Error("Match side is invalid.");
     if (!Array.isArray(rawSide.participants)) {
       throw new Error("Match participants are invalid.");
@@ -92,7 +92,7 @@ function parseArchive(raw: unknown): X01MatchArchive {
       id: requireString(rawSide.id, "side.id"),
       sideIndex: requireInteger(rawSide.sideIndex, "side.sideIndex", 0, 1),
       name: requireString(rawSide.name, "side.name"),
-      participants: rawSide.participants.map((rawParticipant, participantIndex) => {
+      participants: rawSide.participants.map((rawParticipant) => {
         if (!isRecord(rawParticipant)) {
           throw new Error("Match participant is invalid.");
         }
@@ -166,7 +166,7 @@ function parseArchive(raw: unknown): X01MatchArchive {
             "double_out",
           ] as const),
           recordedAt: requireNullableNumber(rawTurn.recordedAt, "turn.recordedAt"),
-          darts: rawTurn.darts.map((rawDart, dartIndex) => {
+          darts: rawTurn.darts.map((rawDart) => {
             if (!isRecord(rawDart)) throw new Error("Dart is invalid.");
             return {
               id: requireString(rawDart.id, "dart.id"),
@@ -199,7 +199,12 @@ function parseArchive(raw: unknown): X01MatchArchive {
         "straight_out",
         "double_out",
       ] as const),
-      bestOfLegs: requireInteger(settings.bestOfLegs, "settings.bestOfLegs", 1, MAX_LEGS) as X01MatchArchive["settings"]["bestOfLegs"],
+      bestOfLegs: requireInteger(
+        settings.bestOfLegs,
+        "settings.bestOfLegs",
+        1,
+        MAX_LEGS,
+      ) as X01MatchArchive["settings"]["bestOfLegs"],
       scoreEntryMode: requireEnum(settings.scoreEntryMode, "settings.scoreEntryMode", [
         "turn",
         "dart",
