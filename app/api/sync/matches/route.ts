@@ -62,7 +62,12 @@ export async function POST(request: Request) {
 
   let archives;
   try {
-    archives = parseMatchSyncUpload(await request.json());
+    // Do not rely on Content-Length alone; clients/proxies may omit it.
+    const bodyText = await request.text();
+    if (new TextEncoder().encode(bodyText).byteLength > MAX_REQUEST_BYTES) {
+      return noStoreJson({ error: "Sync request is too large." }, { status: 413 });
+    }
+    archives = parseMatchSyncUpload(JSON.parse(bodyText));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Invalid sync request.";
     return noStoreJson({ error: message }, { status: 400 });
