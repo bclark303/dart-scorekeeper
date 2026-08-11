@@ -1,0 +1,95 @@
+name: Board device scratch verification
+
+on:
+  pull_request:
+    branches:
+      - agent/game-night-framework
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    env:
+      DB_PROVIDER: libsql
+      DATABASE_URL: file:./data/board-device-scratch-ci.db
+      DATABASE_AUTH_TOKEN: ""
+      BETTER_AUTH_SECRET: ci-only-dart-scorekeeper-auth-secret-123456789
+      BETTER_AUTH_URL: http://localhost:3000
+      NEXT_TELEMETRY_DISABLED: "1"
+
+    steps:
+      - name: Check out scratch branch
+        uses: actions/checkout@v4
+        with:
+          ref: internal/board-device-connector
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply device-to-match bridge
+        run: node scripts/apply-board-device-bridge.mjs
+
+      - name: Prepare local database directory
+        run: mkdir -p data
+
+      - name: Generate board device migration
+        run: npm run db:generate
+
+      - name: Apply migrations
+        run: npm run db:migrate
+
+      - name: Exercise database repository contract
+        run: npm run db:test
+
+      - name: Exercise browser archive queue contract
+        run: npm run local:test
+
+      - name: Exercise authentication and sync ownership contract
+        run: npm run auth:test
+
+      - name: Exercise self-hosted database setup contract
+        run: npm run setup:test
+
+      - name: Exercise league framework contract
+        run: npm run league:test
+
+      - name: Exercise league player and roster contract
+        run: npm run league:roster:test
+
+      - name: Exercise game-night lifecycle contract
+        run: npm run game-night:test
+
+      - name: Exercise central league match contract
+        run: npm run league-match:test
+
+      - name: Exercise board device connector contract
+        run: npm run board-device:test
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build Next.js
+        run: npm run build
+
+      - name: Build Docker portability target
+        run: docker build -t dart-scorekeeper-board-device-scratch .
+
+      - name: Commit validated bridge and migration artifacts
+        if: success()
+        run: |
+          if ! git diff --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add components/LeagueMatchScorer.tsx app/game-nights/page.tsx lib/db/repositories/leagueMatches.ts drizzle/
+            git commit -m "Wire registered board devices into central scoring"
+            git push
+          fi
