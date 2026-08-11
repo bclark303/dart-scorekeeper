@@ -27,6 +27,20 @@ export {
   type MutateSeasonRosterForUserInput,
 } from "./leagueRoster";
 export {
+  assignGameNightPlayerToTeamForUser,
+  createGameNightForUser,
+  getGameNightForUser,
+  listGameNightsForUser,
+  populateGameNightBoardsForUser,
+  prepareGameNightTeamsForUser,
+  setGameNightStatusForUser,
+  updateGameNightAttendanceForUser,
+  updateGameNightSettingsForUser,
+  type CreateGameNightForUserInput,
+  type UpdateGameNightAttendanceForUserInput,
+  type UpdateGameNightSettingsForUserInput,
+} from "./gameNights";
+export {
   listRecentX01MatchSummaries,
   listX01MatchArchivesForUser,
   MatchOwnershipError,
