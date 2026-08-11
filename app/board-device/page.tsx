@@ -16,10 +16,13 @@ export default function BoardDevicePage() {
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
-    const saved = window.localStorage.getItem(STORAGE_KEY) ?? "";
-    setDeviceKey(saved);
-    setKeyDraft(saved);
-    setInitialized(true);
+    const timeout = window.setTimeout(() => {
+      const saved = window.localStorage.getItem(STORAGE_KEY) ?? "";
+      setDeviceKey(saved);
+      setKeyDraft(saved);
+      setInitialized(true);
+    }, 0);
+    return () => window.clearTimeout(timeout);
   }, []);
 
   const loadConnection = useCallback(async () => {
