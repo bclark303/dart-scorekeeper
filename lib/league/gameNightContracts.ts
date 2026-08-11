@@ -19,6 +19,7 @@ export type GameNightSettingsSummary = {
   minTeamPlayers: number;
   maxTeamPlayers: number;
   dummyPlayerMode: DummyPlayerMode;
+  dummyScore: number;
   boardCount: number;
   boardRotationType: BoardRotationType;
   legsPerMatch: number;
@@ -64,6 +65,9 @@ export type GameNightBoardPairingSummary = {
   teamAId: string;
   teamBId: string;
   status: "scheduled" | "active" | "completed";
+  matchSessionId: string | null;
+  matchStatus: "scheduled" | "active" | "completed" | null;
+  winnerTeamId: string | null;
 };
 
 export type GameNightSummary = {
@@ -130,6 +134,7 @@ export const DEFAULT_GAME_NIGHT_SETTINGS: GameNightSettingsSummary = {
   minTeamPlayers: 2,
   maxTeamPlayers: 4,
   dummyPlayerMode: "fill",
+  dummyScore: 0,
   boardCount: 2,
   boardRotationType: "rotate",
   legsPerMatch: 3,
