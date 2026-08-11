@@ -41,6 +41,13 @@ export {
   type UpdateGameNightSettingsForUserInput,
 } from "./gameNights";
 export {
+  getLeagueMatchForUser,
+  LeagueMatchStateError,
+  startLeagueMatchForUser,
+  submitLeagueMatchTurnForUser,
+  undoLastLeagueMatchTurnForUser,
+} from "./leagueMatches";
+export {
   listRecentX01MatchSummaries,
   listX01MatchArchivesForUser,
   MatchOwnershipError,
