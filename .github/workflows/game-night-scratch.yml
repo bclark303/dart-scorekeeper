@@ -34,6 +34,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Apply League tab split
+        run: |
+          node scripts/split-league-tab-scratch.mjs
+          if ! git diff --quiet -- app/page.tsx; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add app/page.tsx
+            git commit -m "Add dedicated League tab"
+            git push
+          fi
+
       - name: Normalize scratch UI helper name
         run: |
           if grep -q "useReturnedNight" app/game-nights/page.tsx; then
