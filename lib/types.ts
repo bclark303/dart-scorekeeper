@@ -109,7 +109,7 @@ export type SavedMatchState = {
   brandName: string;
   refreshBehavior: RefreshBehavior;
   defaultScoreLayout: DefaultScoreLayout;
-  activeView?: "score" | "game" | "app" | "stats" | "history";
+  activeView?: "score" | "game" | "league" | "app" | "stats" | "history";
   isGameModeActive?: boolean;
   matchId?: string;
   matchCreatedAt?: number;
