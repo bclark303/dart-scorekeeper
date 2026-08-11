@@ -42,6 +42,84 @@ export const players = sqliteTable(
 );
 
 /**
+ * A league is the long-lived organizational container for seasons.
+ *
+ * Authentication identity remains separate from dart-player identity. League
+ * permissions are granted through league_memberships rather than by attaching
+ * an auth user directly to a player row.
+ */
+export const leagues = sqliteTable(
+  "leagues",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    status: text("status").notNull(),
+    createdByUserId: text("created_by_user_id").notNull(),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+    archivedAt: integer("archived_at"),
+  },
+  (table) => [
+    index("leagues_name_idx").on(table.name),
+    index("leagues_status_idx").on(table.status),
+    index("leagues_created_by_user_id_idx").on(table.createdByUserId),
+    index("leagues_archived_at_idx").on(table.archivedAt),
+  ],
+);
+
+/**
+ * Account-level access to a league.
+ *
+ * userId intentionally has no foreign key to Better Auth. Auth is a replaceable
+ * boundary, while the league domain remains provider-neutral and portable.
+ */
+export const leagueMemberships = sqliteTable(
+  "league_memberships",
+  {
+    id: text("id").primaryKey(),
+    leagueId: text("league_id")
+      .notNull()
+      .references(() => leagues.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    role: text("role").notNull(),
+    status: text("status").notNull(),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("league_memberships_league_user_unique").on(
+      table.leagueId,
+      table.userId,
+    ),
+    index("league_memberships_league_id_idx").on(table.leagueId),
+    index("league_memberships_user_id_idx").on(table.userId),
+    index("league_memberships_status_idx").on(table.status),
+  ],
+);
+
+/** A named competition period within a league. */
+export const seasons = sqliteTable(
+  "seasons",
+  {
+    id: text("id").primaryKey(),
+    leagueId: text("league_id")
+      .notNull()
+      .references(() => leagues.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    status: text("status").notNull(),
+    startsAt: integer("starts_at"),
+    endsAt: integer("ends_at"),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (table) => [
+    index("seasons_league_id_idx").on(table.leagueId),
+    index("seasons_status_idx").on(table.status),
+    index("seasons_starts_at_idx").on(table.startsAt),
+  ],
+);
+
+/**
  * Provider-neutral match envelope shared by every future game type.
  *
  * createdByUserId stores the Better Auth user that owns the synchronized copy.
@@ -218,6 +296,12 @@ export type AppMetadataRow = typeof appMetadata.$inferSelect;
 export type NewAppMetadataRow = typeof appMetadata.$inferInsert;
 export type PlayerRow = typeof players.$inferSelect;
 export type NewPlayerRow = typeof players.$inferInsert;
+export type LeagueRow = typeof leagues.$inferSelect;
+export type NewLeagueRow = typeof leagues.$inferInsert;
+export type LeagueMembershipRow = typeof leagueMemberships.$inferSelect;
+export type NewLeagueMembershipRow = typeof leagueMemberships.$inferInsert;
+export type SeasonRow = typeof seasons.$inferSelect;
+export type NewSeasonRow = typeof seasons.$inferInsert;
 export type MatchRow = typeof matches.$inferSelect;
 export type MatchSideRow = typeof matchSides.$inferSelect;
 export type MatchParticipantRow = typeof matchParticipants.$inferSelect;
