@@ -59,6 +59,9 @@ function validSettings(settings: GameNightSettingsSummary) {
     settings.maxTeamPlayers >= settings.minTeamPlayers &&
     settings.maxTeamPlayers <= 32 &&
     ["none", "allow", "fill"].includes(settings.dummyPlayerMode) &&
+    Number.isInteger(settings.dummyScore) &&
+    settings.dummyScore >= 0 &&
+    settings.dummyScore <= 180 &&
     Number.isInteger(settings.boardCount) &&
     settings.boardCount >= 1 &&
     settings.boardCount <= 32 &&
