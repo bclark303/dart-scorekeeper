@@ -6,14 +6,16 @@ on:
       - agent/database-setup-preview
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   generate:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
+      - name: Check out scratch branch
         uses: actions/checkout@v4
+        with:
+          ref: internal/league-framework-gen
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -27,18 +29,16 @@ jobs:
       - name: Generate migration
         run: npm run db:generate
 
-      - name: Print generated migration artifacts
+      - name: Commit generated migration artifacts
         shell: bash
         run: |
           set -euo pipefail
-          echo "GENERATED_FILES_START"
-          git status --short -- drizzle/
-          for file in drizzle/0003_*.sql drizzle/meta/0003_snapshot.json drizzle/meta/_journal.json; do
-            if [ -f "$file" ]; then
-              echo "FILE_START:$file"
-              base64 -w 0 "$file"
-              echo
-              echo "FILE_END:$file"
-            fi
-          done
-          echo "GENERATED_FILES_END"
+          git add drizzle/
+          if git diff --cached --quiet; then
+            echo "Migration artifacts are already committed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Generate league framework migration"
+          git push origin HEAD:internal/league-framework-gen
