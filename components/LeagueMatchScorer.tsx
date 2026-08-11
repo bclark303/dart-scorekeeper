@@ -22,8 +22,25 @@ function statusLabel(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-export function LeagueMatchScorer({ matchId }: { matchId: string }) {
+type LeagueMatchScorerProps = {
+  matchId: string;
+  authMode?: "account" | "device";
+  deviceKey?: string;
+  backHref?: string;
+  backLabel?: string;
+};
+
+export function LeagueMatchScorer({
+  matchId,
+  authMode = "account",
+  deviceKey,
+  backHref = "/game-nights",
+  backLabel = "← Back to Game Nights",
+}: LeagueMatchScorerProps) {
   const { data: session, isPending: sessionPending } = authClient.useSession();
+  const deviceMode = authMode === "device";
+  const accessReady = deviceMode ? Boolean(deviceKey) : Boolean(session?.user);
+  const apiUrl = deviceMode ? "/api/board-device" : "/api/league-matches";
   const [match, setMatch] = useState<LeagueMatchSummary | null>(null);
   const [scoreInput, setScoreInput] = useState("");
   const [dartsThrown, setDartsThrown] = useState<1 | 2 | 3>(3);
@@ -37,8 +54,9 @@ export function LeagueMatchScorer({ matchId }: { matchId: string }) {
     if (!matchId) return;
     setLoading(true);
     try {
-      const response = await fetch(`/api/league-matches?matchId=${encodeURIComponent(matchId)}`, {
+      const response = await fetch(`${apiUrl}?matchId=${encodeURIComponent(matchId)}`, {
         cache: "no-store",
+        headers: deviceMode && deviceKey ? { Authorization: `Bearer ${deviceKey}` } : undefined,
       });
       const result = (await response.json()) as LeagueMatchResponse;
       if (!response.ok || !result.match) {
@@ -51,17 +69,17 @@ export function LeagueMatchScorer({ matchId }: { matchId: string }) {
     } finally {
       setLoading(false);
     }
-  }, [matchId]);
+  }, [apiUrl, deviceKey, deviceMode, matchId]);
 
   useEffect(() => {
-    if (!session?.user) return;
+    if (!accessReady) return;
     const timeoutId = window.setTimeout(() => void loadMatch(), 0);
     const intervalId = window.setInterval(() => void loadMatch(), 5000);
     return () => {
       window.clearTimeout(timeoutId);
       window.clearInterval(intervalId);
     };
-  }, [loadMatch, session?.user]);
+  }, [accessReady, loadMatch]);
 
   const currentTeam = useMemo(() => {
     if (!match?.currentTeamId) return null;
@@ -78,9 +96,12 @@ export function LeagueMatchScorer({ matchId }: { matchId: string }) {
     setErrorMessage("");
     setStatusMessage("");
     try {
-      const response = await fetch("/api/league-matches", {
+      const response = await fetch(apiUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(deviceMode && deviceKey ? { Authorization: `Bearer ${deviceKey}` } : {}),
+        },
         body: JSON.stringify(body),
       });
       const result = (await response.json()) as LeagueMatchResponse;
@@ -148,11 +169,11 @@ export function LeagueMatchScorer({ matchId }: { matchId: string }) {
     await sendScore(scoreEntered, dartsThrown);
   }
 
-  if (sessionPending) {
+  if (!deviceMode && sessionPending) {
     return <main className="mx-auto max-w-5xl p-6 text-[var(--color-text-muted)]">Loading account…</main>;
   }
 
-  if (!session?.user) {
+  if (!deviceMode && !session?.user) {
     return (
       <main className="mx-auto max-w-3xl p-6">
         <Link href="/" className="text-sm font-semibold text-[var(--color-primary)]">← Back to scorekeeper</Link>
@@ -167,7 +188,7 @@ export function LeagueMatchScorer({ matchId }: { matchId: string }) {
   if (!match) {
     return (
       <main className="mx-auto max-w-5xl p-6">
-        <Link href="/game-nights" className="text-sm font-semibold text-[var(--color-primary)]">← Back to Game Nights</Link>
+        <Link href={backHref} className="text-sm font-semibold text-[var(--color-primary)]">{backLabel}</Link>
         <section className="mt-6 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-6">
           <h1 className="text-3xl font-bold">League Board Scorer</h1>
           <p className="mt-2 text-[var(--color-text-muted)]">{loading ? "Loading board assignment…" : errorMessage || "Match not found."}</p>
@@ -187,7 +208,7 @@ export function LeagueMatchScorer({ matchId }: { matchId: string }) {
     <main className="mx-auto max-w-6xl p-4 sm:p-6">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <Link href="/game-nights" className="text-sm font-semibold text-[var(--color-primary)]">← Back to Game Nights</Link>
+          <Link href={backHref} className="text-sm font-semibold text-[var(--color-primary)]">{backLabel}</Link>
           <div className="mt-2 text-sm uppercase tracking-wide text-[var(--color-text-muted)]">
             {match.gameNightName} · {match.seasonName}
           </div>
@@ -217,7 +238,7 @@ export function LeagueMatchScorer({ matchId }: { matchId: string }) {
           </p>
           {match.gameNightStatus !== "active" && (
             <p className="mt-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-100">
-              Game night status is currently {match.gameNightStatus}. Return to Game Nights and press Start Game Night first.
+              Game night status is currently {match.gameNightStatus}. {deviceMode ? "The game-night coordinator must press Start Game Night before this board can begin." : "Return to Game Nights and press Start Game Night first."}
             </p>
           )}
           <button
@@ -332,7 +353,7 @@ export function LeagueMatchScorer({ matchId }: { matchId: string }) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-xl font-bold">Central Turn History</h2>
-            <p className="text-sm text-[var(--color-text-muted)]">Turns are stored in the league database with idempotent IDs so a future board client can safely retry submissions.</p>
+            <p className="text-sm text-[var(--color-text-muted)]">Turns are stored centrally with idempotent IDs so this device can safely retry a submission after a network interruption.</p>
           </div>
           <button type="button" disabled={working || !match.canUndo || match.status === "scheduled"} onClick={() => void mutate({ action: "undo", matchId }, "Last turn undone. Match state recalculated from central history.")} className="rounded-xl border border-[var(--color-panel-border)] px-4 py-2.5 font-bold disabled:opacity-50">
             Undo Last Turn

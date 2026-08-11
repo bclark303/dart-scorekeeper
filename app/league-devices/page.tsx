@@ -179,7 +179,7 @@ export default function LeagueDevicesPage() {
         <section className="mb-6 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-5">
           <h2 className="text-xl font-bold text-amber-100">One-time key for {issuedDeviceName}</h2>
           <p className="mt-1 text-sm text-amber-100/80">
-            This plaintext key is not stored on the server and will not be shown again. Enter it once on that board's device client.
+            This plaintext key is not stored on the server and will not be shown again. Enter it once on that board&apos;s device client.
           </p>
           <div className="mt-4 break-all rounded-xl border border-amber-500/40 bg-black/20 p-4 font-mono text-sm text-amber-50">{issuedKey}</div>
           <div className="mt-3 flex flex-wrap gap-2">

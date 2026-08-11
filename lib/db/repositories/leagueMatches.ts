@@ -313,6 +313,12 @@ async function buildLeagueMatchSummary(matchId: string): Promise<LeagueMatchSumm
   };
 }
 
+export async function getLeagueMatchAfterAuthorization(
+  matchId: string,
+): Promise<LeagueMatchSummary> {
+  return buildLeagueMatchSummary(matchId);
+}
+
 export async function getLeagueMatchForUser(
   matchId: string,
   userId: string,
@@ -322,12 +328,10 @@ export async function getLeagueMatchForUser(
   return buildLeagueMatchSummary(matchId);
 }
 
-export async function startLeagueMatchForUser(
+export async function startLeagueMatchAfterAuthorization(
   matchId: string,
-  userId: string,
 ): Promise<LeagueMatchSummary> {
   const context = await getMatchContext(matchId);
-  await requireLeagueAdmin(context.leagueId, userId);
   if (context.gameNightStatus !== "active") {
     throw new LeagueMatchStateError("Start the game night before starting a board match.");
   }
@@ -348,16 +352,23 @@ export async function startLeagueMatchForUser(
   return buildLeagueMatchSummary(matchId);
 }
 
-export async function submitLeagueMatchTurnForUser(input: {
+export async function startLeagueMatchForUser(
+  matchId: string,
+  userId: string,
+): Promise<LeagueMatchSummary> {
+  const context = await getMatchContext(matchId);
+  await requireLeagueAdmin(context.leagueId, userId);
+  return startLeagueMatchAfterAuthorization(matchId);
+}
+
+export async function submitLeagueMatchTurnAfterAuthorization(input: {
   matchId: string;
-  userId: string;
   turnId: string;
   scoreEntered: number;
   dartsThrown: 1 | 2 | 3;
   checkoutConfirmed?: boolean;
 }): Promise<LeagueMatchSummary> {
   const context = await getMatchContext(input.matchId);
-  await requireLeagueAdmin(context.leagueId, input.userId);
 
   const [existing] = await getDatabase()
     .select({ id: leagueMatchTurns.id })
@@ -444,12 +455,29 @@ export async function submitLeagueMatchTurnForUser(input: {
   return buildLeagueMatchSummary(input.matchId);
 }
 
-export async function undoLastLeagueMatchTurnForUser(
+export async function submitLeagueMatchTurnForUser(input: {
+  matchId: string;
+  userId: string;
+  turnId: string;
+  scoreEntered: number;
+  dartsThrown: 1 | 2 | 3;
+  checkoutConfirmed?: boolean;
+}): Promise<LeagueMatchSummary> {
+  const context = await getMatchContext(input.matchId);
+  await requireLeagueAdmin(context.leagueId, input.userId);
+  return submitLeagueMatchTurnAfterAuthorization({
+    matchId: input.matchId,
+    turnId: input.turnId,
+    scoreEntered: input.scoreEntered,
+    dartsThrown: input.dartsThrown,
+    checkoutConfirmed: input.checkoutConfirmed,
+  });
+}
+
+export async function undoLastLeagueMatchTurnAfterAuthorization(
   matchId: string,
-  userId: string,
 ): Promise<LeagueMatchSummary> {
   const context = await getMatchContext(matchId);
-  await requireLeagueAdmin(context.leagueId, userId);
   if (context.session.status === "scheduled") {
     throw new LeagueMatchStateError("There is no scored turn to undo.");
   }
@@ -487,4 +515,14 @@ export async function undoLastLeagueMatchTurnForUser(
     .where(eq(gameNightBoardPairings.id, context.session.pairingId));
 
   return buildLeagueMatchSummary(matchId);
+}
+
+
+export async function undoLastLeagueMatchTurnForUser(
+  matchId: string,
+  userId: string,
+): Promise<LeagueMatchSummary> {
+  const context = await getMatchContext(matchId);
+  await requireLeagueAdmin(context.leagueId, userId);
+  return undoLastLeagueMatchTurnAfterAuthorization(matchId);
 }
