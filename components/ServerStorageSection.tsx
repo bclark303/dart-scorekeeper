@@ -96,9 +96,8 @@ export function ServerStorageSection() {
                   <div>
                     <h2 className="text-xl font-bold">League framework</h2>
                     <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                      Create leagues and seasons, then maintain persistent player
-                      profiles and season rosters. Fixtures, standings, and
-                      league-match assignment come next.
+                      Create leagues and seasons, maintain player rosters, then
+                      schedule game nights with check-in, dues, team rules, and boards.
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -110,9 +109,15 @@ export function ServerStorageSection() {
                     </Link>
                     <Link
                       href="/league-roster"
-                      className="w-fit rounded-xl bg-[var(--color-primary)] px-4 py-2.5 font-bold text-white hover:bg-[var(--color-primary-hover)]"
+                      className="w-fit rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] px-4 py-2.5 font-bold hover:bg-[var(--color-panel-border)]"
                     >
                       Players & Rosters
+                    </Link>
+                    <Link
+                      href="/game-nights"
+                      className="w-fit rounded-xl bg-[var(--color-primary)] px-4 py-2.5 font-bold text-white hover:bg-[var(--color-primary-hover)]"
+                    >
+                      Game Nights
                     </Link>
                   </div>
                 </div>
