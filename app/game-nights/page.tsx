@@ -208,6 +208,7 @@ export default function GameNightsPage() {
         <div className="flex gap-2">
           <Link href="/leagues" className="rounded-xl border border-[var(--color-panel-border)] px-4 py-2 text-sm font-bold">League Center</Link>
           <Link href="/league-roster" className="rounded-xl border border-[var(--color-panel-border)] px-4 py-2 text-sm font-bold">Players & Rosters</Link>
+          <Link href="/league-devices" className="rounded-xl border border-[var(--color-panel-border)] px-4 py-2 text-sm font-bold">Board Devices</Link>
         </div>
       </div>
 

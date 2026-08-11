@@ -71,6 +71,9 @@ jobs:
       - name: Exercise central league match contract
         run: npm run league-match:test
 
+      - name: Exercise board device connector contract
+        run: npm run board-device:test
+
       - name: Lint
         run: npm run lint
 

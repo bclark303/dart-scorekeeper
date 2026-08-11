@@ -48,6 +48,21 @@ export {
   undoLastLeagueMatchTurnForUser,
 } from "./leagueMatches";
 export {
+  authenticateBoardDeviceCredential,
+  BoardDeviceAssignmentError,
+  BoardDeviceCredentialError,
+  getBoardDeviceAssignment,
+  getBoardDeviceConnectionForCredential,
+  getBoardDeviceMatchForCredential,
+  listBoardDevicesForUser,
+  registerBoardDeviceForUser,
+  rotateBoardDeviceKeyForUser,
+  startBoardDeviceMatchForCredential,
+  submitBoardDeviceTurnForCredential,
+  undoBoardDeviceTurnForCredential,
+  updateBoardDeviceForUser,
+} from "./boardDevices";
+export {
   listRecentX01MatchSummaries,
   listX01MatchArchivesForUser,
   MatchOwnershipError,

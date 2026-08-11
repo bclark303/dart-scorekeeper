@@ -17,6 +17,7 @@
     "league:roster:test": "tsx scripts/league-roster-contract-test.ts",
     "game-night:test": "tsx scripts/game-night-contract-test.ts",
     "league-match:test": "tsx scripts/league-match-contract-test.ts",
+    "board-device:test": "tsx scripts/board-device-contract-test.ts",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {

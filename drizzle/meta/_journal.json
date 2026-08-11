@@ -50,6 +50,13 @@
       "when": 1786486613843,
       "tag": "0006_common_nuke",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1786488768124,
+      "tag": "0007_brief_mantis",
+      "breakpoints": true
     }
   ]
 }
