@@ -15,6 +15,7 @@
     "setup:test": "tsx scripts/database-setup-contract-test.ts",
     "league:test": "tsx scripts/league-framework-contract-test.ts",
     "league:roster:test": "tsx scripts/league-roster-contract-test.ts",
+    "game-night:test": "tsx scripts/game-night-contract-test.ts",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
