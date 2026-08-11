@@ -55,7 +55,7 @@ export default function GameNightsPage() {
     return result;
   }, [selectedNight]);
 
-  function useReturnedNight(gameNight: GameNightSummary, message?: string) {
+  function applyReturnedNight(gameNight: GameNightSummary, message?: string) {
     setGameNights((current) => {
       const exists = current.some((night) => night.id === gameNight.id);
       const next = exists
@@ -131,7 +131,7 @@ export default function GameNightsPage() {
       });
       const result = (await response.json()) as { gameNight?: GameNightSummary; error?: string };
       if (!response.ok || !result.gameNight) throw new Error(result.error ?? "Game-night update failed.");
-      useReturnedNight(result.gameNight, message);
+      applyReturnedNight(result.gameNight, message);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Game-night update failed.");
     } finally {
@@ -159,7 +159,7 @@ export default function GameNightsPage() {
       });
       const result = (await response.json()) as { gameNight?: GameNightSummary; error?: string };
       if (!response.ok || !result.gameNight) throw new Error(result.error ?? "Game night could not be created.");
-      useReturnedNight(result.gameNight, "Game night created. Check in players when they arrive.");
+      applyReturnedNight(result.gameNight, "Game night created. Check in players when they arrive.");
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Game night could not be created.");
     } finally {
