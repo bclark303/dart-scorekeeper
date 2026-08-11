@@ -60,7 +60,12 @@ export default function LeaguesPage() {
 
   useEffect(() => {
     if (!session?.user) return;
-    void loadLeagues();
+
+    // Queue the initial network synchronization outside the effect body. The
+    // actual state changes happen in the timer/fetch callbacks, matching the
+    // React 19 guidance enforced by this repository's lint configuration.
+    const timeoutId = window.setTimeout(() => void loadLeagues(), 0);
+    return () => window.clearTimeout(timeoutId);
   }, [loadLeagues, session?.user]);
 
   async function handleCreateLeague(event: FormEvent<HTMLFormElement>) {
