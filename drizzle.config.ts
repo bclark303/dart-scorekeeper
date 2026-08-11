@@ -11,6 +11,7 @@ export default defineConfig({
   schema: [
     "./lib/db/schema.ts",
     "./lib/db/league-schema.ts",
+    "./lib/db/game-night-schema.ts",
     "./lib/db/auth-schema.ts",
   ],
   out: "./drizzle",
