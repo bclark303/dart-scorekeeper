@@ -272,6 +272,7 @@ export default function GameNightsPage() {
                 <label className="text-sm">Creation mode<select value={settingsDraft.teamCreationMode} onChange={(event) => setSettingsDraft({ ...settingsDraft, teamCreationMode: event.target.value as GameNightSettingsSummary["teamCreationMode"] })} className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-2"><option value="automatic">Automatic</option><option value="manual">Manual</option><option value="hybrid">Hybrid</option></select></label>
                 <label className="text-sm">Target teams<input type="number" min={2} max={64} value={settingsDraft.targetTeamCount} onChange={(event) => setSettingsDraft({ ...settingsDraft, targetTeamCount: numberValue(event.target.value, 2) })} className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-2" /></label>
                 <label className="text-sm">Dummy players<select value={settingsDraft.dummyPlayerMode} onChange={(event) => setSettingsDraft({ ...settingsDraft, dummyPlayerMode: event.target.value as GameNightSettingsSummary["dummyPlayerMode"] })} className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-2"><option value="none">None</option><option value="allow">Allowed if needed</option><option value="fill">Auto-fill to minimum</option></select></label>
+                <label className="text-sm">Dummy turn score<input type="number" min={0} max={180} value={settingsDraft.dummyScore} onChange={(event) => setSettingsDraft({ ...settingsDraft, dummyScore: numberValue(event.target.value, 0) })} className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-2" /></label>
                 <label className="text-sm">Minimum players/team<input type="number" min={1} max={16} value={settingsDraft.minTeamPlayers} onChange={(event) => setSettingsDraft({ ...settingsDraft, minTeamPlayers: numberValue(event.target.value, 1) })} className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-2" /></label>
                 <label className="text-sm">Maximum players/team<input type="number" min={1} max={32} value={settingsDraft.maxTeamPlayers} onChange={(event) => setSettingsDraft({ ...settingsDraft, maxTeamPlayers: numberValue(event.target.value, 1) })} className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-2" /></label>
                 <label className="text-sm">Number of boards<input type="number" min={1} max={32} value={settingsDraft.boardCount} onChange={(event) => setSettingsDraft({ ...settingsDraft, boardCount: numberValue(event.target.value, 1) })} className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-2" /></label>
@@ -314,10 +315,39 @@ export default function GameNightsPage() {
             </section>
 
             <section className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
-              <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-bold">Boards</h2><p className="text-sm text-[var(--color-text-muted)]">Populate round one from the current teams. Unpaired teams remain available for the future rotation engine.</p></div><button disabled={working || selectedNight.teams.length < 2} type="button" onClick={() => void patchGameNight({ action: "populateBoards", gameNightId: selectedNight.id }, "Boards populated for round one.")} className="rounded-xl bg-[var(--color-primary)] px-4 py-2.5 font-bold text-white disabled:opacity-50">Populate Boards</button></div>
-              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">{selectedNight.boards.map((board) => { const pairing = selectedNight.pairings.find((item) => item.boardId === board.id && item.roundNumber === 1); const teamA = selectedNight.teams.find((team) => team.id === pairing?.teamAId); const teamB = selectedNight.teams.find((team) => team.id === pairing?.teamBId); return <div key={board.id} className="rounded-xl border border-[var(--color-panel-border)] p-4"><div className="font-bold">{board.name}</div>{pairing ? <div className="mt-3 text-center"><div className="font-bold">{teamA?.name}</div><div className="my-1 text-xs text-[var(--color-text-muted)]">vs</div><div className="font-bold">{teamB?.name}</div><div className="mt-3 text-xs text-[var(--color-text-muted)]">{selectedNight.settings.startingScore} · {selectedNight.settings.legsPerMatch} legs · {selectedNight.settings.finishRule} out</div></div> : <div className="mt-3 text-sm text-[var(--color-text-muted)]">Not populated</div>}</div>; })}</div>
+              <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-bold">Boards</h2><p className="text-sm text-[var(--color-text-muted)]">Populate round one from the current teams. Unpaired teams remain available for the future rotation engine.</p></div><button disabled={working || selectedNight.teams.length < 2} type="button" onClick={() => void patchGameNight({ action: "populateBoards", gameNightId: selectedNight.id }, "Boards populated and central match sessions created for round one.")} className="rounded-xl bg-[var(--color-primary)] px-4 py-2.5 font-bold text-white disabled:opacity-50">Populate Boards</button></div>
+              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {selectedNight.boards.map((board) => {
+                  const pairing = selectedNight.pairings.find((item) => item.boardId === board.id && item.roundNumber === 1);
+                  const teamA = selectedNight.teams.find((team) => team.id === pairing?.teamAId);
+                  const teamB = selectedNight.teams.find((team) => team.id === pairing?.teamBId);
+                  const winner = selectedNight.teams.find((team) => team.id === pairing?.winnerTeamId);
+                  return (
+                    <div key={board.id} className="rounded-xl border border-[var(--color-panel-border)] p-4">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="font-bold">{board.name}</div>
+                        {pairing?.matchStatus && <span className="rounded-full border border-[var(--color-panel-border)] px-2 py-1 text-[10px] font-bold uppercase">{pairing.matchStatus}</span>}
+                      </div>
+                      {pairing ? (
+                        <div className="mt-3 text-center">
+                          <div className="font-bold">{teamA?.name}</div>
+                          <div className="my-1 text-xs text-[var(--color-text-muted)]">vs</div>
+                          <div className="font-bold">{teamB?.name}</div>
+                          <div className="mt-3 text-xs text-[var(--color-text-muted)]">{selectedNight.settings.startingScore} · {selectedNight.settings.legsPerMatch} legs · {selectedNight.settings.finishRule} out</div>
+                          {winner && <div className="mt-2 text-xs font-bold text-emerald-300">Winner: {winner.name}</div>}
+                          {pairing.matchSessionId && (
+                            <Link href={`/league-match/${pairing.matchSessionId}`} className="mt-4 inline-flex rounded-xl bg-[var(--color-primary)] px-4 py-2.5 text-sm font-bold text-white">
+                              Open Scorer
+                            </Link>
+                          )}
+                        </div>
+                      ) : <div className="mt-3 text-sm text-[var(--color-text-muted)]">Not populated</div>}
+                    </div>
+                  );
+                })}
+              </div>
               {selectedNight.unpairedTeamIds.length > 0 && <p className="mt-3 text-sm text-amber-100">Waiting/bye: {selectedNight.unpairedTeamIds.map((id) => selectedNight.teams.find((team) => team.id === id)?.name ?? id).join(", ")}</p>}
-              <div className="mt-5 flex flex-wrap gap-2"><button disabled={working || !selectedNight.pairings.length || selectedNight.status === "active"} type="button" onClick={() => void patchGameNight({ action: "status", gameNightId: selectedNight.id, status: "active" }, "Game night started. Board-to-scorer launch is the next integration layer.")} className="rounded-xl bg-emerald-600 px-4 py-2.5 font-bold text-white disabled:opacity-50">Start Game Night</button>{selectedNight.status === "active" && <button disabled={working} type="button" onClick={() => void patchGameNight({ action: "status", gameNightId: selectedNight.id, status: "completed" }, "Game night marked complete.")} className="rounded-xl border border-[var(--color-panel-border)] px-4 py-2.5 font-bold">Complete Night</button>}</div>
+              <div className="mt-5 flex flex-wrap gap-2"><button disabled={working || !selectedNight.pairings.length || selectedNight.status === "active"} type="button" onClick={() => void patchGameNight({ action: "status", gameNightId: selectedNight.id, status: "active" }, "Game night started. Board scorers can now start their assigned matches.")} className="rounded-xl bg-emerald-600 px-4 py-2.5 font-bold text-white disabled:opacity-50">Start Game Night</button>{selectedNight.status === "active" && <button disabled={working} type="button" onClick={() => void patchGameNight({ action: "status", gameNightId: selectedNight.id, status: "completed" }, "Game night marked complete.")} className="rounded-xl border border-[var(--color-panel-border)] px-4 py-2.5 font-bold">Complete Night</button>}</div>
             </section>
           </div>
         ) : <section className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-6 text-[var(--color-text-muted)]">Select or create a game night to begin.</section>}
