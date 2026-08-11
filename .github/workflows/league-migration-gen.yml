@@ -1,0 +1,44 @@
+name: League migration generator
+
+on:
+  pull_request:
+    branches:
+      - agent/database-setup-preview
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate migration
+        run: npm run db:generate
+
+      - name: Print generated migration artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "GENERATED_FILES_START"
+          git status --short -- drizzle/
+          for file in drizzle/0003_*.sql drizzle/meta/0003_snapshot.json drizzle/meta/_journal.json; do
+            if [ -f "$file" ]; then
+              echo "FILE_START:$file"
+              base64 -w 0 "$file"
+              echo
+              echo "FILE_END:$file"
+            fi
+          done
+          echo "GENERATED_FILES_END"
