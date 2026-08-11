@@ -39,6 +39,7 @@ jobs:
         run: |
           node scripts/fix-board-device-bridge-template.mjs
           node scripts/apply-board-device-bridge.mjs
+          node scripts/fix-board-device-ui-lint.mjs
 
       - name: Prepare local database directory
         run: mkdir -p data
@@ -91,7 +92,7 @@ jobs:
           if ! git diff --quiet; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add components/LeagueMatchScorer.tsx app/game-nights/page.tsx lib/db/repositories/leagueMatches.ts drizzle/
+            git add components/LeagueMatchScorer.tsx app/game-nights/page.tsx app/league-devices/page.tsx lib/db/repositories/leagueMatches.ts drizzle/
             git commit -m "Wire registered board devices into central scoring"
             git push
           fi
