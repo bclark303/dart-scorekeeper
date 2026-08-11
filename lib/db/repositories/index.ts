@@ -19,6 +19,14 @@ export {
   type CreateSeasonForUserInput,
 } from "./leagues";
 export {
+  addLeaguePlayerToSeasonForUser,
+  createLeaguePlayerForUser,
+  listLeaguePlayersForUser,
+  removeLeaguePlayerFromSeasonForUser,
+  type CreateLeaguePlayerForUserInput,
+  type MutateSeasonRosterForUserInput,
+} from "./leagueRoster";
+export {
   listRecentX01MatchSummaries,
   listX01MatchArchivesForUser,
   MatchOwnershipError,

@@ -29,6 +29,13 @@
       "when": 1786474154538,
       "tag": "0003_curious_chat",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1786475869166,
+      "tag": "0004_dark_excalibur",
+      "breakpoints": true
     }
   ]
 }
