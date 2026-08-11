@@ -31,6 +31,7 @@ export const gameNightSettings = sqliteTable("game_night_settings", {
     .primaryKey()
     .references(() => gameNights.id, { onDelete: "cascade" }),
   teamCreationMode: text("team_creation_mode").notNull(),
+  targetTeamCount: integer("target_team_count").notNull(),
   minTeamPlayers: integer("min_team_players").notNull(),
   maxTeamPlayers: integer("max_team_players").notNull(),
   dummyPlayerMode: text("dummy_player_mode").notNull(),
