@@ -22,6 +22,7 @@ import {
   gameNights,
 } from "../game-night-schema";
 import { leaguePlayers, seasonRosterEntries } from "../league-schema";
+import { leagueMatchSessions } from "../league-match-schema";
 import { leagueMemberships, players, seasons } from "../schema";
 import { LeaguePermissionError } from "./leagues";
 
@@ -102,6 +103,7 @@ function settingsFromRow(row: typeof gameNightSettings.$inferSelect): GameNightS
     minTeamPlayers: row.minTeamPlayers,
     maxTeamPlayers: row.maxTeamPlayers,
     dummyPlayerMode: asDummyPlayerMode(row.dummyPlayerMode),
+    dummyScore: row.dummyScore,
     boardCount: row.boardCount,
     boardRotationType: asBoardRotationType(row.boardRotationType),
     legsPerMatch: row.legsPerMatch,
@@ -255,6 +257,18 @@ export async function getGameNightForUser(
     .where(eq(gameNightBoardPairings.gameNightId, gameNightId))
     .orderBy(asc(gameNightBoardPairings.roundNumber));
   const pairedTeamIds = new Set(pairingRows.flatMap((row) => [row.teamAId, row.teamBId]));
+  const matchSessionRows = await getDatabase()
+    .select({
+      id: leagueMatchSessions.id,
+      pairingId: leagueMatchSessions.pairingId,
+      status: leagueMatchSessions.status,
+      winnerTeamId: leagueMatchSessions.winnerTeamId,
+    })
+    .from(leagueMatchSessions)
+    .where(eq(leagueMatchSessions.gameNightId, gameNightId));
+  const matchSessionByPairing = new Map(
+    matchSessionRows.map((session) => [session.pairingId, session]),
+  );
 
   return {
     ...night,
@@ -298,6 +312,13 @@ export async function getGameNightForUser(
         pairing.status === "active" || pairing.status === "completed"
           ? pairing.status
           : "scheduled",
+      matchSessionId: matchSessionByPairing.get(pairing.id)?.id ?? null,
+      matchStatus: (matchSessionByPairing.get(pairing.id)?.status ?? null) as
+        | "scheduled"
+        | "active"
+        | "completed"
+        | null,
+      winnerTeamId: matchSessionByPairing.get(pairing.id)?.winnerTeamId ?? null,
     })),
     unpairedTeamIds: teamRows.filter((team) => !pairedTeamIds.has(team.id)).map((team) => team.id),
   };
@@ -641,15 +662,34 @@ export async function populateGameNightBoardsForUser(
   const pairCount = Math.floor(teams.length / 2);
   if (pairCount > refreshedBoards.length) throw new Error("Not enough boards are available for the current teams.");
   if (pairCount) {
-    await getDatabase().insert(gameNightBoardPairings).values(
-      Array.from({ length: pairCount }, (_, index) => ({
+    const pairings = Array.from({ length: pairCount }, (_, index) => ({
+      id: crypto.randomUUID(),
+      gameNightId,
+      boardId: refreshedBoards[index].id,
+      roundNumber: 1,
+      teamAId: teams[index * 2].id,
+      teamBId: teams[index * 2 + 1].id,
+      status: "scheduled",
+      createdAt: now,
+      updatedAt: now,
+    }));
+    await getDatabase().insert(gameNightBoardPairings).values(pairings);
+    await getDatabase().insert(leagueMatchSessions).values(
+      pairings.map((pairing) => ({
         id: crypto.randomUUID(),
+        pairingId: pairing.id,
         gameNightId,
-        boardId: refreshedBoards[index].id,
-        roundNumber: 1,
-        teamAId: teams[index * 2].id,
-        teamBId: teams[index * 2 + 1].id,
+        boardId: pairing.boardId,
+        teamAId: pairing.teamAId,
+        teamBId: pairing.teamBId,
         status: "scheduled",
+        startingScore: settings.startingScore,
+        finishRule: settings.finishRule,
+        legsPerMatch: settings.legsPerMatch,
+        dummyScore: settings.dummyScore,
+        winnerTeamId: null,
+        startedAt: null,
+        completedAt: null,
         createdAt: now,
         updatedAt: now,
       })),

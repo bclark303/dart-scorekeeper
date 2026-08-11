@@ -68,6 +68,9 @@ jobs:
       - name: Exercise game-night lifecycle contract
         run: npm run game-night:test
 
+      - name: Exercise central league match contract
+        run: npm run league-match:test
+
       - name: Lint
         run: npm run lint
 

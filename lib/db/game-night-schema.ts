@@ -35,6 +35,7 @@ export const gameNightSettings = sqliteTable("game_night_settings", {
   minTeamPlayers: integer("min_team_players").notNull(),
   maxTeamPlayers: integer("max_team_players").notNull(),
   dummyPlayerMode: text("dummy_player_mode").notNull(),
+  dummyScore: integer("dummy_score").notNull().default(0),
   boardCount: integer("board_count").notNull(),
   boardRotationType: text("board_rotation_type").notNull(),
   legsPerMatch: integer("legs_per_match").notNull(),
