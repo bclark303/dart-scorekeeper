@@ -30,7 +30,7 @@ replaceOnce(
 
 replaceOnce(
   '      status:\n        pairing.status === "active" || pairing.status === "completed"\n          ? pairing.status\n          : "scheduled",\n    })),',
-  '      status:\n        pairing.status === "active" || pairing.status === "completed"\n          ? pairing.status\n          : "scheduled",\n      matchSessionId: matchSessionByPairing.get(pairing.id)?.id ?? null,\n      matchStatus:\n        matchSessionByPairing.get(pairing.id)?.status === "active" ||\n        matchSessionByPairing.get(pairing.id)?.status === "completed"\n          ? matchSessionByPairing.get(pairing.id)?.status ?? null\n          : matchSessionByPairing.has(pairing.id)\n            ? "scheduled"\n            : null,\n      winnerTeamId: matchSessionByPairing.get(pairing.id)?.winnerTeamId ?? null,\n    })),',
+  '      status:\n        pairing.status === "active" || pairing.status === "completed"\n          ? pairing.status\n          : "scheduled",\n      matchSessionId: matchSessionByPairing.get(pairing.id)?.id ?? null,\n      matchStatus: (matchSessionByPairing.get(pairing.id)?.status ?? null) as\n        | "scheduled"\n        | "active"\n        | "completed"\n        | null,\n      winnerTeamId: matchSessionByPairing.get(pairing.id)?.winnerTeamId ?? null,\n    })),',
   "pairing match summary",
 );
 
