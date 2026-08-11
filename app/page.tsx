@@ -37,6 +37,7 @@ import { useEffect, useState } from "react";
 import { CurrentTurnBanner } from "@/components/CurrentTurnBanner";
 import { AppSettings } from "@/components/AppSettings";
 import { ServerStorageSection } from "@/components/ServerStorageSection";
+import { LeagueControlsSection } from "@/components/LeagueControlsSection";
 import { SyncCoordinator } from "@/components/SyncCoordinator";
 import {
   DartThrow,
@@ -47,7 +48,7 @@ import {
   validateTurnScore,
 } from "@/lib/scoring";
 
-type AppView = "score" | "game" | "app" | "stats" | "history";
+type AppView = "score" | "game" | "league" | "app" | "stats" | "history";
 type ScoreLayout = "compact" | "full";
 type FeedbackType = "bug" | "feature" | "general";
 type FeedbackSubmitStatus = "idle" | "submitting" | "success" | "error";
@@ -556,6 +557,8 @@ export default function Home() {
         return "Score";
       case "game":
         return "Game Setup";
+      case "league":
+        return "League";
       case "app":
         return "App Settings";
       case "stats":
@@ -1722,7 +1725,7 @@ export default function Home() {
 
   function renderFullNavigation() {
     return (
-      <nav className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-8">
+      <nav className="grid grid-cols-2 gap-3 mb-8 sm:grid-cols-3 lg:grid-cols-6">
         <button
           onClick={() => setActiveView("score")}
           className={getTabClass("score")}
@@ -1735,6 +1738,13 @@ export default function Home() {
           className={getTabClass("game")}
         >
           Game
+        </button>
+
+        <button
+          onClick={() => setActiveView("league")}
+          className={getTabClass("league")}
+        >
+          League
         </button>
 
         <button
@@ -1836,6 +1846,13 @@ export default function Home() {
                   className={getGameMenuButtonClass("game")}
                 >
                   Game Setup
+                </button>
+
+                <button
+                  onClick={() => openGameMenuView("league")}
+                  className={getGameMenuButtonClass("league")}
+                >
+                  League
                 </button>
 
                 <button
@@ -1983,6 +2000,8 @@ export default function Home() {
             cancelClearSavedMatch={cancelClearSavedMatch}
           />
         )}
+
+        {activeView === "league" && <LeagueControlsSection />}
 
         {activeView === "app" && (
           <>
