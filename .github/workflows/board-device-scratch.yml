@@ -36,7 +36,9 @@ jobs:
         run: npm ci
 
       - name: Apply device-to-match bridge
-        run: node scripts/apply-board-device-bridge.mjs
+        run: |
+          node scripts/fix-board-device-bridge-template.mjs
+          node scripts/apply-board-device-bridge.mjs
 
       - name: Prepare local database directory
         run: mkdir -p data
