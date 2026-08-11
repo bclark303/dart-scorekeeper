@@ -59,6 +59,9 @@ jobs:
       - name: Exercise self-hosted database setup contract
         run: npm run setup:test
 
+      - name: Exercise league framework contract
+        run: npm run league:test
+
       - name: Lint
         run: npm run lint
 

@@ -7,8 +7,12 @@ export {
 // boundary rather than importing Drizzle, libSQL, or adapters directly.
 export {
   archivePlayer,
+  createLeagueForUser,
+  createSeasonForUser,
   getAppMetadata,
   getPlayerById,
+  LeaguePermissionError,
+  listLeaguesForUser,
   listPlayers,
   listRecentX01MatchSummaries,
   listX01MatchArchivesForUser,
@@ -18,5 +22,7 @@ export {
   saveX01MatchArchive,
   saveX01MatchArchiveForUser,
   setAppMetadata,
+  type CreateLeagueForUserInput,
+  type CreateSeasonForUserInput,
   type SavePlayerInput,
 } from "./repositories";

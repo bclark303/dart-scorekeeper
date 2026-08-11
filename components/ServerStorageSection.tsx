@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { AccountSyncPanel } from "@/components/AccountSyncPanel";
@@ -88,7 +89,26 @@ export function ServerStorageSection() {
           <DatabaseSetupPanel onStatusChange={setSetupStatus} />
 
           {setupStatus?.account.ready ? (
-            <AccountSyncPanel />
+            <>
+              <AccountSyncPanel />
+              <section className="mb-8 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold">League framework</h2>
+                    <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+                      Signed-in accounts can create leagues and seasons. Rosters,
+                      fixtures, standings, and league-match assignment come next.
+                    </p>
+                  </div>
+                  <Link
+                    href="/leagues"
+                    className="w-fit rounded-xl bg-[var(--color-primary)] px-4 py-2.5 font-bold text-white hover:bg-[var(--color-primary-hover)]"
+                  >
+                    Open League Center
+                  </Link>
+                </div>
+              </section>
+            </>
           ) : (
             <section className="mb-8 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-5">
               <h2 className="text-xl font-bold text-amber-100">
