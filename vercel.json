@@ -3,7 +3,7 @@
   "buildCommand": "npm run db:migrate && npm run build",
   "git": {
     "deploymentEnabled": {
-      "internal/league-framework-gen": false
+      "internal/*": false
     }
   }
 }
