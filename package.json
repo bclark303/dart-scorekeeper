@@ -16,7 +16,7 @@
     "league:test": "tsx scripts/league-framework-contract-test.ts",
     "league:roster:test": "tsx scripts/league-roster-contract-test.ts",
     "game-night:test": "tsx scripts/game-night-contract-test.ts",
-    "league-match:test": "tsx scripts/league-match-contract-test.ts",
+    "league-match:test": "node scripts/fix-league-match-null.mjs && tsx scripts/league-match-contract-test.ts",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
