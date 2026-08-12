@@ -68,7 +68,7 @@ export async function getBoardDeviceAssignment(
       and(
         eq(gameNightBoardPairings.gameNightId, gameNights.id),
         eq(gameNightBoardPairings.boardId, gameNightBoards.id),
-        inArray(gameNightBoardPairings.status, ["ready", "active"]),
+        inArray(gameNightBoardPairings.status, ["ready", "active", "completed"]),
       ),
     )
     .leftJoin(
@@ -81,11 +81,18 @@ export async function getBoardDeviceAssignment(
         inArray(gameNights.status, ["ready", "active"]),
       ),
     )
-    .orderBy(desc(gameNights.scheduledAt), desc(gameNightBoardPairings.roundNumber));
+    .orderBy(
+      desc(gameNights.scheduledAt),
+      desc(gameNightBoardPairings.roundNumber),
+    );
 
   if (!rows.length) return null;
   const activeRows = rows.filter((item) => item.gameNightStatus === "active");
-  const row = activeRows.find((item) => item.matchSessionId) ?? activeRows[0] ?? rows.find((item) => item.matchSessionId) ?? rows[0];
+  const row =
+    activeRows.find((item) => item.matchSessionId) ??
+    activeRows[0] ??
+    rows.find((item) => item.matchSessionId) ??
+    rows[0];
 
   let teamAName: string | null = null;
   let teamBName: string | null = null;
@@ -134,12 +141,12 @@ async function requireAssignedMatch(deviceKey: string, matchId: string) {
   const assignment = await getBoardDeviceAssignment(device);
   if (!assignment?.matchSessionId) {
     throw new BoardDeviceAssignmentError(
-      "This board does not currently have a playable match assignment.",
+      "This board does not currently have a match assignment.",
     );
   }
   if (assignment.matchSessionId !== matchId) {
     throw new BoardDeviceAssignmentError(
-      "That match is not assigned to this board in the active round.",
+      "That match is not assigned to this board in the current round state.",
     );
   }
   return { device, assignment };
