@@ -36,6 +36,7 @@ export {
   pingDatabase,
   populateGameNightBoardsForUser,
   prepareGameNightTeamsForUser,
+  refreshGameNightForUser,
   regenerateGameNightRoundForUser,
   registerBoardDeviceForUser,
   removeLeaguePlayerFromSeasonForUser,
