@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - internal/dummy-score-rules
   pull_request:
     branches:
       - main
@@ -14,7 +15,7 @@ permissions:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       DB_PROVIDER: libsql
       DATABASE_URL: file:./data/ci.db
@@ -73,6 +74,9 @@ jobs:
 
       - name: Exercise Game Night stats and Best-of contract
         run: npm run game-night:stats:test
+
+      - name: Exercise dummy scoring rules contract
+        run: npm run dummy-scoring:test
 
       - name: Exercise central league match contract
         run: npm run league-match:test
