@@ -133,23 +133,50 @@ export function GameNightRulesPanel({
                 <option value="fill">Auto-fill to minimum</option>
               </select>
             </label>
-
-            {settings.dummyPlayerMode !== "none" && (
-              <label className="text-sm">
-                Dummy turn score
-                <input
-                  type="number"
-                  min={0}
-                  max={180}
-                  value={settings.dummyScore}
-                  onChange={(event) =>
-                    patch("dummyScore", numberValue(event.target.value, 0))
-                  }
-                  className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-2.5"
-                />
-              </label>
-            )}
           </div>
+
+          {settings.dummyPlayerMode !== "none" && (
+            <div className="mt-4 rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h4 className="font-bold">Dummy Scoring Rules</h4>
+                  <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                    Defines how the automatic dummy turn is derived from the
+                    real partner&apos;s previous turn.
+                  </p>
+                </div>
+                <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-bold uppercase text-emerald-200">
+                  Active
+                </span>
+              </div>
+
+              <div className="mt-3 rounded-lg border border-[var(--color-primary)] bg-[var(--color-panel-soft)] p-3">
+                <div className="font-bold">Half of actual score</div>
+                <ul className="mt-2 space-y-1 text-xs text-[var(--color-text-muted)]">
+                  <li>• The dummy gets one score for each dart the partner threw.</li>
+                  <li>• Each dummy dart is floor(partner dart score ÷ 2).</li>
+                  <li>• Misses remain 0.</li>
+                  <li>• The dummy turn is the sum of those per-dart values.</li>
+                  <li>• Dart-by-dart entry uses the partner&apos;s exact dart scores.</li>
+                  <li>• Total Turn entry splits the partner total into three equal baseline darts before applying the same rule.</li>
+                </ul>
+              </div>
+
+              <div className="mt-3 rounded-lg border border-dashed border-[var(--color-panel-border)] p-3 opacity-65">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="font-bold">Fixed dummy score per turn</div>
+                    <div className="mt-1 text-xs text-[var(--color-text-muted)]">
+                      Alternate rule retained for a future selectable option.
+                    </div>
+                  </div>
+                  <span className="text-[11px] font-bold uppercase text-[var(--color-text-muted)]">
+                    Future
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-4">
