@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - internal/game-night-polish
   pull_request:
     branches:
       - main
@@ -70,6 +71,9 @@ jobs:
 
       - name: Exercise game-night lifecycle contract
         run: npm run game-night:test
+
+      - name: Exercise Game Night stats and Best-of contract
+        run: npm run game-night:stats:test
 
       - name: Exercise central league match contract
         run: npm run league-match:test
