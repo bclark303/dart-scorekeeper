@@ -1,5 +1,6 @@
 import type { GameNightSummary } from "@/lib/league/gameNightContracts";
 
+import { hydrateGameNightAutoLayout } from "./gameNightAutoLayout";
 import {
   activateAutomaticRoundIfDue,
   getGameNightForUser,
@@ -21,5 +22,7 @@ export async function refreshGameNightForUser(
   if (before.status === "active") {
     await activateAutomaticRoundIfDue(gameNightId);
   }
-  return getGameNightForUser(gameNightId, userId);
+  return hydrateGameNightAutoLayout(
+    await getGameNightForUser(gameNightId, userId),
+  );
 }
