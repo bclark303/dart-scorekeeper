@@ -23,6 +23,7 @@ export async function activateAutomaticRoundsForLeague(leagueId: string) {
 export async function assertMatchRoundPlayable(matchId: string) {
   const [row] = await getDatabase()
     .select({
+      gameNightStatus: gameNights.status,
       pairingStatus: gameNightBoardPairings.status,
       roundNumber: gameNightBoardPairings.roundNumber,
     })
@@ -31,9 +32,20 @@ export async function assertMatchRoundPlayable(matchId: string) {
       gameNightBoardPairings,
       eq(leagueMatchSessions.pairingId, gameNightBoardPairings.id),
     )
+    .innerJoin(
+      gameNights,
+      eq(leagueMatchSessions.gameNightId, gameNights.id),
+    )
     .where(eq(leagueMatchSessions.id, matchId))
     .limit(1);
   if (!row) throw new Error("League match was not found.");
+
+  // Let the established league-match lifecycle produce its existing
+  // "Start the game night" error before the overall night is active. The new
+  // synchronized-round guard only becomes authoritative once league play is
+  // actually underway.
+  if (row.gameNightStatus !== "active") return;
+
   if (
     row.pairingStatus !== "ready" &&
     row.pairingStatus !== "active" &&
