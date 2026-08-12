@@ -5,6 +5,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { DartEntry } from "@/components/DartEntry";
 import { authClient } from "@/lib/auth/client";
+import { calculateHalfActualDummyTurn } from "@/lib/league/dummyScoring";
 import type {
   LeagueMatchMutationRequest,
   LeagueMatchResponse,
@@ -94,6 +95,21 @@ export function LeagueMatchScorer({
     () => currentTeam?.members.find((member) => member.id === match?.currentMemberId) ?? null,
     [currentTeam, match?.currentMemberId],
   );
+
+  const automaticDummyTurn = useMemo(() => {
+    if (!match || !currentTeam || !currentMember?.isDummy) return null;
+    const partnerTurn = match.turns.find(
+      (turn) => turn.teamId === currentTeam.id && !turn.isDummy,
+    );
+    return calculateHalfActualDummyTurn(
+      partnerTurn
+        ? {
+            scoreEntered: partnerTurn.scoreEntered,
+            darts: partnerTurn.darts,
+          }
+        : null,
+    );
+  }, [currentMember?.isDummy, currentTeam, match]);
 
   const graphicalLastTurn = useMemo<Turn | null>(() => {
     const turn = match?.turns[0];
@@ -383,15 +399,31 @@ export function LeagueMatchScorer({
                 isLegComplete={false}
                 isMatchComplete={false}
                 isCurrentThrowerDummy={currentMember.isDummy}
-                dummyScore={match.dummyScore}
-                submitDummyScore={() => void sendScore(match.dummyScore, 3)}
+                dummyScore={automaticDummyTurn?.scoreEntered ?? 0}
+                submitDummyScore={() => automaticDummyTurn
+                  ? void sendScore(automaticDummyTurn.scoreEntered, automaticDummyTurn.dartsThrown, true)
+                  : undefined}
               />
             </div>
           ) : currentMember.isDummy ? (
-            <div className="mt-5">
-              <p className="text-sm text-[var(--color-text-muted)]">This slot is a dummy player. The configured dummy turn is {match.dummyScore}.</p>
-              <button type="button" disabled={working} onClick={() => void sendScore(match.dummyScore, 3)} className="mt-3 rounded-xl bg-[var(--color-primary)] px-5 py-3 font-bold text-white disabled:opacity-50">
-                Apply Dummy Score ({match.dummyScore})
+            <div className="mt-5 rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-4">
+              <div className="font-bold">Automatic dummy turn</div>
+              <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+                Half of the partner&apos;s previous real turn, calculated per dart and rounded down. Misses remain zero.
+              </p>
+              <div className="mt-3 text-sm text-[var(--color-text-muted)]">
+                Calculated dummy score: <span className="font-bold text-[var(--color-text)]">{automaticDummyTurn?.scoreEntered ?? 0}</span>
+                {automaticDummyTurn ? ` · ${automaticDummyTurn.dartsThrown} darts` : ""}
+              </div>
+              <button
+                type="button"
+                disabled={working || !automaticDummyTurn}
+                onClick={() => automaticDummyTurn
+                  ? void sendScore(automaticDummyTurn.scoreEntered, automaticDummyTurn.dartsThrown, true)
+                  : undefined}
+                className="mt-3 rounded-xl bg-[var(--color-primary)] px-5 py-3 font-bold text-white disabled:opacity-50"
+              >
+                Apply Dummy Score ({automaticDummyTurn?.scoreEntered ?? 0})
               </button>
             </div>
           ) : (
