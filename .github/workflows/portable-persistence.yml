@@ -4,13 +4,14 @@ on:
   push:
     branches:
       - main
+      - internal/board-offline-queue
   pull_request:
     branches:
       - main
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   verify:
@@ -32,6 +33,17 @@ jobs:
         with:
           node-version: 22
           cache: npm
+
+      - name: Apply board offline queue scratch integration
+        run: |
+          node scripts/apply-board-offline-queue-scratch.mjs
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A ':!.github/workflows/portable-persistence.yml'
+          if ! git diff --cached --quiet; then
+            git commit -m "Apply board offline queue integration [skip ci]"
+            git push
+          fi
 
       - name: Install locked dependencies
         run: npm ci
@@ -95,6 +107,9 @@ jobs:
 
       - name: Exercise board device connector contract
         run: npm run board-device:test
+
+      - name: Exercise board offline queue contract
+        run: npm run board-device:offline:test
 
       - name: Exercise board device pairing contract
         run: npm run board-device:pairing:test
