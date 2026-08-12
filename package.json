@@ -16,6 +16,7 @@
     "league:test": "tsx scripts/league-framework-contract-test.ts",
     "league:roster:test": "tsx scripts/league-roster-contract-test.ts",
     "game-night:test": "tsx scripts/game-night-contract-test.ts",
+    "game-night:stats:test": "tsx scripts/game-night-stats-contract-test.ts",
     "league-match:test": "tsx scripts/league-match-contract-test.ts",
     "board-device:test": "tsx scripts/board-device-contract-test.ts",
     "x01:test": "tsx scripts/x01-engine-contract-test.ts",
