@@ -74,6 +74,9 @@ jobs:
       - name: Exercise Game Night stats and Best-of contract
         run: npm run game-night:stats:test
 
+      - name: Exercise multi-board Game Night completion contract
+        run: npm run game-night:multi-board:test
+
       - name: Exercise dummy scoring rules contract
         run: npm run dummy-scoring:test
 

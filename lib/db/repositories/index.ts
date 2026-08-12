@@ -33,13 +33,13 @@ export {
   listGameNightsForUser,
   populateGameNightBoardsForUser,
   prepareGameNightTeamsForUser,
-  setGameNightStatusForUser,
   updateGameNightAttendanceForUser,
   updateGameNightSettingsForUser,
   type CreateGameNightForUserInput,
   type UpdateGameNightAttendanceForUserInput,
   type UpdateGameNightSettingsForUserInput,
 } from "./gameNights";
+export { setGameNightStatusForUser } from "./gameNightLifecycle";
 export {
   getLeagueMatchForUser,
   LeagueMatchStateError,
