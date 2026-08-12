@@ -59,6 +59,9 @@ jobs:
       - name: Exercise self-hosted database setup contract
         run: npm run setup:test
 
+      - name: Exercise shared X01 rules contract
+        run: npm run x01:test
+
       - name: Exercise league framework contract
         run: npm run league:test
 
