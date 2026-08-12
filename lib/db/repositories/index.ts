@@ -28,17 +28,23 @@ export {
 } from "./leagueRoster";
 export {
   assignGameNightPlayerToTeamForUser,
-  createGameNightForUser,
-  getGameNightForUser,
-  listGameNightsForUser,
-  populateGameNightBoardsForUser,
   prepareGameNightTeamsForUser,
   updateGameNightAttendanceForUser,
-  updateGameNightSettingsForUser,
   type CreateGameNightForUserInput,
   type UpdateGameNightAttendanceForUserInput,
   type UpdateGameNightSettingsForUserInput,
 } from "./gameNights";
+export {
+  createGameNightForUser,
+  getGameNightForUser,
+  listGameNightsForUser,
+  populateGameNightBoardsForUser,
+  regenerateGameNightRoundForUser,
+  replaceGameNightRoundFixturesForUser,
+  setGameNightTeamStatusForUser,
+  startNextGameNightRoundForUser,
+  updateGameNightSettingsForUser,
+} from "./gameNightFixtures";
 export { setGameNightStatusForUser } from "./gameNightLifecycle";
 export {
   getLeagueMatchForUser,
