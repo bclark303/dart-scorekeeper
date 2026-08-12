@@ -7,7 +7,7 @@ export type GameNightStatus =
   | "cancelled";
 
 export type TeamCreationMode = "manual" | "automatic" | "hybrid";
-export type DummyPlayerMode = "none" | "allow" | "fill";
+export type DummyPlayerMode = "none" | "allow" | "fill" | "balance";
 export type BoardRotationType = "fixed" | "rotate" | "manual";
 export type FixturePairingStrategy = "random" | "round_robin" | "swiss" | "manual";
 export type RoundAdvanceMode = "manual" | "automatic";

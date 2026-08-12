@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { GameNightRulesPanel } from "@/components/GameNightRulesPanel";
+import { GameNightScheduleButton } from "@/components/GameNightScheduleButton";
 import { GameNightStatsPanel } from "@/components/GameNightStatsPanel";
 import { authClient } from "@/lib/auth/client";
 import type { LeagueListResponse, LeagueSummary } from "@/lib/league/contracts";
@@ -409,9 +410,12 @@ export default function GameNightsPage() {
                     {formatScheduledAt(selectedNight.scheduledAt)}
                   </p>
                 </div>
-                <span className="rounded-full border border-[var(--color-panel-border)] px-3 py-1 text-xs font-bold uppercase">
-                  {selectedNight.status}
-                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <GameNightScheduleButton gameNight={selectedNight} />
+                  <span className="rounded-full border border-[var(--color-panel-border)] px-3 py-1 text-xs font-bold uppercase">
+                    {selectedNight.status}
+                  </span>
+                </div>
               </div>
             </section>
 

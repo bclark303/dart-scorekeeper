@@ -9,6 +9,7 @@ import {
 } from "react";
 
 import { GameNightDraftRoundEditor } from "@/components/GameNightDraftRoundEditor";
+import { GameNightScheduleButton } from "@/components/GameNightScheduleButton";
 import {
   resolveGameNightSettings,
   type FixturePairingStrategy,
@@ -104,9 +105,12 @@ export function GameNightFixturePanel({
             prepared as a draft before it becomes playable.
           </p>
         </div>
-        <div className="rounded-full border border-[var(--color-panel-border)] px-3 py-1 text-xs font-bold uppercase">
-          {gameNight.completedRoundCount ?? 0} / {resolved.roundCount} rounds
-          complete
+        <div className="flex flex-wrap items-center gap-2">
+          <GameNightScheduleButton gameNight={gameNight} />
+          <div className="rounded-full border border-[var(--color-panel-border)] px-3 py-1 text-xs font-bold uppercase">
+            {gameNight.completedRoundCount ?? 0} / {resolved.roundCount} rounds
+            complete
+          </div>
         </div>
       </div>
 

@@ -11,6 +11,7 @@ import type {
   GameNightSummary,
   TeamCreationMode,
 } from "@/lib/league/gameNightContracts";
+import { dummyTargetSizeForTeams } from "@/lib/league/dummyTeamBalance";
 import { getDatabase } from "../client";
 import {
   gameNightAttendance,
@@ -72,7 +73,7 @@ function asTeamCreationMode(value: string): TeamCreationMode {
 }
 
 function asDummyPlayerMode(value: string): DummyPlayerMode {
-  if (value === "none" || value === "allow" || value === "fill") return value;
+  if (value === "none" || value === "allow" || value === "fill" || value === "balance") return value;
   throw new Error(`Unsupported dummy player mode: ${value}`);
 }
 
@@ -490,6 +491,7 @@ export async function prepareGameNightTeamsForUser(
   if (
     settings.teamCreationMode !== "manual" &&
     settings.dummyPlayerMode !== "fill" &&
+    settings.dummyPlayerMode !== "balance" &&
     checkedIn.length < settings.targetTeamCount * settings.minTeamPlayers
   ) {
     throw new Error("Not enough checked-in players to satisfy the minimum team size without dummy filling.");
@@ -529,10 +531,23 @@ export async function prepareGameNightTeamsForUser(
       });
     });
 
-    if (settings.dummyPlayerMode === "fill") {
+    if (settings.dummyPlayerMode === "fill" || settings.dummyPlayerMode === "balance") {
+      const realPlayerCounts = teams.map(
+        (team) =>
+          teamMembers.filter(
+            (member) => member.teamId === team.id && !member.isDummy,
+          ).length,
+      );
+      const targetSize = dummyTargetSizeForTeams({
+        mode: settings.dummyPlayerMode,
+        realPlayerCounts,
+        minTeamPlayers: settings.minTeamPlayers,
+        maxTeamPlayers: settings.maxTeamPlayers,
+      });
+
       for (const team of teams) {
         let count = teamMembers.filter((member) => member.teamId === team.id).length;
-        while (count < settings.minTeamPlayers) {
+        while (count < targetSize) {
           teamMembers.push({
             id: crypto.randomUUID(),
             teamId: team.id,
@@ -629,13 +644,60 @@ export async function populateGameNightBoardsForUser(
   if (teams.length < 2) throw new Error("At least two teams are required before boards can be populated.");
   if (teams.length > settings.boardCount * 2) throw new Error("There are more teams than the configured boards can host in one round.");
 
+  const membersByTeam = new Map<string, (typeof gameNightTeamMembers.$inferSelect)[]>();
+  const realPlayerCounts: number[] = [];
   for (const team of teams) {
-    let members = await getDatabase().select().from(gameNightTeamMembers).where(eq(gameNightTeamMembers.teamId, team.id));
-    if (members.length > settings.maxTeamPlayers) throw new Error(`${team.name} exceeds the maximum team size.`);
-    if (members.length < settings.minTeamPlayers) {
-      if (settings.dummyPlayerMode === "none") throw new Error(`${team.name} is below the minimum team size.`);
-      while (members.length < settings.minTeamPlayers) {
-        const slotIndex = members.length ? Math.max(...members.map((member) => member.slotIndex)) + 1 : 0;
+    const members = await getDatabase()
+      .select()
+      .from(gameNightTeamMembers)
+      .where(eq(gameNightTeamMembers.teamId, team.id));
+    membersByTeam.set(team.id, members);
+    const realCount = members.filter((member) => !member.isDummy).length;
+    realPlayerCounts.push(realCount);
+    if (realCount > settings.maxTeamPlayers) {
+      throw new Error(`${team.name} exceeds the maximum team size.`);
+    }
+    if (settings.dummyPlayerMode !== "balance" && members.length > settings.maxTeamPlayers) {
+      throw new Error(`${team.name} exceeds the maximum team size.`);
+    }
+  }
+
+  const targetSize = dummyTargetSizeForTeams({
+    mode: settings.dummyPlayerMode,
+    realPlayerCounts,
+    minTeamPlayers: settings.minTeamPlayers,
+    maxTeamPlayers: settings.maxTeamPlayers,
+  });
+
+  for (const team of teams) {
+    let members = membersByTeam.get(team.id) ?? [];
+
+    // Balance mode is a true normalization rule: if an earlier manual edit or
+    // attendance change left stale extra dummies, remove only the excess dummy
+    // slots before filling every team to the shared target size.
+    if (settings.dummyPlayerMode === "balance") {
+      while (members.length > targetSize) {
+        const removableDummy = [...members]
+          .filter((member) => member.isDummy)
+          .sort((a, b) => b.slotIndex - a.slotIndex)[0];
+        if (!removableDummy) break;
+        await getDatabase()
+          .delete(gameNightTeamMembers)
+          .where(eq(gameNightTeamMembers.id, removableDummy.id));
+        members = members.filter((member) => member.id !== removableDummy.id);
+      }
+    }
+
+    const minimumForMode =
+      settings.dummyPlayerMode === "balance" ? targetSize : settings.minTeamPlayers;
+    if (members.length < minimumForMode) {
+      if (settings.dummyPlayerMode === "none") {
+        throw new Error(`${team.name} is below the minimum team size.`);
+      }
+      while (members.length < minimumForMode) {
+        const slotIndex = members.length
+          ? Math.max(...members.map((member) => member.slotIndex)) + 1
+          : 0;
         const dummy = {
           id: crypto.randomUUID(),
           teamId: team.id,
