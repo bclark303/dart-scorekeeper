@@ -2,20 +2,29 @@ import { getRequestSession } from "@/lib/auth/server";
 import {
   assignGameNightPlayerToTeamForUser,
   createGameNightForUser,
-  getGameNightForUser,
   LeaguePermissionError,
   listGameNightsForUser,
   populateGameNightBoardsForUser,
   prepareGameNightTeamsForUser,
+  refreshGameNightForUser,
+  regenerateGameNightRoundForUser,
+  replaceGameNightRoundFixturesForUser,
   setGameNightStatusForUser,
+  setGameNightTeamStatusForUser,
+  startNextGameNightRoundForUser,
   updateGameNightAttendanceForUser,
   updateGameNightSettingsForUser,
 } from "@/lib/db";
 import {
   DEFAULT_GAME_NIGHT_SETTINGS,
+  resolveGameNightSettings,
+  type FixturePairingStrategy,
   type GameNightDuesStatus,
   type GameNightSettingsSummary,
+  type GameNightTeamStatus,
+  type ResolvedGameNightSettings,
 } from "@/lib/league/gameNightContracts";
+import type { FixtureRoundPairing } from "@/lib/league/fixtureEngine";
 import { isSupportedBestOfLegs } from "@/lib/league/matchFormat";
 
 export const runtime = "nodejs";
@@ -47,7 +56,7 @@ function validName(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0 && value.trim().length <= 80;
 }
 
-function validSettings(settings: GameNightSettingsSummary) {
+function validSettings(settings: ResolvedGameNightSettings) {
   return (
     ["manual", "automatic", "hybrid"].includes(settings.teamCreationMode) &&
     Number.isInteger(settings.targetTeamCount) &&
@@ -67,6 +76,21 @@ function validSettings(settings: GameNightSettingsSummary) {
     settings.boardCount >= 1 &&
     settings.boardCount <= 32 &&
     ["fixed", "rotate", "manual"].includes(settings.boardRotationType) &&
+    Number.isInteger(settings.roundCount) &&
+    settings.roundCount >= 1 &&
+    settings.roundCount <= 32 &&
+    ["random", "round_robin", "swiss", "manual"].includes(settings.pairingStrategy) &&
+    ["manual", "automatic"].includes(settings.roundAdvanceMode) &&
+    Number.isInteger(settings.roundAdvanceDelaySeconds) &&
+    settings.roundAdvanceDelaySeconds >= 0 &&
+    settings.roundAdvanceDelaySeconds <= 3600 &&
+    Array.isArray(settings.intermissionAfterRounds) &&
+    settings.intermissionAfterRounds.every(
+      (round) => Number.isInteger(round) && round >= 1 && round < settings.roundCount,
+    ) &&
+    Number.isInteger(settings.intermissionDurationMinutes) &&
+    settings.intermissionDurationMinutes >= 0 &&
+    settings.intermissionDurationMinutes <= 180 &&
     isSupportedBestOfLegs(settings.legsPerMatch) &&
     [301, 501, 701].includes(settings.startingScore) &&
     ["straight", "double"].includes(settings.finishRule)
@@ -91,7 +115,7 @@ export async function GET(request: Request) {
   const leagueId = url.searchParams.get("leagueId");
   try {
     if (gameNightId) {
-      return noStoreJson({ gameNight: await getGameNightForUser(gameNightId, authState.user.id) });
+      return noStoreJson({ gameNight: await refreshGameNightForUser(gameNightId, authState.user.id) });
     }
     if (!leagueId) return noStoreJson({ error: "leagueId is required." }, { status: 400 });
     return noStoreJson({ gameNights: await listGameNightsForUser(leagueId, authState.user.id) });
@@ -123,7 +147,7 @@ export async function POST(request: Request) {
   if (typeof input.scheduledAt !== "number" || !Number.isFinite(input.scheduledAt)) {
     return noStoreJson({ error: "A valid scheduled date/time is required." }, { status: 400 });
   }
-  const settings: GameNightSettingsSummary = { ...DEFAULT_GAME_NIGHT_SETTINGS, ...input.settings };
+  const settings = resolveGameNightSettings({ ...DEFAULT_GAME_NIGHT_SETTINGS, ...input.settings });
   if (!validSettings(settings)) {
     return noStoreJson({ error: "Game-night rules are invalid." }, { status: 400 });
   }
@@ -150,6 +174,10 @@ type PatchBody =
   | { action: "prepareTeams"; gameNightId: string }
   | { action: "assignTeam"; gameNightId: string; leaguePlayerId: string; teamId: string | null }
   | { action: "populateBoards"; gameNightId: string }
+  | { action: "regenerateRound"; gameNightId: string; roundNumber: number; strategy?: FixturePairingStrategy }
+  | { action: "replaceRoundFixtures"; gameNightId: string; roundNumber: number; pairings: FixtureRoundPairing[] }
+  | { action: "startNextRound"; gameNightId: string; endIntermissionEarly?: boolean }
+  | { action: "teamStatus"; gameNightId: string; teamId: string; status: GameNightTeamStatus }
   | { action: "status"; gameNightId: string; status: "active" | "completed" | "cancelled" };
 
 export async function PATCH(request: Request) {
@@ -166,8 +194,9 @@ export async function PATCH(request: Request) {
 
   try {
     if (input.action === "settings") {
-      if (!validSettings(input.settings)) return noStoreJson({ error: "Game-night settings are invalid." }, { status: 400 });
-      return noStoreJson({ gameNight: await updateGameNightSettingsForUser({ gameNightId: input.gameNightId, userId: authState.user.id, settings: input.settings }) });
+      const settings = resolveGameNightSettings(input.settings);
+      if (!validSettings(settings)) return noStoreJson({ error: "Game-night settings are invalid." }, { status: 400 });
+      return noStoreJson({ gameNight: await updateGameNightSettingsForUser({ gameNightId: input.gameNightId, userId: authState.user.id, settings }) });
     }
     if (input.action === "attendance") {
       if (!["unpaid", "paid", "waived"].includes(input.duesStatus)) return noStoreJson({ error: "Invalid dues status." }, { status: 400 });
@@ -181,6 +210,24 @@ export async function PATCH(request: Request) {
     }
     if (input.action === "populateBoards") {
       return noStoreJson({ gameNight: await populateGameNightBoardsForUser(input.gameNightId, authState.user.id) });
+    }
+    if (input.action === "regenerateRound") {
+      if (!Number.isInteger(input.roundNumber) || input.roundNumber < 1) return noStoreJson({ error: "Invalid round number." }, { status: 400 });
+      if (input.strategy && !["random", "round_robin", "swiss", "manual"].includes(input.strategy)) return noStoreJson({ error: "Invalid pairing strategy." }, { status: 400 });
+      return noStoreJson({ gameNight: await regenerateGameNightRoundForUser(input.gameNightId, input.roundNumber, authState.user.id, input.strategy) });
+    }
+    if (input.action === "replaceRoundFixtures") {
+      if (!Number.isInteger(input.roundNumber) || input.roundNumber < 1 || !Array.isArray(input.pairings) || input.pairings.length > 32) {
+        return noStoreJson({ error: "Invalid round fixtures." }, { status: 400 });
+      }
+      return noStoreJson({ gameNight: await replaceGameNightRoundFixturesForUser({ gameNightId: input.gameNightId, roundNumber: input.roundNumber, userId: authState.user.id, pairings: input.pairings }) });
+    }
+    if (input.action === "startNextRound") {
+      return noStoreJson({ gameNight: await startNextGameNightRoundForUser(input.gameNightId, authState.user.id, { endIntermissionEarly: input.endIntermissionEarly === true }) });
+    }
+    if (input.action === "teamStatus") {
+      if (input.status !== "active" && input.status !== "withdrawn") return noStoreJson({ error: "Invalid team status." }, { status: 400 });
+      return noStoreJson({ gameNight: await setGameNightTeamStatusForUser(input.gameNightId, input.teamId, input.status, authState.user.id) });
     }
     if (input.action === "status") {
       if (!["active", "completed", "cancelled"].includes(input.status)) return noStoreJson({ error: "Invalid game-night status." }, { status: 400 });

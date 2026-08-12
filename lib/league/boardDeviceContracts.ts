@@ -22,6 +22,7 @@ export type BoardDeviceAssignmentSummary = {
   boardId: string;
   boardName: string;
   boardNumber: number;
+  roundNumber?: number;
   matchSessionId: string | null;
   matchStatus: "scheduled" | "active" | "completed" | null;
   teamAName: string | null;

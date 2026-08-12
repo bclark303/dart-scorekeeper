@@ -25,7 +25,7 @@ export const gameNights = sqliteTable(
   ],
 );
 
-/** Team-building, board, and X01 defaults captured for one game night. */
+/** Team-building, fixture, board, and X01 defaults captured for one game night. */
 export const gameNightSettings = sqliteTable("game_night_settings", {
   gameNightId: text("game_night_id")
     .primaryKey()
@@ -38,6 +38,12 @@ export const gameNightSettings = sqliteTable("game_night_settings", {
   dummyScore: integer("dummy_score").notNull().default(0),
   boardCount: integer("board_count").notNull(),
   boardRotationType: text("board_rotation_type").notNull(),
+  roundCount: integer("round_count").notNull().default(3),
+  pairingStrategy: text("pairing_strategy").notNull().default("random"),
+  roundAdvanceMode: text("round_advance_mode").notNull().default("manual"),
+  roundAdvanceDelaySeconds: integer("round_advance_delay_seconds").notNull().default(60),
+  intermissionAfterRoundsJson: text("intermission_after_rounds").notNull().default("[]"),
+  intermissionDurationMinutes: integer("intermission_duration_minutes").notNull().default(10),
   legsPerMatch: integer("legs_per_match").notNull(),
   startingScore: integer("starting_score").notNull(),
   finishRule: text("finish_rule").notNull(),
@@ -84,6 +90,7 @@ export const gameNightTeams = sqliteTable(
     teamIndex: integer("team_index").notNull(),
     name: text("name").notNull(),
     source: text("source").notNull(),
+    status: text("status").notNull().default("active"),
     createdAt: integer("created_at").notNull(),
     updatedAt: integer("updated_at").notNull(),
   },
@@ -142,7 +149,7 @@ export const gameNightBoards = sqliteTable(
   ],
 );
 
-/** Initial/future round pairing of two teams on a physical board. */
+/** One fixture assigned to a physical board inside a synchronized round. */
 export const gameNightBoardPairings = sqliteTable(
   "game_night_board_pairings",
   {

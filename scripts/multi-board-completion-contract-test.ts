@@ -95,6 +95,7 @@ async function run() {
       maxTeamPlayers: 1,
       dummyPlayerMode: "none",
       boardCount: 2,
+      roundCount: 1,
       legsPerMatch: 1,
       startingScore: 301,
       finishRule: "straight",
