@@ -41,16 +41,19 @@ export default function GameNightFixturesPage() {
     [gameNights, selectedGameNightId],
   );
 
-  function applyNight(night: GameNightSummary, message?: string) {
-    setGameNights((current) =>
-      current
-        .map((item) => (item.id === night.id ? night : item))
-        .sort((a, b) => a.scheduledAt - b.scheduledAt),
-    );
-    setSelectedGameNightId(night.id);
-    setSettingsDraft(resolveGameNightSettings(night.settings));
-    if (message) setStatusMessage(message);
-  }
+  const applyNight = useCallback(
+    (night: GameNightSummary, message?: string) => {
+      setGameNights((current) =>
+        current
+          .map((item) => (item.id === night.id ? night : item))
+          .sort((a, b) => a.scheduledAt - b.scheduledAt),
+      );
+      setSelectedGameNightId(night.id);
+      setSettingsDraft(resolveGameNightSettings(night.settings));
+      if (message) setStatusMessage(message);
+    },
+    [],
+  );
 
   const loadLeagues = useCallback(async () => {
     try {
@@ -58,11 +61,15 @@ export default function GameNightFixturesPage() {
       const result = (await response.json()) as LeagueListResponse & {
         error?: string;
       };
-      if (!response.ok) throw new Error(result.error ?? "Could not load leagues.");
+      if (!response.ok) {
+        throw new Error(result.error ?? "Could not load leagues.");
+      }
       setLeagues(result.leagues);
       setSelectedLeagueId((current) => current || result.leagues[0]?.id || "");
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Could not load leagues.");
+      setErrorMessage(
+        error instanceof Error ? error.message : "Could not load leagues.",
+      );
     }
   }, []);
 
@@ -81,20 +88,21 @@ export default function GameNightFixturesPage() {
         throw new Error(result.error ?? "Could not load Game Nights.");
       }
       setGameNights(result.gameNights);
-      const first = result.gameNights.find((night) => night.status !== "completed") ?? result.gameNights[0];
-      if (first) {
-        setSelectedGameNightId((current) =>
-          current && result.gameNights!.some((night) => night.id === current)
-            ? current
-            : first.id,
+      setSelectedGameNightId((current) => {
+        if (current && result.gameNights!.some((night) => night.id === current)) {
+          return current;
+        }
+        return (
+          result.gameNights!.find((night) => night.status !== "completed")?.id ??
+          result.gameNights![0]?.id ??
+          ""
         );
-        setSettingsDraft(resolveGameNightSettings(first.settings));
-      } else {
-        setSelectedGameNightId("");
-      }
+      });
       setErrorMessage("");
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Could not load Game Nights.");
+      setErrorMessage(
+        error instanceof Error ? error.message : "Could not load Game Nights.",
+      );
     }
   }, []);
 
@@ -115,9 +123,13 @@ export default function GameNightFixturesPage() {
       applyNight(result.gameNight);
       setErrorMessage("");
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Could not refresh round status.");
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not refresh round status.",
+      );
     }
-  }, [selectedGameNightId]);
+  }, [applyNight, selectedGameNightId]);
 
   useEffect(() => {
     if (!session?.user) return;
@@ -132,10 +144,15 @@ export default function GameNightFixturesPage() {
   }, [loadNights, selectedLeagueId]);
 
   useEffect(() => {
-    if (!selectedNight || selectedNight.status !== "active") return;
+    if (!selectedNight) return;
+    setSettingsDraft(resolveGameNightSettings(selectedNight.settings));
+  }, [selectedNight]);
+
+  useEffect(() => {
+    if (selectedNight?.status !== "active") return;
     const timer = window.setInterval(() => void refreshSelectedNight(), 5000);
     return () => window.clearInterval(timer);
-  }, [refreshSelectedNight, selectedNight]);
+  }, [refreshSelectedNight, selectedNight?.status]);
 
   async function patchNight(body: object, message?: string) {
     setWorking(true);
@@ -156,23 +173,36 @@ export default function GameNightFixturesPage() {
       }
       applyNight(result.gameNight, message);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Game-night update failed.");
+      setErrorMessage(
+        error instanceof Error ? error.message : "Game-night update failed.",
+      );
     } finally {
       setWorking(false);
     }
   }
 
   if (isPending) {
-    return <main className="mx-auto max-w-7xl p-6 text-[var(--color-text-muted)]">Loading account…</main>;
+    return (
+      <main className="mx-auto max-w-7xl p-6 text-[var(--color-text-muted)]">
+        Loading account…
+      </main>
+    );
   }
 
   if (!session?.user) {
     return (
       <main className="mx-auto max-w-3xl p-6">
-        <Link href="/" className="text-sm font-bold text-[var(--color-primary)]">← Back to scorekeeper</Link>
+        <Link
+          href="/"
+          className="text-sm font-bold text-[var(--color-primary)]"
+        >
+          ← Back to scorekeeper
+        </Link>
         <section className="mt-6 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-6">
           <h1 className="text-3xl font-bold">Fixture & Round Control</h1>
-          <p className="mt-2 text-[var(--color-text-muted)]">Sign in before running a league Game Night.</p>
+          <p className="mt-2 text-[var(--color-text-muted)]">
+            Sign in before running a league Game Night.
+          </p>
         </section>
       </main>
     );
@@ -182,10 +212,16 @@ export default function GameNightFixturesPage() {
     <main className="mx-auto max-w-7xl p-4 sm:p-6">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <Link href="/game-nights" className="text-sm font-bold text-[var(--color-primary)]">← Game Night setup</Link>
+          <Link
+            href="/game-nights"
+            className="text-sm font-bold text-[var(--color-primary)]"
+          >
+            ← Game Night setup
+          </Link>
           <h1 className="mt-2 text-3xl font-bold">Fixture & Round Control</h1>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-            Generate synchronized fixtures, manage byes and intermissions, and release each round to its boards.
+            Generate synchronized fixtures, manage byes and intermissions, and
+            release each round to its boards.
           </p>
         </div>
         <button
@@ -199,10 +235,14 @@ export default function GameNightFixturesPage() {
       </div>
 
       {errorMessage && (
-        <div className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-100">{errorMessage}</div>
+        <div className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-100">
+          {errorMessage}
+        </div>
       )}
       {statusMessage && (
-        <div className="mb-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-sm text-emerald-100">{statusMessage}</div>
+        <div className="mb-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-sm text-emerald-100">
+          {statusMessage}
+        </div>
       )}
 
       <section className="mb-6 grid gap-3 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5 md:grid-cols-2">
@@ -218,7 +258,9 @@ export default function GameNightFixturesPage() {
           >
             <option value="">Select league</option>
             {leagues.map((league) => (
-              <option key={league.id} value={league.id}>{league.name}</option>
+              <option key={league.id} value={league.id}>
+                {league.name}
+              </option>
             ))}
           </select>
         </label>
@@ -226,18 +268,14 @@ export default function GameNightFixturesPage() {
           Game Night
           <select
             value={selectedGameNightId}
-            onChange={(event) => {
-              const id = event.target.value;
-              setSelectedGameNightId(id);
-              const night = gameNights.find((item) => item.id === id);
-              if (night) setSettingsDraft(resolveGameNightSettings(night.settings));
-            }}
+            onChange={(event) => setSelectedGameNightId(event.target.value)}
             className="mt-2 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-3"
           >
             <option value="">Select Game Night</option>
             {gameNights.map((night) => (
               <option key={night.id} value={night.id}>
-                {night.name} · {formatScheduledAt(night.scheduledAt)} · {night.status}
+                {night.name} · {formatScheduledAt(night.scheduledAt)} ·{" "}
+                {night.status}
               </option>
             ))}
           </select>
@@ -251,7 +289,8 @@ export default function GameNightFixturesPage() {
               <div>
                 <h2 className="text-2xl font-bold">{selectedNight.name}</h2>
                 <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                  {selectedNight.seasonName} · {formatScheduledAt(selectedNight.scheduledAt)}
+                  {selectedNight.seasonName} ·{" "}
+                  {formatScheduledAt(selectedNight.scheduledAt)}
                 </p>
               </div>
               <span className="rounded-full border border-[var(--color-panel-border)] px-3 py-1 text-xs font-bold uppercase">
@@ -260,19 +299,25 @@ export default function GameNightFixturesPage() {
             </div>
 
             <div className="mt-4 flex flex-wrap gap-2">
-              {!selectedNight.pairings.length && selectedNight.teams.length >= 2 && (
-                <button
-                  type="button"
-                  disabled={working}
-                  onClick={() => void patchNight(
-                    { action: "populateBoards", gameNightId: selectedNight.id },
-                    "Round 1 fixture draft generated.",
-                  )}
-                  className="rounded-xl bg-[var(--color-primary)] px-4 py-2.5 font-bold text-white disabled:opacity-50"
-                >
-                  Generate Round 1
-                </button>
-              )}
+              {!selectedNight.pairings.length &&
+                selectedNight.teams.length >= 2 && (
+                  <button
+                    type="button"
+                    disabled={working}
+                    onClick={() =>
+                      void patchNight(
+                        {
+                          action: "populateBoards",
+                          gameNightId: selectedNight.id,
+                        },
+                        "Round 1 fixture draft generated.",
+                      )
+                    }
+                    className="rounded-xl bg-[var(--color-primary)] px-4 py-2.5 font-bold text-white disabled:opacity-50"
+                  >
+                    Generate Round 1
+                  </button>
+                )}
 
               {selectedNight.status !== "active" &&
                 selectedNight.status !== "completed" &&
@@ -281,10 +326,16 @@ export default function GameNightFixturesPage() {
                   <button
                     type="button"
                     disabled={working}
-                    onClick={() => void patchNight(
-                      { action: "status", gameNightId: selectedNight.id, status: "active" },
-                      "Game Night started. Round 1 is live on registered boards.",
-                    )}
+                    onClick={() =>
+                      void patchNight(
+                        {
+                          action: "status",
+                          gameNightId: selectedNight.id,
+                          status: "active",
+                        },
+                        "Game Night started. Round 1 is live on registered boards.",
+                      )
+                    }
                     className="rounded-xl bg-emerald-600 px-4 py-2.5 font-bold text-white disabled:opacity-50"
                   >
                     Start Game Night / Round 1
@@ -295,10 +346,16 @@ export default function GameNightFixturesPage() {
                 <button
                   type="button"
                   disabled={working}
-                  onClick={() => void patchNight(
-                    { action: "status", gameNightId: selectedNight.id, status: "completed" },
-                    "Game Night completed.",
-                  )}
+                  onClick={() =>
+                    void patchNight(
+                      {
+                        action: "status",
+                        gameNightId: selectedNight.id,
+                        status: "completed",
+                      },
+                      "Game Night completed.",
+                    )
+                  }
                   className="rounded-xl border border-emerald-500/50 px-4 py-2.5 font-bold text-emerald-200 disabled:opacity-50"
                 >
                   Complete Game Night
