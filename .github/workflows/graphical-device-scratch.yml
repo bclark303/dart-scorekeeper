@@ -36,7 +36,7 @@ jobs:
         run: npm ci
 
       - name: Apply graphical device scoring patch
-        run: node scripts/apply-graphical-device-scoring.mjs
+        run: node scripts/run-graphical-device-scoring-patch.mjs
 
       - name: Prepare local database directory
         run: mkdir -p data
