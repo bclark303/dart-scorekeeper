@@ -45,6 +45,7 @@ export {
   startNextGameNightRoundForUser,
   updateGameNightSettingsForUser,
 } from "./gameNightFixtures";
+export { refreshGameNightForUser } from "./gameNightFixtureRefresh";
 export { setGameNightStatusForUser } from "./gameNightLifecycle";
 export {
   getLeagueMatchForUser,
