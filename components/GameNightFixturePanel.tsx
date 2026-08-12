@@ -21,7 +21,7 @@ type FixtureAction = (body: object, message?: string) => Promise<void> | void;
 
 function strategyLabel(strategy: FixturePairingStrategy) {
   if (strategy === "round_robin") return "Round robin";
-  if (strategy === "swiss") return "Swiss / standings based";
+  if (strategy === "swiss") return "Swiss · current-night record";
   if (strategy === "manual") return "Manual coordinator draft";
   return "Random · avoid rematches";
 }
@@ -117,10 +117,12 @@ export function GameNightFixturePanel({
     );
   }
 
-  const canEditRules = gameNight.status !== "active" && gameNight.status !== "completed";
-  const finalRoundComplete =
-    rounds.length >= resolved.roundCount &&
-    rounds.find((round) => round.roundNumber === resolved.roundCount)?.completedAt !== null;
+  const canEditRules =
+    gameNight.status !== "active" && gameNight.status !== "completed";
+  const finalRound = rounds.find(
+    (round) => round.roundNumber === resolved.roundCount,
+  );
+  const finalRoundComplete = finalRound?.completedAt != null;
 
   return (
     <section className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
@@ -149,7 +151,9 @@ export function GameNightFixturePanel({
                 max={32}
                 disabled={disabled || !canEditRules}
                 value={resolved.roundCount}
-                onChange={(event) => patch("roundCount", Number(event.target.value))}
+                onChange={(event) =>
+                  patch("roundCount", Number(event.target.value))
+                }
                 className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-2.5"
               />
             </label>
@@ -159,13 +163,16 @@ export function GameNightFixturePanel({
                 disabled={disabled || !canEditRules}
                 value={resolved.pairingStrategy}
                 onChange={(event) =>
-                  patch("pairingStrategy", event.target.value as FixturePairingStrategy)
+                  patch(
+                    "pairingStrategy",
+                    event.target.value as FixturePairingStrategy,
+                  )
                 }
                 className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-2.5"
               >
                 <option value="random">Random · avoid rematches</option>
                 <option value="round_robin">Round robin</option>
-                <option value="swiss">Swiss / standings based</option>
+                <option value="swiss">Swiss · current-night record</option>
                 <option value="manual">Manual coordinator</option>
               </select>
             </label>
@@ -192,10 +199,17 @@ export function GameNightFixturePanel({
                 type="number"
                 min={0}
                 max={3600}
-                disabled={disabled || !canEditRules || resolved.roundAdvanceMode !== "automatic"}
+                disabled={
+                  disabled ||
+                  !canEditRules ||
+                  resolved.roundAdvanceMode !== "automatic"
+                }
                 value={resolved.roundAdvanceDelaySeconds}
                 onChange={(event) =>
-                  patch("roundAdvanceDelaySeconds", Number(event.target.value))
+                  patch(
+                    "roundAdvanceDelaySeconds",
+                    Number(event.target.value),
+                  )
                 }
                 className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-2.5 disabled:opacity-50"
               />
@@ -206,22 +220,25 @@ export function GameNightFixturePanel({
             <div className="mt-4">
               <div className="text-sm font-bold">Scheduled intermissions</div>
               <div className="mt-2 flex flex-wrap gap-2">
-                {Array.from({ length: resolved.roundCount - 1 }, (_, index) => index + 1).map(
-                  (roundNumber) => (
-                    <label
-                      key={roundNumber}
-                      className="flex items-center gap-2 rounded-lg border border-[var(--color-panel-border)] px-3 py-2 text-sm"
-                    >
-                      <input
-                        type="checkbox"
-                        disabled={disabled || !canEditRules}
-                        checked={resolved.intermissionAfterRounds.includes(roundNumber)}
-                        onChange={() => toggleIntermission(roundNumber)}
-                      />
-                      After Round {roundNumber}
-                    </label>
-                  ),
-                )}
+                {Array.from(
+                  { length: resolved.roundCount - 1 },
+                  (_, index) => index + 1,
+                ).map((roundNumber) => (
+                  <label
+                    key={roundNumber}
+                    className="flex items-center gap-2 rounded-lg border border-[var(--color-panel-border)] px-3 py-2 text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      disabled={disabled || !canEditRules}
+                      checked={resolved.intermissionAfterRounds.includes(
+                        roundNumber,
+                      )}
+                      onChange={() => toggleIntermission(roundNumber)}
+                    />
+                    After Round {roundNumber}
+                  </label>
+                ))}
               </div>
               <label className="mt-3 block text-sm sm:max-w-xs">
                 Intermission duration (minutes)
@@ -232,7 +249,10 @@ export function GameNightFixturePanel({
                   disabled={disabled || !canEditRules}
                   value={resolved.intermissionDurationMinutes}
                   onChange={(event) =>
-                    patch("intermissionDurationMinutes", Number(event.target.value))
+                    patch(
+                      "intermissionDurationMinutes",
+                      Number(event.target.value),
+                    )
                   }
                   className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-2.5"
                 />
@@ -291,7 +311,8 @@ export function GameNightFixturePanel({
                         action: "teamStatus",
                         gameNightId: gameNight.id,
                         teamId: team.id,
-                        status: team.status === "withdrawn" ? "active" : "withdrawn",
+                        status:
+                          team.status === "withdrawn" ? "active" : "withdrawn",
                       },
                       `${team.name} ${team.status === "withdrawn" ? "returned to" : "withdrawn from"} future rounds.`,
                     )
@@ -341,13 +362,16 @@ export function GameNightFixturePanel({
                     className="rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-3"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-bold">{board?.name ?? `Board ${pairing.boardNumber}`}</span>
+                      <span className="font-bold">
+                        {board?.name ?? `Board ${pairing.boardNumber}`}
+                      </span>
                       <span className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">
                         {pairing.matchStatus ?? pairing.status}
                       </span>
                     </div>
                     <div className="mt-2 text-sm font-semibold">
-                      {teamA?.name ?? pairing.teamAId} vs {teamB?.name ?? pairing.teamBId}
+                      {teamA?.name ?? pairing.teamAId} vs{" "}
+                      {teamB?.name ?? pairing.teamBId}
                     </div>
                     {winner && (
                       <div className="mt-1 text-xs font-bold text-emerald-300">
@@ -359,7 +383,9 @@ export function GameNightFixturePanel({
                         href={`/league-match/${pairing.matchSessionId}`}
                         className="mt-3 inline-flex rounded-lg border border-[var(--color-panel-border)] px-3 py-2 text-xs font-bold"
                       >
-                        {pairing.matchStatus === "completed" ? "View Match" : "Open Scorer"}
+                        {pairing.matchStatus === "completed"
+                          ? "View Match"
+                          : "Open Scorer"}
                       </Link>
                     )}
                   </div>
@@ -369,7 +395,10 @@ export function GameNightFixturePanel({
 
             {round.byeTeamIds.length > 0 && (
               <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-100">
-                Bye / waiting: {round.byeTeamIds.map((id) => teamById.get(id)?.name ?? id).join(", ")}
+                Bye / waiting:{" "}
+                {round.byeTeamIds
+                  .map((id) => teamById.get(id)?.name ?? id)
+                  .join(", ")}
               </div>
             )}
           </div>
@@ -385,7 +414,9 @@ export function GameNightFixturePanel({
         <div className="mt-5 rounded-xl border border-[var(--color-primary)] bg-[var(--color-panel-soft)] p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h3 className="text-lg font-bold">Edit Round {draftRound.roundNumber} Draft</h3>
+              <h3 className="text-lg font-bold">
+                Edit Round {draftRound.roundNumber} Draft
+              </h3>
               <p className="mt-1 text-sm text-[var(--color-text-muted)]">
                 Change teams or boards before this round is released. Duplicate
                 teams/boards are rejected when saved.
@@ -420,31 +451,43 @@ export function GameNightFixturePanel({
                 <select
                   value={pairing.boardId}
                   disabled={disabled}
-                  onChange={(event) => updateFixture(index, "boardId", event.target.value)}
+                  onChange={(event) =>
+                    updateFixture(index, "boardId", event.target.value)
+                  }
                   className="rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-2"
                 >
                   {gameNight.boards.map((board) => (
-                    <option key={board.id} value={board.id}>{board.name}</option>
+                    <option key={board.id} value={board.id}>
+                      {board.name}
+                    </option>
                   ))}
                 </select>
                 <select
                   value={pairing.teamAId}
                   disabled={disabled}
-                  onChange={(event) => updateFixture(index, "teamAId", event.target.value)}
+                  onChange={(event) =>
+                    updateFixture(index, "teamAId", event.target.value)
+                  }
                   className="rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-2"
                 >
                   {activeTeams.map((team) => (
-                    <option key={team.id} value={team.id}>{team.name}</option>
+                    <option key={team.id} value={team.id}>
+                      {team.name}
+                    </option>
                   ))}
                 </select>
                 <select
                   value={pairing.teamBId}
                   disabled={disabled}
-                  onChange={(event) => updateFixture(index, "teamBId", event.target.value)}
+                  onChange={(event) =>
+                    updateFixture(index, "teamBId", event.target.value)
+                  }
                   className="rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-2"
                 >
                   {activeTeams.map((team) => (
-                    <option key={team.id} value={team.id}>{team.name}</option>
+                    <option key={team.id} value={team.id}>
+                      {team.name}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -501,8 +544,9 @@ export function GameNightFixturePanel({
             previousRound?.completedAt &&
             !breakActive && (
               <p className="mt-3 text-xs text-[var(--color-text-muted)]">
-                Automatic mode releases this round after {resolved.roundAdvanceDelaySeconds}s.
-                A coordinator can still start it early.
+                Automatic mode releases this round after{" "}
+                {resolved.roundAdvanceDelaySeconds}s. A coordinator can still
+                start it early.
               </p>
             )}
         </div>
@@ -510,7 +554,8 @@ export function GameNightFixturePanel({
 
       {finalRoundComplete && (
         <div className="mt-5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-sm text-emerald-100">
-          All {resolved.roundCount} scheduled rounds are complete. The coordinator can now complete the Game Night.
+          All {resolved.roundCount} scheduled rounds are complete. The
+          coordinator can now complete the Game Night.
         </div>
       )}
     </section>
