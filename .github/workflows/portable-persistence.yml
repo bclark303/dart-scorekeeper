@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   verify:
@@ -40,21 +40,10 @@ jobs:
       - name: Prepare local database directory
         run: mkdir -p data
 
-      - name: Generate and commit missing Drizzle state on fixture scratch
-        if: github.ref_name == 'internal/game-night-fixture-rotation' && github.event_name == 'push'
-        run: |
-          npm run db:generate
-          if [ -n "$(git status --porcelain -- drizzle/)" ]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add drizzle/
-            git commit -m "Commit generated fixture migration snapshot [skip ci]"
-            git push origin HEAD:${GITHUB_REF_NAME}
-          fi
-
       - name: Verify Drizzle migrations are committed
         run: |
           npm run db:generate
+          git diff --exit-code -- drizzle/
           test -z "$(git status --porcelain -- drizzle/)"
 
       - name: Apply migrations to local SQLite/libSQL
