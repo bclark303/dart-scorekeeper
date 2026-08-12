@@ -11,7 +11,10 @@ export function BoardDeviceReturnControl() {
   const [registered, setRegistered] = useState(false);
 
   useEffect(() => {
-    setRegistered(Boolean(window.localStorage.getItem(DEVICE_KEY_STORAGE)));
+    const timeoutId = window.setTimeout(() => {
+      setRegistered(Boolean(window.localStorage.getItem(DEVICE_KEY_STORAGE)));
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
   }, [pathname]);
 
   if (!registered || pathname.startsWith("/board-device")) return null;
