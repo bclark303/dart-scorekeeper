@@ -49,9 +49,11 @@ export { setGameNightStatusForUser } from "./gameNightLifecycle";
 export {
   getLeagueMatchForUser,
   LeagueMatchStateError,
+} from "./leagueMatches";
+export {
   startLeagueMatchForUser,
   undoLastLeagueMatchTurnForUser,
-} from "./leagueMatches";
+} from "./fixtureLeagueMatchLifecycle";
 export {
   submitBoardDeviceTurnForCredential,
   submitLeagueMatchTurnForUser,
@@ -60,16 +62,18 @@ export {
   authenticateBoardDeviceCredential,
   BoardDeviceAssignmentError,
   BoardDeviceCredentialError,
-  getBoardDeviceAssignment,
-  getBoardDeviceConnectionForCredential,
-  getBoardDeviceMatchForCredential,
   listBoardDevicesForUser,
   registerBoardDeviceForUser,
   rotateBoardDeviceKeyForUser,
-  startBoardDeviceMatchForCredential,
-  undoBoardDeviceTurnForCredential,
   updateBoardDeviceForUser,
 } from "./boardDevices";
+export {
+  getBoardDeviceAssignment,
+  getBoardDeviceConnectionForCredential,
+  getBoardDeviceMatchForCredential,
+  startBoardDeviceMatchForCredential,
+  undoBoardDeviceTurnForCredential,
+} from "./fixtureBoardDevices";
 export {
   listRecentX01MatchSummaries,
   listX01MatchArchivesForUser,
