@@ -1,10 +1,9 @@
 import type { LeagueMatchDartInput, LeagueMatchSummary } from "@/lib/league/matchContracts";
 import { calculateConfiguredDummyTurn } from "@/lib/league/dummyScoring";
 
-import {
-  BoardDeviceAssignmentError,
-  getBoardDeviceConnectionForCredential,
-} from "./boardDevices";
+import { BoardDeviceAssignmentError } from "./boardDevices";
+import { getBoardDeviceConnectionForCredential } from "./fixtureBoardDevices";
+import { prepareNextRoundAfterCompletion } from "./gameNightFixtures";
 import {
   getLeagueMatchForUser,
   submitLeagueMatchTurnAfterAuthorization as submitRawAfterAuthorization,
@@ -70,16 +69,24 @@ function normalizeDummySubmission(
   };
 }
 
+async function prepareFollowingRound(updated: LeagueMatchSummary) {
+  if (updated.status === "completed") {
+    await prepareNextRoundAfterCompletion(updated.gameNightId);
+  }
+  return updated;
+}
+
 export async function submitLeagueMatchTurnForUser(input: LeagueTurnSubmission & {
   userId: string;
 }): Promise<LeagueMatchSummary> {
   const match = await getLeagueMatchForUser(input.matchId, input.userId);
   const normalized = normalizeDummySubmission(match, input);
 
-  return submitRawForUser({
+  const updated = await submitRawForUser({
     ...normalized,
     userId: input.userId,
   });
+  return prepareFollowingRound(updated);
 }
 
 export async function submitBoardDeviceTurnForCredential(input: LeagueTurnSubmission & {
@@ -103,5 +110,6 @@ export async function submitBoardDeviceTurnForCredential(input: LeagueTurnSubmis
   }
 
   const normalized = normalizeDummySubmission(connection.match, input);
-  return submitRawAfterAuthorization(normalized);
+  const updated = await submitRawAfterAuthorization(normalized);
+  return prepareFollowingRound(updated);
 }
