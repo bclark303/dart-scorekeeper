@@ -17,6 +17,13 @@ export type LeagueMatchTeamSummary = {
   members: LeagueMatchMemberSummary[];
 };
 
+export type LeagueMatchDartInput = {
+  id: string;
+  segment: number | "outer-bull" | "bull" | "miss";
+  multiplier: 0 | 1 | 2 | 3;
+  score: number;
+};
+
 export type LeagueMatchTurnSummary = {
   id: string;
   turnIndex: number;
@@ -32,6 +39,7 @@ export type LeagueMatchTurnSummary = {
   dartsThrown: number;
   isBust: boolean;
   isCheckout: boolean;
+  darts: LeagueMatchDartInput[];
   createdAt: number;
 };
 
@@ -82,6 +90,7 @@ export type ScoreLeagueMatchTurnRequest = {
   scoreEntered: number;
   dartsThrown: 1 | 2 | 3;
   checkoutConfirmed?: boolean;
+  darts?: LeagueMatchDartInput[];
 };
 
 export type UndoLeagueMatchTurnRequest = {

@@ -1,6 +1,7 @@
-import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 
 import type {
+  LeagueMatchDartInput,
   LeagueMatchFinishRule,
   LeagueMatchMemberSummary,
   LeagueMatchStatus,
@@ -15,7 +16,7 @@ import {
   gameNightTeams,
   gameNights,
 } from "../game-night-schema";
-import { leagueMatchSessions, leagueMatchTurns } from "../league-match-schema";
+import { leagueMatchDarts, leagueMatchSessions, leagueMatchTurns } from "../league-match-schema";
 import { leagueMemberships, seasons } from "../schema";
 import { LeaguePermissionError } from "./leagues";
 
@@ -66,6 +67,54 @@ function asStatus(value: string): LeagueMatchStatus {
 function asFinishRule(value: string): LeagueMatchFinishRule {
   if (value === "straight" || value === "double") return value;
   throw new Error(`Unsupported league match finish rule: ${value}`);
+}
+
+function validGraphicalDart(dart: LeagueMatchDartInput) {
+  if (!dart.id || typeof dart.id !== "string") return false;
+  if (![0, 1, 2, 3].includes(dart.multiplier)) return false;
+  if (!Number.isInteger(dart.score) || dart.score < 0 || dart.score > 60) return false;
+
+  if (typeof dart.segment === "number") {
+    return (
+      Number.isInteger(dart.segment) &&
+      dart.segment >= 1 &&
+      dart.segment <= 20 &&
+      [1, 2, 3].includes(dart.multiplier) &&
+      dart.score === dart.segment * dart.multiplier
+    );
+  }
+  if (dart.segment === "outer-bull") return dart.multiplier === 1 && dart.score === 25;
+  if (dart.segment === "bull") return dart.multiplier === 2 && dart.score === 50;
+  return dart.segment === "miss" && dart.multiplier === 0 && dart.score === 0;
+}
+
+function validateGraphicalDarts(
+  darts: LeagueMatchDartInput[] | undefined,
+  scoreEntered: number,
+  dartsThrown: 1 | 2 | 3,
+) {
+  if (darts === undefined) return;
+  if (darts.length !== dartsThrown || darts.length < 1 || darts.length > 3) {
+    throw new LeagueMatchStateError("Graphical dart count must match darts thrown.");
+  }
+  if (!darts.every(validGraphicalDart)) {
+    throw new LeagueMatchStateError("Graphical dart data contains an invalid board hit.");
+  }
+  const total = darts.reduce((sum, dart) => sum + dart.score, 0);
+  if (total !== scoreEntered) {
+    throw new LeagueMatchStateError("Graphical dart total does not match the submitted turn score.");
+  }
+}
+
+function isDoubleOutDart(dart: LeagueMatchDartInput | undefined) {
+  return dart?.segment === "bull" || dart?.multiplier === 2;
+}
+
+function parseStoredDartSegment(value: string): LeagueMatchDartInput["segment"] {
+  if (value === "outer-bull" || value === "bull" || value === "miss") return value;
+  const segment = Number(value);
+  if (Number.isInteger(segment) && segment >= 1 && segment <= 20) return segment;
+  throw new LeagueMatchStateError("Stored graphical dart contains an invalid segment.");
 }
 
 async function getMatchContext(matchId: string): Promise<MatchContext> {
@@ -257,6 +306,24 @@ async function buildLeagueMatchSummary(matchId: string): Promise<LeagueMatchSumm
   const { context, teamA, teamB, turns } = await loadMatchPieces(matchId);
   const state = deriveMatchState(context, teamA, teamB, turns);
   const activeTurns = turns.filter((turn) => turn.voidedAt === null);
+  const dartRows = activeTurns.length
+    ? await getDatabase()
+        .select()
+        .from(leagueMatchDarts)
+        .where(inArray(leagueMatchDarts.turnId, activeTurns.map((turn) => turn.id)))
+        .orderBy(asc(leagueMatchDarts.dartIndex))
+    : [];
+  const dartsByTurn = new Map<string, LeagueMatchDartInput[]>();
+  for (const dart of dartRows) {
+    const existing = dartsByTurn.get(dart.turnId) ?? [];
+    existing.push({
+      id: dart.id,
+      segment: parseStoredDartSegment(dart.segment),
+      multiplier: dart.multiplier as 0 | 1 | 2 | 3,
+      score: dart.score,
+    });
+    dartsByTurn.set(dart.turnId, existing);
+  }
   const storedStatus = asStatus(context.session.status);
   const status: LeagueMatchStatus = state.isComplete
     ? "completed"
@@ -304,6 +371,7 @@ async function buildLeagueMatchSummary(matchId: string): Promise<LeagueMatchSumm
         dartsThrown: turn.dartsThrown,
         isBust: turn.isBust,
         isCheckout: turn.isCheckout,
+        darts: dartsByTurn.get(turn.id) ?? [],
         createdAt: turn.createdAt,
       })),
     canUndo: activeTurns.length > 0,
@@ -367,6 +435,7 @@ export async function submitLeagueMatchTurnAfterAuthorization(input: {
   scoreEntered: number;
   dartsThrown: 1 | 2 | 3;
   checkoutConfirmed?: boolean;
+  darts?: LeagueMatchDartInput[];
 }): Promise<LeagueMatchSummary> {
   const context = await getMatchContext(input.matchId);
 
@@ -386,6 +455,7 @@ export async function submitLeagueMatchTurnAfterAuthorization(input: {
   if (![1, 2, 3].includes(input.dartsThrown)) {
     throw new LeagueMatchStateError("Darts thrown must be 1, 2, or 3.");
   }
+  validateGraphicalDarts(input.darts, input.scoreEntered, input.dartsThrown);
 
   const { teamA, teamB, turns } = await loadMatchPieces(input.matchId);
   const state = deriveMatchState(context, teamA, teamB, turns);
@@ -402,32 +472,51 @@ export async function submitLeagueMatchTurnAfterAuthorization(input: {
   const finishRule = asFinishRule(context.session.finishRule);
   const bustForRemainder = calculatedScore < 0 || (finishRule === "double" && calculatedScore === 1);
   const reachedZero = calculatedScore === 0;
-  const confirmedCheckout = reachedZero && (finishRule === "straight" || input.checkoutConfirmed === true);
+  const graphicalCheckoutConfirmed = input.darts?.length
+    ? isDoubleOutDart(input.darts[input.darts.length - 1])
+    : input.checkoutConfirmed === true;
+  const confirmedCheckout = reachedZero && (finishRule === "straight" || graphicalCheckoutConfirmed);
   const isBust = bustForRemainder || (reachedZero && !confirmedCheckout);
   const isCheckout = reachedZero && !isBust;
   const scoreAfter = isBust ? scoreBefore : calculatedScore;
   const turnIndex = turns.length ? Math.max(...turns.map((turn) => turn.turnIndex)) + 1 : 1;
   const now = Date.now();
 
-  await getDatabase().insert(leagueMatchTurns).values({
-    id: input.turnId,
-    matchSessionId: input.matchId,
-    turnIndex,
-    legNumber: state.currentLegNumber,
-    teamId: currentTeam.id,
-    teamMemberId: currentMember.id,
-    leaguePlayerId: currentMember.leaguePlayerId,
-    displayName: currentMember.displayName,
-    isDummy: currentMember.isDummy,
-    scoreEntered: input.scoreEntered,
-    scoreBefore,
-    scoreAfter,
-    dartsThrown: input.dartsThrown,
-    isBust,
-    isCheckout,
-    checkoutConfirmed: input.checkoutConfirmed === true,
-    voidedAt: null,
-    createdAt: now,
+  const database = getDatabase();
+  await database.transaction(async (transaction) => {
+    await transaction.insert(leagueMatchTurns).values({
+      id: input.turnId,
+      matchSessionId: input.matchId,
+      turnIndex,
+      legNumber: state.currentLegNumber,
+      teamId: currentTeam.id,
+      teamMemberId: currentMember.id,
+      leaguePlayerId: currentMember.leaguePlayerId,
+      displayName: currentMember.displayName,
+      isDummy: currentMember.isDummy,
+      scoreEntered: input.scoreEntered,
+      scoreBefore,
+      scoreAfter,
+      dartsThrown: input.dartsThrown,
+      isBust,
+      isCheckout,
+      checkoutConfirmed: graphicalCheckoutConfirmed,
+      voidedAt: null,
+      createdAt: now,
+    });
+    if (input.darts?.length) {
+      await transaction.insert(leagueMatchDarts).values(
+        input.darts.map((dart, dartIndex) => ({
+          id: dart.id,
+          turnId: input.turnId,
+          dartIndex,
+          segment: String(dart.segment),
+          multiplier: dart.multiplier,
+          score: dart.score,
+          createdAt: now,
+        })),
+      );
+    }
   });
 
   const updated = await buildLeagueMatchSummary(input.matchId);
@@ -462,6 +551,7 @@ export async function submitLeagueMatchTurnForUser(input: {
   scoreEntered: number;
   dartsThrown: 1 | 2 | 3;
   checkoutConfirmed?: boolean;
+  darts?: LeagueMatchDartInput[];
 }): Promise<LeagueMatchSummary> {
   const context = await getMatchContext(input.matchId);
   await requireLeagueAdmin(context.leagueId, input.userId);
@@ -471,6 +561,7 @@ export async function submitLeagueMatchTurnForUser(input: {
     scoreEntered: input.scoreEntered,
     dartsThrown: input.dartsThrown,
     checkoutConfirmed: input.checkoutConfirmed,
+    darts: input.darts,
   });
 }
 

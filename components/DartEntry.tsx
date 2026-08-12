@@ -14,7 +14,7 @@ type DartEntryProps = {
   finishRule: FinishRule;
   fullscreenScoreCards: FullscreenScoreCard[];
   lastTurn: Turn | null;
-  submitDartTurn: (darts: DartThrow[]) => void;
+  submitDartTurn: (darts: DartThrow[]) => void | boolean | Promise<void | boolean>;
   undoLastTurn: () => void;
   startNextLeg: () => void;
   replayMatch: () => void;
@@ -597,12 +597,13 @@ export function DartEntry({
     );
   }
 
-  function handleSubmitTurn() {
+  async function handleSubmitTurn() {
     if (currentDarts.length === 0) {
       return;
     }
 
-    submitDartTurn(currentDarts);
+    const submitted = await submitDartTurn(currentDarts);
+    if (submitted === false) return;
     setCurrentDarts([]);
 
     if (isBoardFullscreen && dartInputStyle === "board") {
