@@ -24,6 +24,7 @@
     "dummy-team-balance:test": "tsx scripts/dummy-team-balance-contract-test.ts && tsx scripts/dummy-team-balance-integration-contract-test.ts",
     "league-match:test": "tsx scripts/league-match-contract-test.ts",
     "board-device:test": "tsx scripts/board-device-contract-test.ts",
+    "board-device:offline:test": "tsx scripts/board-offline-queue-contract-test.ts",
     "board-device:pairing:test": "tsx scripts/board-device-pairing-contract-test.ts",
     "x01:test": "tsx scripts/x01-engine-contract-test.ts",
     "db:studio": "drizzle-kit studio"
