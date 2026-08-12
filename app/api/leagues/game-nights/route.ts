@@ -2,6 +2,8 @@ import { getRequestSession } from "@/lib/auth/server";
 import {
   assignGameNightPlayerToTeamForUser,
   createGameNightForUser,
+  hydrateGameNightAutoLayout,
+  hydrateGameNightAutoLayouts,
   LeaguePermissionError,
   listGameNightsForUser,
   populateGameNightBoardsForUser,
@@ -21,6 +23,7 @@ import {
   type FixturePairingStrategy,
   type GameNightDuesStatus,
   type GameNightSettingsSummary,
+  type GameNightSummary,
   type GameNightTeamStatus,
   type ResolvedGameNightSettings,
 } from "@/lib/league/gameNightContracts";
@@ -59,9 +62,11 @@ function validName(value: unknown): value is string {
 function validSettings(settings: ResolvedGameNightSettings) {
   return (
     ["manual", "automatic", "hybrid"].includes(settings.teamCreationMode) &&
+    ["manual", "automatic"].includes(settings.teamCountMode) &&
     Number.isInteger(settings.targetTeamCount) &&
     settings.targetTeamCount >= 2 &&
     settings.targetTeamCount <= 64 &&
+    ["manual", "automatic"].includes(settings.teamSizeMode) &&
     Number.isInteger(settings.minTeamPlayers) &&
     settings.minTeamPlayers >= 1 &&
     settings.minTeamPlayers <= 16 &&
@@ -72,6 +77,7 @@ function validSettings(settings: ResolvedGameNightSettings) {
     Number.isInteger(settings.dummyScore) &&
     settings.dummyScore >= 0 &&
     settings.dummyScore <= 180 &&
+    ["manual", "automatic"].includes(settings.boardCountMode) &&
     Number.isInteger(settings.boardCount) &&
     settings.boardCount >= 1 &&
     settings.boardCount <= 32 &&
@@ -106,6 +112,10 @@ function errorResponse(error: unknown) {
   return noStoreJson({ error: message }, { status: 400 });
 }
 
+async function gameNightPayload(gameNight: Promise<GameNightSummary>) {
+  return { gameNight: await hydrateGameNightAutoLayout(await gameNight) };
+}
+
 export async function GET(request: Request) {
   const authState = await getAuthenticatedUser(request);
   if (!authState.user) return authFailureResponse(authState.unavailable);
@@ -115,10 +125,16 @@ export async function GET(request: Request) {
   const leagueId = url.searchParams.get("leagueId");
   try {
     if (gameNightId) {
-      return noStoreJson({ gameNight: await refreshGameNightForUser(gameNightId, authState.user.id) });
+      return noStoreJson(
+        await gameNightPayload(refreshGameNightForUser(gameNightId, authState.user.id)),
+      );
     }
     if (!leagueId) return noStoreJson({ error: "leagueId is required." }, { status: 400 });
-    return noStoreJson({ gameNights: await listGameNightsForUser(leagueId, authState.user.id) });
+    return noStoreJson({
+      gameNights: await hydrateGameNightAutoLayouts(
+        await listGameNightsForUser(leagueId, authState.user.id),
+      ),
+    });
   } catch (error) {
     return errorResponse(error);
   }
@@ -153,16 +169,20 @@ export async function POST(request: Request) {
   }
 
   try {
-    const gameNight = await createGameNightForUser({
-      id: crypto.randomUUID(),
-      leagueId: input.leagueId,
-      seasonId: input.seasonId,
-      userId: authState.user.id,
-      name: input.name,
-      scheduledAt: input.scheduledAt,
-      settings,
-    });
-    return noStoreJson({ gameNight }, { status: 201 });
+    return noStoreJson(
+      await gameNightPayload(
+        createGameNightForUser({
+          id: crypto.randomUUID(),
+          leagueId: input.leagueId,
+          seasonId: input.seasonId,
+          userId: authState.user.id,
+          name: input.name,
+          scheduledAt: input.scheduledAt,
+          settings,
+        }),
+      ),
+      { status: 201 },
+    );
   } catch (error) {
     return errorResponse(error);
   }
@@ -196,42 +216,130 @@ export async function PATCH(request: Request) {
     if (input.action === "settings") {
       const settings = resolveGameNightSettings(input.settings);
       if (!validSettings(settings)) return noStoreJson({ error: "Game-night settings are invalid." }, { status: 400 });
-      return noStoreJson({ gameNight: await updateGameNightSettingsForUser({ gameNightId: input.gameNightId, userId: authState.user.id, settings }) });
+      return noStoreJson(
+        await gameNightPayload(
+          updateGameNightSettingsForUser({
+            gameNightId: input.gameNightId,
+            userId: authState.user.id,
+            settings,
+          }),
+        ),
+      );
     }
     if (input.action === "attendance") {
-      if (!["unpaid", "paid", "waived"].includes(input.duesStatus)) return noStoreJson({ error: "Invalid dues status." }, { status: 400 });
-      return noStoreJson({ gameNight: await updateGameNightAttendanceForUser({ attendanceId: crypto.randomUUID(), gameNightId: input.gameNightId, leaguePlayerId: input.leaguePlayerId, userId: authState.user.id, checkedIn: input.checkedIn, duesStatus: input.duesStatus }) });
+      if (!["unpaid", "paid", "waived"].includes(input.duesStatus)) {
+        return noStoreJson({ error: "Invalid dues status." }, { status: 400 });
+      }
+      return noStoreJson(
+        await gameNightPayload(
+          updateGameNightAttendanceForUser({
+            attendanceId: crypto.randomUUID(),
+            gameNightId: input.gameNightId,
+            leaguePlayerId: input.leaguePlayerId,
+            userId: authState.user.id,
+            checkedIn: input.checkedIn,
+            duesStatus: input.duesStatus,
+          }),
+        ),
+      );
     }
     if (input.action === "prepareTeams") {
-      return noStoreJson({ gameNight: await prepareGameNightTeamsForUser(input.gameNightId, authState.user.id) });
+      return noStoreJson(
+        await gameNightPayload(
+          prepareGameNightTeamsForUser(input.gameNightId, authState.user.id),
+        ),
+      );
     }
     if (input.action === "assignTeam") {
-      return noStoreJson({ gameNight: await assignGameNightPlayerToTeamForUser(input.gameNightId, input.leaguePlayerId, input.teamId, authState.user.id) });
+      return noStoreJson(
+        await gameNightPayload(
+          assignGameNightPlayerToTeamForUser(
+            input.gameNightId,
+            input.leaguePlayerId,
+            input.teamId,
+            authState.user.id,
+          ),
+        ),
+      );
     }
     if (input.action === "populateBoards") {
-      return noStoreJson({ gameNight: await populateGameNightBoardsForUser(input.gameNightId, authState.user.id) });
+      return noStoreJson(
+        await gameNightPayload(
+          populateGameNightBoardsForUser(input.gameNightId, authState.user.id),
+        ),
+      );
     }
     if (input.action === "regenerateRound") {
-      if (!Number.isInteger(input.roundNumber) || input.roundNumber < 1) return noStoreJson({ error: "Invalid round number." }, { status: 400 });
-      if (input.strategy && !["random", "round_robin", "swiss", "manual"].includes(input.strategy)) return noStoreJson({ error: "Invalid pairing strategy." }, { status: 400 });
-      return noStoreJson({ gameNight: await regenerateGameNightRoundForUser(input.gameNightId, input.roundNumber, authState.user.id, input.strategy) });
+      if (!Number.isInteger(input.roundNumber) || input.roundNumber < 1) {
+        return noStoreJson({ error: "Invalid round number." }, { status: 400 });
+      }
+      if (input.strategy && !["random", "round_robin", "swiss", "manual"].includes(input.strategy)) {
+        return noStoreJson({ error: "Invalid pairing strategy." }, { status: 400 });
+      }
+      return noStoreJson(
+        await gameNightPayload(
+          regenerateGameNightRoundForUser(
+            input.gameNightId,
+            input.roundNumber,
+            authState.user.id,
+            input.strategy,
+          ),
+        ),
+      );
     }
     if (input.action === "replaceRoundFixtures") {
-      if (!Number.isInteger(input.roundNumber) || input.roundNumber < 1 || !Array.isArray(input.pairings) || input.pairings.length > 32) {
+      if (
+        !Number.isInteger(input.roundNumber) ||
+        input.roundNumber < 1 ||
+        !Array.isArray(input.pairings) ||
+        input.pairings.length > 32
+      ) {
         return noStoreJson({ error: "Invalid round fixtures." }, { status: 400 });
       }
-      return noStoreJson({ gameNight: await replaceGameNightRoundFixturesForUser({ gameNightId: input.gameNightId, roundNumber: input.roundNumber, userId: authState.user.id, pairings: input.pairings }) });
+      return noStoreJson(
+        await gameNightPayload(
+          replaceGameNightRoundFixturesForUser({
+            gameNightId: input.gameNightId,
+            roundNumber: input.roundNumber,
+            userId: authState.user.id,
+            pairings: input.pairings,
+          }),
+        ),
+      );
     }
     if (input.action === "startNextRound") {
-      return noStoreJson({ gameNight: await startNextGameNightRoundForUser(input.gameNightId, authState.user.id, { endIntermissionEarly: input.endIntermissionEarly === true }) });
+      return noStoreJson(
+        await gameNightPayload(
+          startNextGameNightRoundForUser(input.gameNightId, authState.user.id, {
+            endIntermissionEarly: input.endIntermissionEarly === true,
+          }),
+        ),
+      );
     }
     if (input.action === "teamStatus") {
-      if (input.status !== "active" && input.status !== "withdrawn") return noStoreJson({ error: "Invalid team status." }, { status: 400 });
-      return noStoreJson({ gameNight: await setGameNightTeamStatusForUser(input.gameNightId, input.teamId, input.status, authState.user.id) });
+      if (input.status !== "active" && input.status !== "withdrawn") {
+        return noStoreJson({ error: "Invalid team status." }, { status: 400 });
+      }
+      return noStoreJson(
+        await gameNightPayload(
+          setGameNightTeamStatusForUser(
+            input.gameNightId,
+            input.teamId,
+            input.status,
+            authState.user.id,
+          ),
+        ),
+      );
     }
     if (input.action === "status") {
-      if (!["active", "completed", "cancelled"].includes(input.status)) return noStoreJson({ error: "Invalid game-night status." }, { status: 400 });
-      return noStoreJson({ gameNight: await setGameNightStatusForUser(input.gameNightId, authState.user.id, input.status) });
+      if (!["active", "completed", "cancelled"].includes(input.status)) {
+        return noStoreJson({ error: "Invalid game-night status." }, { status: 400 });
+      }
+      return noStoreJson(
+        await gameNightPayload(
+          setGameNightStatusForUser(input.gameNightId, authState.user.id, input.status),
+        ),
+      );
     }
     return noStoreJson({ error: "Unknown game-night action." }, { status: 400 });
   } catch (error) {

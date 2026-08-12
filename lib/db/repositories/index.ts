@@ -32,6 +32,16 @@ export {
   type UpdateGameNightSettingsForUserInput,
 } from "./gameNights";
 export {
+  hydrateGameNightAutoLayout,
+  hydrateGameNightAutoLayouts,
+  optimizeSettingsForGameNight,
+  syncAutomaticGameNightLayout,
+} from "./gameNightAutoLayout";
+export {
+  getGameNightForUser,
+  listGameNightsForUser,
+} from "./gameNightReadModel";
+export {
   assignGameNightPlayerToTeamForUser,
   prepareGameNightTeamsForUser,
   updateGameNightAttendanceForUser,
@@ -39,8 +49,6 @@ export {
 } from "./gameNightSetupLifecycle";
 export {
   createGameNightForUser,
-  getGameNightForUser,
-  listGameNightsForUser,
   populateGameNightBoardsForUser,
   regenerateGameNightRoundForUser,
   replaceGameNightRoundFixturesForUser,

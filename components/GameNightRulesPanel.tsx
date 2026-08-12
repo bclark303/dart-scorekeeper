@@ -2,13 +2,20 @@
 
 import type { Dispatch, SetStateAction } from "react";
 
-import type { GameNightSettingsSummary } from "@/lib/league/gameNightContracts";
+import type {
+  GameNightLayoutMode,
+  GameNightSettingsSummary,
+} from "@/lib/league/gameNightContracts";
 import { getDummyScoringRule } from "@/lib/league/dummyScoring";
 import { X01_BEST_OF_OPTIONS } from "@/lib/league/matchFormat";
 
 function numberValue(value: string, fallback: number) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function modeValue(value: string): GameNightLayoutMode {
+  return value === "automatic" ? "automatic" : "manual";
 }
 
 export function GameNightRulesPanel({
@@ -23,6 +30,9 @@ export function GameNightRulesPanel({
   onSave: () => void;
 }) {
   const dummyScoringRule = getDummyScoringRule(settings.dummyScore);
+  const teamCountMode = settings.teamCountMode ?? "manual";
+  const teamSizeMode = settings.teamSizeMode ?? "manual";
+  const boardCountMode = settings.boardCountMode ?? "manual";
 
   function patch<K extends keyof GameNightSettingsSummary>(
     key: K,
@@ -47,6 +57,15 @@ export function GameNightRulesPanel({
           <p className="mt-1 text-xs text-[var(--color-text-muted)]">
             Controls how checked-in roster players are divided for this night.
           </p>
+
+          <div className="mt-4 rounded-xl border border-[var(--color-primary)]/40 bg-[var(--color-panel)] p-3 text-xs text-[var(--color-text-muted)]">
+            <span className="font-bold text-[var(--color-text)]">Automatic layout:</span>{" "}
+            Auto modes recalculate from the checked-in headcount. Team sizing
+            prefers balanced 2-3 player teams where practical, team count avoids
+            a bye when a similarly good even-team layout exists, and Auto Boards
+            provides one board per simultaneous matchup.
+          </div>
+
           <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
             <label className="text-sm">
               Creation mode
@@ -55,8 +74,7 @@ export function GameNightRulesPanel({
                 onChange={(event) =>
                   patch(
                     "teamCreationMode",
-                    event.target
-                      .value as GameNightSettingsSummary["teamCreationMode"],
+                    event.target.value as GameNightSettingsSummary["teamCreationMode"],
                   )
                 }
                 className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-2.5"
@@ -68,55 +86,84 @@ export function GameNightRulesPanel({
             </label>
 
             <label className="text-sm">
-              Target teams
+              Number of teams
+              <select
+                value={teamCountMode}
+                onChange={(event) => patch("teamCountMode", modeValue(event.target.value))}
+                className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-2.5"
+              >
+                <option value="manual">Manual</option>
+                <option value="automatic">Auto from check-ins</option>
+              </select>
               <input
                 type="number"
                 min={2}
                 max={64}
+                disabled={disabled || teamCountMode === "automatic"}
                 value={settings.targetTeamCount}
                 onChange={(event) =>
-                  patch(
-                    "targetTeamCount",
-                    numberValue(event.target.value, 2),
-                  )
+                  patch("targetTeamCount", numberValue(event.target.value, 2))
                 }
-                className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-2.5"
+                className="mt-2 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-2.5 disabled:opacity-60"
               />
+              {teamCountMode === "automatic" && (
+                <span className="mt-1 block text-xs text-emerald-200">
+                  Current calculated value: {settings.targetTeamCount} teams
+                </span>
+              )}
             </label>
 
-            <label className="text-sm">
-              Minimum players / team
-              <input
-                type="number"
-                min={1}
-                max={16}
-                value={settings.minTeamPlayers}
-                onChange={(event) =>
-                  patch(
-                    "minTeamPlayers",
-                    numberValue(event.target.value, 1),
-                  )
-                }
-                className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-2.5"
-              />
-            </label>
-
-            <label className="text-sm">
-              Maximum players / team
-              <input
-                type="number"
-                min={1}
-                max={32}
-                value={settings.maxTeamPlayers}
-                onChange={(event) =>
-                  patch(
-                    "maxTeamPlayers",
-                    numberValue(event.target.value, 1),
-                  )
-                }
-                className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-2.5"
-              />
-            </label>
+            <div className="rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-3">
+              <label className="text-sm">
+                Team sizes
+                <select
+                  value={teamSizeMode}
+                  onChange={(event) => patch("teamSizeMode", modeValue(event.target.value))}
+                  className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-2.5"
+                >
+                  <option value="manual">Manual min / max</option>
+                  <option value="automatic">Auto balanced sizes</option>
+                </select>
+              </label>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <label className="text-xs">
+                  Minimum
+                  <input
+                    type="number"
+                    min={1}
+                    max={16}
+                    disabled={disabled || teamSizeMode === "automatic"}
+                    value={settings.minTeamPlayers}
+                    onChange={(event) =>
+                      patch("minTeamPlayers", numberValue(event.target.value, 1))
+                    }
+                    className="mt-1 w-full rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-2.5 disabled:opacity-60"
+                  />
+                </label>
+                <label className="text-xs">
+                  Maximum
+                  <input
+                    type="number"
+                    min={1}
+                    max={32}
+                    disabled={disabled || teamSizeMode === "automatic"}
+                    value={settings.maxTeamPlayers}
+                    onChange={(event) =>
+                      patch("maxTeamPlayers", numberValue(event.target.value, 1))
+                    }
+                    className="mt-1 w-full rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-2.5 disabled:opacity-60"
+                  />
+                </label>
+              </div>
+              {teamSizeMode === "automatic" && (
+                <div className="mt-2 text-xs text-emerald-200">
+                  Current calculated range: {settings.minTeamPlayers}
+                  {settings.minTeamPlayers === settings.maxTeamPlayers
+                    ? ""
+                    : `-${settings.maxTeamPlayers}`} players/team
+                </div>
+              )}
+            </div>
 
             <label className="text-sm">
               Uneven teams / dummy policy
@@ -125,8 +172,7 @@ export function GameNightRulesPanel({
                 onChange={(event) =>
                   patch(
                     "dummyPlayerMode",
-                    event.target
-                      .value as GameNightSettingsSummary["dummyPlayerMode"],
+                    event.target.value as GameNightSettingsSummary["dummyPlayerMode"],
                   )
                 }
                 className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-2.5"
@@ -140,14 +186,10 @@ export function GameNightRulesPanel({
 
           {settings.dummyPlayerMode !== "none" && (
             <div className="mt-4 rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-4">
-              <div>
-                <h4 className="font-bold">Dummy Scoring Rules</h4>
-                <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                  Choose how every automatic dummy turn is scored for this Game Night.
-                  The selected rule is snapshotted into each board match when boards are populated.
-                </p>
-              </div>
-
+              <h4 className="font-bold">Dummy Scoring Rules</h4>
+              <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                The selected dummy rule is snapshotted into each board match.
+              </p>
               <div className="mt-3 grid gap-3">
                 <button
                   type="button"
@@ -158,30 +200,15 @@ export function GameNightRulesPanel({
                       : "border-[var(--color-panel-border)]"
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="font-bold">Half of actual score</div>
-                    {dummyScoringRule === "half_actual" && (
-                      <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-bold uppercase text-emerald-200">
-                        Selected
-                      </span>
-                    )}
-                  </div>
-                  <ul className="mt-2 space-y-1 text-xs text-[var(--color-text-muted)]">
-                    <li>• Uses the most recent real teammate turn from the current leg only.</li>
-                    <li>• Each dummy dart is floor(partner dart score ÷ 2).</li>
-                    <li>• Misses remain 0 and the partner&apos;s actual dart count is preserved.</li>
-                    <li>• Total Turn entry splits the partner total into three equal baseline darts before applying the same rule.</li>
-                    <li>• If no real teammate has scored yet in the leg, the dummy scores 0.</li>
-                  </ul>
+                  <div className="font-bold">Half of actual score</div>
+                  <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                    Each dummy dart is floor(partner dart score ÷ 2); misses stay 0.
+                  </p>
                 </button>
-
                 <button
                   type="button"
                   onClick={() =>
-                    patch(
-                      "dummyScore",
-                      settings.dummyScore > 0 ? settings.dummyScore : 60,
-                    )
+                    patch("dummyScore", settings.dummyScore > 0 ? settings.dummyScore : 60)
                   }
                   className={`rounded-lg border p-3 text-left ${
                     dummyScoringRule === "fixed"
@@ -189,21 +216,12 @@ export function GameNightRulesPanel({
                       : "border-[var(--color-panel-border)]"
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="font-bold">Fixed dummy score per turn</div>
-                    {dummyScoringRule === "fixed" && (
-                      <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-bold uppercase text-emerald-200">
-                        Selected
-                      </span>
-                    )}
-                  </div>
-                  <p className="mt-2 text-xs text-[var(--color-text-muted)]">
-                    Every dummy turn uses the same configured score. Fixed dummy turns are
-                    recorded as three-dart turns and still obey the normal X01 bust and finish rules.
+                  <div className="font-bold">Fixed dummy score per turn</div>
+                  <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                    Every dummy turn uses the configured fixed score.
                   </p>
                 </button>
               </div>
-
               {dummyScoringRule === "fixed" && (
                 <label className="mt-3 block text-sm font-bold">
                   Fixed score per dummy turn
@@ -215,22 +233,13 @@ export function GameNightRulesPanel({
                     onChange={(event) =>
                       patch(
                         "dummyScore",
-                        Math.max(
-                          1,
-                          Math.min(180, numberValue(event.target.value, 60)),
-                        ),
+                        Math.max(1, Math.min(180, numberValue(event.target.value, 60))),
                       )
                     }
                     className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-2.5"
                   />
                 </label>
               )}
-
-              <p className="mt-3 text-xs text-[var(--color-text-muted)]">
-                Automatic dummy turns are server-authoritative. A board cannot override the
-                configured dummy value. If an automatic dummy score lands exactly on zero,
-                it is treated as a valid checkout; normal bust/remainder rules still apply.
-              </p>
             </div>
           )}
         </div>
@@ -245,9 +254,7 @@ export function GameNightRulesPanel({
               Game
               <select
                 value={settings.startingScore}
-                onChange={(event) =>
-                  patch("startingScore", Number(event.target.value))
-                }
+                onChange={(event) => patch("startingScore", Number(event.target.value))}
                 className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-2.5"
               >
                 <option value={301}>301</option>
@@ -255,17 +262,12 @@ export function GameNightRulesPanel({
                 <option value={701}>701</option>
               </select>
             </label>
-
             <label className="text-sm">
               Finish
               <select
                 value={settings.finishRule}
                 onChange={(event) =>
-                  patch(
-                    "finishRule",
-                    event.target
-                      .value as GameNightSettingsSummary["finishRule"],
-                  )
+                  patch("finishRule", event.target.value as GameNightSettingsSummary["finishRule"])
                 }
                 className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-2.5"
               >
@@ -273,30 +275,22 @@ export function GameNightRulesPanel({
                 <option value="straight">Straight Out</option>
               </select>
             </label>
-
             <label className="text-sm">
               Legs
               <select
                 value={settings.legsPerMatch}
-                onChange={(event) =>
-                  patch("legsPerMatch", Number(event.target.value))
-                }
+                onChange={(event) => patch("legsPerMatch", Number(event.target.value))}
                 className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-2.5"
               >
                 {X01_BEST_OF_OPTIONS.map((legs) => (
-                  <option key={legs} value={legs}>
-                    Best of {legs}
-                  </option>
+                  <option key={legs} value={legs}>Best of {legs}</option>
                 ))}
               </select>
             </label>
-
             <div className="rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-3 text-sm">
               <div className="font-bold">Score Entry</div>
               <div className="mt-1 text-[var(--color-text-muted)]">
-                Graphical dart-by-dart and total-turn entry are both available
-                on league scorers. This is a scorer preference rather than a
-                competition rule.
+                Graphical dart-by-dart and total-turn entry remain scorer preferences.
               </div>
             </div>
           </div>
@@ -305,22 +299,33 @@ export function GameNightRulesPanel({
         <div className="rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-4">
           <h3 className="text-lg font-bold">Boards & Rotation</h3>
           <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-            Controls the physical boards and how future rounds move between
-            them.
+            Controls the physical boards and how future rounds move between them.
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
             <label className="text-sm">
               Number of boards
+              <select
+                value={boardCountMode}
+                onChange={(event) => patch("boardCountMode", modeValue(event.target.value))}
+                className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-2.5"
+              >
+                <option value="manual">Manual</option>
+                <option value="automatic">Auto from team count</option>
+              </select>
               <input
                 type="number"
                 min={1}
                 max={32}
+                disabled={disabled || boardCountMode === "automatic"}
                 value={settings.boardCount}
-                onChange={(event) =>
-                  patch("boardCount", numberValue(event.target.value, 1))
-                }
-                className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-2.5"
+                onChange={(event) => patch("boardCount", numberValue(event.target.value, 1))}
+                className="mt-2 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-2.5 disabled:opacity-60"
               />
+              {boardCountMode === "automatic" && (
+                <span className="mt-1 block text-xs text-emerald-200">
+                  Current calculated value: {settings.boardCount} board{settings.boardCount === 1 ? "" : "s"}
+                </span>
+              )}
             </label>
 
             <label className="text-sm">
@@ -330,8 +335,7 @@ export function GameNightRulesPanel({
                 onChange={(event) =>
                   patch(
                     "boardRotationType",
-                    event.target
-                      .value as GameNightSettingsSummary["boardRotationType"],
+                    event.target.value as GameNightSettingsSummary["boardRotationType"],
                   )
                 }
                 className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-2.5"
@@ -354,8 +358,8 @@ export function GameNightRulesPanel({
         Save Rules
       </button>
       <p className="mt-2 text-xs text-[var(--color-text-muted)]">
-        Saving rules clears existing board pairings so they can be rebuilt
-        safely with the new match format.
+        Saving rules recalculates any Auto layout fields from the current check-in
+        count and clears board pairings so they can be rebuilt safely.
       </p>
     </section>
   );

@@ -11,6 +11,7 @@ export type DummyPlayerMode = "none" | "allow" | "fill";
 export type BoardRotationType = "fixed" | "rotate" | "manual";
 export type FixturePairingStrategy = "random" | "round_robin" | "swiss" | "manual";
 export type RoundAdvanceMode = "manual" | "automatic";
+export type GameNightLayoutMode = "manual" | "automatic";
 export type GameNightAttendanceStatus = "absent" | "checked_in";
 export type GameNightDuesStatus = "unpaid" | "paid" | "waived";
 export type GameNightFinishRule = "straight" | "double";
@@ -29,17 +30,20 @@ export type GameNightRoundStatus =
   | "intermission";
 
 /**
- * The fixture fields are optional at the type boundary so repositories can
- * still hydrate databases created before the multi-round migration. Public
- * fixture-aware read models normalize them to DEFAULT_GAME_NIGHT_SETTINGS.
+ * Newer structural fields remain optional at the type boundary so repositories
+ * can still hydrate databases created before the corresponding migrations.
+ * Public read models normalize them to DEFAULT_GAME_NIGHT_SETTINGS.
  */
 export type GameNightSettingsSummary = {
   teamCreationMode: TeamCreationMode;
+  teamCountMode?: GameNightLayoutMode;
   targetTeamCount: number;
+  teamSizeMode?: GameNightLayoutMode;
   minTeamPlayers: number;
   maxTeamPlayers: number;
   dummyPlayerMode: DummyPlayerMode;
   dummyScore: number;
+  boardCountMode?: GameNightLayoutMode;
   boardCount: number;
   boardRotationType: BoardRotationType;
   roundCount?: number;
@@ -54,6 +58,9 @@ export type GameNightSettingsSummary = {
 };
 
 export type ResolvedGameNightSettings = GameNightSettingsSummary & {
+  teamCountMode: GameNightLayoutMode;
+  teamSizeMode: GameNightLayoutMode;
+  boardCountMode: GameNightLayoutMode;
   roundCount: number;
   pairingStrategy: FixturePairingStrategy;
   roundAdvanceMode: RoundAdvanceMode;
@@ -180,11 +187,14 @@ export type GameNightListResponse = {
 
 export const DEFAULT_GAME_NIGHT_SETTINGS: ResolvedGameNightSettings = {
   teamCreationMode: "hybrid",
+  teamCountMode: "manual",
   targetTeamCount: 4,
+  teamSizeMode: "manual",
   minTeamPlayers: 2,
   maxTeamPlayers: 4,
   dummyPlayerMode: "fill",
   dummyScore: 0,
+  boardCountMode: "manual",
   boardCount: 2,
   boardRotationType: "rotate",
   roundCount: 3,
@@ -204,6 +214,9 @@ export function resolveGameNightSettings(
   return {
     ...DEFAULT_GAME_NIGHT_SETTINGS,
     ...settings,
+    teamCountMode: settings.teamCountMode ?? "manual",
+    teamSizeMode: settings.teamSizeMode ?? "manual",
+    boardCountMode: settings.boardCountMode ?? "manual",
     intermissionAfterRounds: settings.intermissionAfterRounds ?? [],
   };
 }

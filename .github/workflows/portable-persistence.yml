@@ -81,6 +81,9 @@ jobs:
       - name: Exercise fixture and rotation engine contract
         run: npm run game-night:fixtures:test
 
+      - name: Exercise automatic Game Night layout contract
+        run: npm run game-night:layout:test
+
       - name: Exercise dummy scoring rules contract
         run: npm run dummy-scoring:test
 
