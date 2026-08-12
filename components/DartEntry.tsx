@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { DartThrow, FinishRule, Turn, getCheckoutSuggestion } from "@/lib/scoring";
 import { getDartLabel } from "@/lib/darts";
+import { evaluateX01Turn } from "@/lib/x01Engine";
 
 type DartEntryProps = {
   message: string;
@@ -207,10 +208,6 @@ function specialDartIsSelected(
   return darts.some((dart) => dart.segment === segment);
 }
 
-function isDoubleOutDart(dart: DartThrow | undefined) {
-  return dart?.segment === "bull" || dart?.multiplier === 2;
-}
-
 function getPreviewToneClass(tone: TurnPreview["tone"]) {
   if (tone === "good") {
     return "border-[var(--color-success)] bg-[var(--color-panel)]";
@@ -235,46 +232,33 @@ function getTurnPreview(
 ): TurnPreview {
   if (darts.length === 0) {
     const checkout = getCheckoutSuggestion(currentScore);
-
     return {
       label: `${currentScore} remaining`,
-      detail: checkout
-        ? `Checkout: ${checkout}`
-        : "Tap the board to build this turn.",
+      detail: checkout ? `Checkout: ${checkout}` : "Tap the board to build this turn.",
       tone: "neutral",
     };
   }
 
-  const remaining = currentScore - turnTotal;
+  const evaluation = evaluateX01Turn({
+    scoreBefore: currentScore,
+    scoreEntered: turnTotal,
+    finishRule,
+    dartsThrown: darts.length as 1 | 2 | 3,
+    darts,
+  });
 
-  if (remaining < 0) {
+  if (evaluation.isBust) {
+    const reachedZero = currentScore - turnTotal === 0;
     return {
-      label: "Bust if submitted",
-      detail: `${turnTotal} scored from ${currentScore}.`,
+      label: reachedZero ? "Invalid checkout" : "Bust if submitted",
+      detail: reachedZero
+        ? "Final dart must be a double or bull."
+        : `${turnTotal} scored from ${currentScore}.`,
       tone: "danger",
     };
   }
 
-  if (finishRule === "double_out" && remaining === 1) {
-    return {
-      label: "Bust if submitted",
-      detail: "Double-out cannot leave 1.",
-      tone: "danger",
-    };
-  }
-
-  if (remaining === 0) {
-    if (
-      finishRule === "double_out" &&
-      !isDoubleOutDart(darts[darts.length - 1])
-    ) {
-      return {
-        label: "Invalid checkout",
-        detail: "Final dart must be a double or bull.",
-        tone: "danger",
-      };
-    }
-
+  if (evaluation.isCheckout) {
     return {
       label: "Checkout ready",
       detail: `Submit to finish the leg in ${darts.length} dart${darts.length === 1 ? "" : "s"}.`,
@@ -282,10 +266,9 @@ function getTurnPreview(
     };
   }
 
-  const checkout = getCheckoutSuggestion(remaining);
-
+  const checkout = getCheckoutSuggestion(evaluation.scoreAfter);
   return {
-    label: `${remaining} remaining`,
+    label: `${evaluation.scoreAfter} remaining`,
     detail: checkout ? `Next checkout: ${checkout}` : `${turnTotal} this turn.`,
     tone: checkout ? "good" : "neutral",
   };

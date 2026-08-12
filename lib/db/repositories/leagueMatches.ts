@@ -8,6 +8,7 @@ import type {
   LeagueMatchSummary,
   LeagueMatchTeamSummary,
 } from "@/lib/league/matchContracts";
+import { evaluateX01Turn, X01RuleError } from "@/lib/x01Engine";
 import { getDatabase } from "../client";
 import {
   gameNightBoardPairings,
@@ -67,47 +68,6 @@ function asStatus(value: string): LeagueMatchStatus {
 function asFinishRule(value: string): LeagueMatchFinishRule {
   if (value === "straight" || value === "double") return value;
   throw new Error(`Unsupported league match finish rule: ${value}`);
-}
-
-function validGraphicalDart(dart: LeagueMatchDartInput) {
-  if (!dart.id || typeof dart.id !== "string") return false;
-  if (![0, 1, 2, 3].includes(dart.multiplier)) return false;
-  if (!Number.isInteger(dart.score) || dart.score < 0 || dart.score > 60) return false;
-
-  if (typeof dart.segment === "number") {
-    return (
-      Number.isInteger(dart.segment) &&
-      dart.segment >= 1 &&
-      dart.segment <= 20 &&
-      [1, 2, 3].includes(dart.multiplier) &&
-      dart.score === dart.segment * dart.multiplier
-    );
-  }
-  if (dart.segment === "outer-bull") return dart.multiplier === 1 && dart.score === 25;
-  if (dart.segment === "bull") return dart.multiplier === 2 && dart.score === 50;
-  return dart.segment === "miss" && dart.multiplier === 0 && dart.score === 0;
-}
-
-function validateGraphicalDarts(
-  darts: LeagueMatchDartInput[] | undefined,
-  scoreEntered: number,
-  dartsThrown: 1 | 2 | 3,
-) {
-  if (darts === undefined) return;
-  if (darts.length !== dartsThrown || darts.length < 1 || darts.length > 3) {
-    throw new LeagueMatchStateError("Graphical dart count must match darts thrown.");
-  }
-  if (!darts.every(validGraphicalDart)) {
-    throw new LeagueMatchStateError("Graphical dart data contains an invalid board hit.");
-  }
-  const total = darts.reduce((sum, dart) => sum + dart.score, 0);
-  if (total !== scoreEntered) {
-    throw new LeagueMatchStateError("Graphical dart total does not match the submitted turn score.");
-  }
-}
-
-function isDoubleOutDart(dart: LeagueMatchDartInput | undefined) {
-  return dart?.segment === "bull" || dart?.multiplier === 2;
 }
 
 function parseStoredDartSegment(value: string): LeagueMatchDartInput["segment"] {
@@ -455,7 +415,6 @@ export async function submitLeagueMatchTurnAfterAuthorization(input: {
   if (![1, 2, 3].includes(input.dartsThrown)) {
     throw new LeagueMatchStateError("Darts thrown must be 1, 2, or 3.");
   }
-  validateGraphicalDarts(input.darts, input.scoreEntered, input.dartsThrown);
 
   const { teamA, teamB, turns } = await loadMatchPieces(input.matchId);
   const state = deriveMatchState(context, teamA, teamB, turns);
@@ -468,17 +427,21 @@ export async function submitLeagueMatchTurnAfterAuthorization(input: {
   if (!currentMember) throw new LeagueMatchStateError("Current thrower could not be resolved.");
 
   const scoreBefore = state.currentTeamId === teamA.id ? state.teamAScore : state.teamBScore;
-  const calculatedScore = scoreBefore - input.scoreEntered;
-  const finishRule = asFinishRule(context.session.finishRule);
-  const bustForRemainder = calculatedScore < 0 || (finishRule === "double" && calculatedScore === 1);
-  const reachedZero = calculatedScore === 0;
-  const graphicalCheckoutConfirmed = input.darts?.length
-    ? isDoubleOutDart(input.darts[input.darts.length - 1])
-    : input.checkoutConfirmed === true;
-  const confirmedCheckout = reachedZero && (finishRule === "straight" || graphicalCheckoutConfirmed);
-  const isBust = bustForRemainder || (reachedZero && !confirmedCheckout);
-  const isCheckout = reachedZero && !isBust;
-  const scoreAfter = isBust ? scoreBefore : calculatedScore;
+  let evaluation;
+  try {
+    evaluation = evaluateX01Turn({
+      scoreBefore,
+      scoreEntered: input.scoreEntered,
+      finishRule: context.session.finishRule === "double" ? "double_out" : "straight_out",
+      dartsThrown: input.dartsThrown,
+      darts: input.darts,
+      checkoutConfirmed: input.darts === undefined ? input.checkoutConfirmed === true : undefined,
+    });
+  } catch (error) {
+    if (error instanceof X01RuleError) throw new LeagueMatchStateError(error.message);
+    throw error;
+  }
+  const { scoreAfter, isBust, isCheckout } = evaluation;
   const turnIndex = turns.length ? Math.max(...turns.map((turn) => turn.turnIndex)) + 1 : 1;
   const now = Date.now();
 
@@ -500,7 +463,7 @@ export async function submitLeagueMatchTurnAfterAuthorization(input: {
       dartsThrown: input.dartsThrown,
       isBust,
       isCheckout,
-      checkoutConfirmed: graphicalCheckoutConfirmed,
+      checkoutConfirmed: isCheckout && context.session.finishRule === "double",
       voidedAt: null,
       createdAt: now,
     });
