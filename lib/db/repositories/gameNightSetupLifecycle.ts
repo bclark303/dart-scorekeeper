@@ -1,4 +1,5 @@
 import type { GameNightSummary } from "@/lib/league/gameNightContracts";
+import { optimizeGameNightLayout } from "@/lib/league/gameNightLayout";
 
 import {
   assignGameNightPlayerToTeamForUser as assignRawGameNightPlayerToTeamForUser,
@@ -11,9 +12,15 @@ import {
   getGameNightForUser,
   updateGameNightSettingsForUser as updateFixtureGameNightSettingsForUser,
 } from "./gameNightFixtures";
+import {
+  hydrateGameNightAutoLayout,
+  syncAutomaticGameNightLayout,
+} from "./gameNightAutoLayout";
 
 async function requireSetupEditable(gameNightId: string, userId: string) {
-  const gameNight = await getGameNightForUser(gameNightId, userId);
+  const gameNight = await hydrateGameNightAutoLayout(
+    await getGameNightForUser(gameNightId, userId),
+  );
   if (
     gameNight.status === "active" ||
     gameNight.status === "completed" ||
@@ -29,8 +36,19 @@ async function requireSetupEditable(gameNightId: string, userId: string) {
 export async function updateGameNightSettingsForUser(
   input: UpdateGameNightSettingsForUserInput,
 ): Promise<GameNightSummary> {
-  await requireSetupEditable(input.gameNightId, input.userId);
-  return updateFixtureGameNightSettingsForUser(input);
+  const gameNight = await requireSetupEditable(input.gameNightId, input.userId);
+  const checkedInPlayerCount = gameNight.attendance.filter(
+    (player) => player.status === "checked_in",
+  ).length;
+  const optimized = optimizeGameNightLayout(
+    input.settings,
+    checkedInPlayerCount,
+  ).settings;
+  const updated = await updateFixtureGameNightSettingsForUser({
+    ...input,
+    settings: optimized,
+  });
+  return hydrateGameNightAutoLayout(updated);
 }
 
 export async function updateGameNightAttendanceForUser(
@@ -38,16 +56,23 @@ export async function updateGameNightAttendanceForUser(
 ): Promise<GameNightSummary> {
   await requireSetupEditable(input.gameNightId, input.userId);
   await updateRawGameNightAttendanceForUser(input);
-  return getGameNightForUser(input.gameNightId, input.userId);
+  const current = await hydrateGameNightAutoLayout(
+    await getGameNightForUser(input.gameNightId, input.userId),
+  );
+  await syncAutomaticGameNightLayout(current);
+  return hydrateGameNightAutoLayout(
+    await getGameNightForUser(input.gameNightId, input.userId),
+  );
 }
 
 export async function prepareGameNightTeamsForUser(
   gameNightId: string,
   userId: string,
 ): Promise<GameNightSummary> {
-  await requireSetupEditable(gameNightId, userId);
+  const current = await requireSetupEditable(gameNightId, userId);
+  await syncAutomaticGameNightLayout(current);
   await prepareRawGameNightTeamsForUser(gameNightId, userId);
-  return getGameNightForUser(gameNightId, userId);
+  return hydrateGameNightAutoLayout(await getGameNightForUser(gameNightId, userId));
 }
 
 export async function assignGameNightPlayerToTeamForUser(
@@ -63,5 +88,5 @@ export async function assignGameNightPlayerToTeamForUser(
     teamId,
     userId,
   );
-  return getGameNightForUser(gameNightId, userId);
+  return hydrateGameNightAutoLayout(await getGameNightForUser(gameNightId, userId));
 }
