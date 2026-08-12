@@ -44,9 +44,12 @@ export {
   getLeagueMatchForUser,
   LeagueMatchStateError,
   startLeagueMatchForUser,
-  submitLeagueMatchTurnForUser,
   undoLastLeagueMatchTurnForUser,
 } from "./leagueMatches";
+export {
+  submitBoardDeviceTurnForCredential,
+  submitLeagueMatchTurnForUser,
+} from "./dummyLeagueScoring";
 export {
   authenticateBoardDeviceCredential,
   BoardDeviceAssignmentError,
@@ -58,7 +61,6 @@ export {
   registerBoardDeviceForUser,
   rotateBoardDeviceKeyForUser,
   startBoardDeviceMatchForCredential,
-  submitBoardDeviceTurnForCredential,
   undoBoardDeviceTurnForCredential,
   updateBoardDeviceForUser,
 } from "./boardDevices";
