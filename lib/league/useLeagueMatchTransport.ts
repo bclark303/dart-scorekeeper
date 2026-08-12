@@ -210,9 +210,11 @@ export function useLeagueMatchTransport(input: {
       }
 
       let local = await getBoardOfflineMatch(input.deviceId, input.matchId);
-      if (local?.conflict?.kind === "conflict" && !forceConflictRetry) {
+      if (local?.conflict && !forceConflictRetry) {
         setRecord(local);
-        setConnectionState("conflict");
+        setConnectionState(
+          local.conflict.kind === "credential" ? "credential" : "conflict",
+        );
         return;
       }
       if (forceConflictRetry && local?.conflict) {
