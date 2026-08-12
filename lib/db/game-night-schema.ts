@@ -42,7 +42,7 @@ export const gameNightSettings = sqliteTable("game_night_settings", {
   pairingStrategy: text("pairing_strategy").notNull().default("random"),
   roundAdvanceMode: text("round_advance_mode").notNull().default("manual"),
   roundAdvanceDelaySeconds: integer("round_advance_delay_seconds").notNull().default(60),
-  intermissionAfterRounds: text("intermission_after_rounds").notNull().default("[]"),
+  intermissionAfterRoundsJson: text("intermission_after_rounds").notNull().default("[]"),
   intermissionDurationMinutes: integer("intermission_duration_minutes").notNull().default(10),
   legsPerMatch: integer("legs_per_match").notNull(),
   startingScore: integer("starting_score").notNull(),
