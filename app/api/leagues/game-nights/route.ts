@@ -16,6 +16,7 @@ import {
   type GameNightDuesStatus,
   type GameNightSettingsSummary,
 } from "@/lib/league/gameNightContracts";
+import { isSupportedBestOfLegs } from "@/lib/league/matchFormat";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -66,9 +67,7 @@ function validSettings(settings: GameNightSettingsSummary) {
     settings.boardCount >= 1 &&
     settings.boardCount <= 32 &&
     ["fixed", "rotate", "manual"].includes(settings.boardRotationType) &&
-    Number.isInteger(settings.legsPerMatch) &&
-    settings.legsPerMatch >= 1 &&
-    settings.legsPerMatch <= 99 &&
+    isSupportedBestOfLegs(settings.legsPerMatch) &&
     [301, 501, 701].includes(settings.startingScore) &&
     ["straight", "double"].includes(settings.finishRule)
   );
@@ -126,7 +125,7 @@ export async function POST(request: Request) {
   }
   const settings: GameNightSettingsSummary = { ...DEFAULT_GAME_NIGHT_SETTINGS, ...input.settings };
   if (!validSettings(settings)) {
-    return noStoreJson({ error: "Game-night team/board settings are invalid." }, { status: 400 });
+    return noStoreJson({ error: "Game-night rules are invalid." }, { status: 400 });
   }
 
   try {
