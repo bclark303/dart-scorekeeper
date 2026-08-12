@@ -4,6 +4,7 @@ import {
   addLeaguePlayerToSeasonForUser,
   authenticateBoardDeviceCredential,
   BoardDeviceCredentialError,
+  LeagueMatchStateError,
   createGameNightForUser,
   createLeagueForUser,
   createLeaguePlayerForUser,
@@ -21,6 +22,7 @@ import {
   updateGameNightAttendanceForUser,
 } from "@/lib/db";
 import { DEFAULT_GAME_NIGHT_SETTINGS } from "@/lib/league/gameNightContracts";
+import { expectedStateForLeagueMatch } from "@/lib/league/offlineMatchReplica";
 
 async function run() {
   const suffix = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -158,6 +160,7 @@ async function run() {
     matchId,
   );
   assert.equal(match.status, "active");
+  const expectedBeforeFirstTurn = expectedStateForLeagueMatch(match);
 
   const turnId = `device-turn-${suffix}`;
   match = await submitBoardDeviceTurnForCredential({
@@ -166,6 +169,7 @@ async function run() {
     turnId,
     scoreEntered: 60,
     dartsThrown: 3,
+    expectedState: expectedBeforeFirstTurn,
     darts: [
       {
         id: `device-dart-1-${suffix}`,
@@ -204,6 +208,7 @@ async function run() {
     turnId,
     scoreEntered: 60,
     dartsThrown: 3,
+    expectedState: expectedBeforeFirstTurn,
     darts: [
       {
         id: `device-dart-1-${suffix}`,
@@ -229,6 +234,22 @@ async function run() {
     match.turns.length,
     1,
     "Retrying the same device turn ID must be idempotent.",
+  );
+
+  await assert.rejects(
+    () =>
+      submitBoardDeviceTurnForCredential({
+        deviceKey: registered.deviceKey,
+        matchId,
+        turnId: `device-stale-turn-${suffix}`,
+        scoreEntered: 45,
+        dartsThrown: 3,
+        expectedState: expectedBeforeFirstTurn,
+      }),
+    (error: unknown) =>
+      error instanceof LeagueMatchStateError &&
+      /Offline sync conflict/.test(error.message),
+    "A new turn carrying stale local state must stop instead of being credited to the server's new thrower.",
   );
 
   match = await undoBoardDeviceTurnForCredential(

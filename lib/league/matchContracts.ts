@@ -78,6 +78,20 @@ export type LeagueMatchResponse = {
   error?: string;
 };
 
+/**
+ * Optimistic concurrency fingerprint captured before a board queues a score.
+ * Turn IDs remain the idempotency key; this fingerprint prevents a valid but
+ * stale queued turn from being applied to a different server-side thrower.
+ */
+export type LeagueMatchExpectedState = {
+  activeTurnCount: number;
+  lastTurnId: string | null;
+  currentLegNumber: number;
+  currentTeamId: string;
+  currentMemberId: string;
+  scoreBefore: number;
+};
+
 export type StartLeagueMatchRequest = {
   action: "start";
   matchId: string;
@@ -91,7 +105,10 @@ export type ScoreLeagueMatchTurnRequest = {
   dartsThrown: 1 | 2 | 3;
   checkoutConfirmed?: boolean;
   darts?: LeagueMatchDartInput[];
+  expectedState?: LeagueMatchExpectedState;
 };
+
+export type LeagueMatchScoreRequest = ScoreLeagueMatchTurnRequest;
 
 export type UndoLeagueMatchTurnRequest = {
   action: "undo";

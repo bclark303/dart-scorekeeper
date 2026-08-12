@@ -2,6 +2,7 @@ import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 
 import type {
   LeagueMatchDartInput,
+  LeagueMatchExpectedState,
   LeagueMatchFinishRule,
   LeagueMatchMemberSummary,
   LeagueMatchStatus,
@@ -475,6 +476,7 @@ export async function submitLeagueMatchTurnAfterAuthorization(input: {
   dartsThrown: 1 | 2 | 3;
   checkoutConfirmed?: boolean;
   darts?: LeagueMatchDartInput[];
+  expectedState?: LeagueMatchExpectedState;
 }): Promise<LeagueMatchSummary> {
   const context = await getMatchContext(input.matchId);
 
@@ -537,6 +539,27 @@ export async function submitLeagueMatchTurnAfterAuthorization(input: {
     state.currentTeamId === teamA.id
       ? state.teamAScore
       : state.teamBScore;
+
+  if (input.expectedState) {
+    const activeTurns = turns.filter((turn) => turn.voidedAt === null);
+    const lastActiveTurnId = activeTurns.length
+      ? activeTurns[activeTurns.length - 1].id
+      : null;
+    const expected = input.expectedState;
+    const stateChanged =
+      expected.activeTurnCount !== activeTurns.length ||
+      expected.lastTurnId !== lastActiveTurnId ||
+      expected.currentLegNumber !== state.currentLegNumber ||
+      expected.currentTeamId !== state.currentTeamId ||
+      expected.currentMemberId !== state.currentMemberId ||
+      expected.scoreBefore !== scoreBefore;
+
+    if (stateChanged) {
+      throw new LeagueMatchStateError(
+        "Offline sync conflict: central match state changed before this queued turn could be applied.",
+      );
+    }
+  }
 
   let evaluation;
   try {
@@ -649,6 +672,7 @@ export async function submitLeagueMatchTurnForUser(input: {
   dartsThrown: 1 | 2 | 3;
   checkoutConfirmed?: boolean;
   darts?: LeagueMatchDartInput[];
+  expectedState?: LeagueMatchExpectedState;
 }): Promise<LeagueMatchSummary> {
   const context = await getMatchContext(input.matchId);
   await requireLeagueAdmin(context.leagueId, input.userId);
@@ -660,6 +684,7 @@ export async function submitLeagueMatchTurnForUser(input: {
     dartsThrown: input.dartsThrown,
     checkoutConfirmed: input.checkoutConfirmed,
     darts: input.darts,
+    expectedState: input.expectedState,
   });
 }
 

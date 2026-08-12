@@ -96,6 +96,9 @@ jobs:
       - name: Exercise board device connector contract
         run: npm run board-device:test
 
+      - name: Exercise board offline queue contract
+        run: npm run board-device:offline:test
+
       - name: Exercise board device pairing contract
         run: npm run board-device:pairing:test
 

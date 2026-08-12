@@ -26,25 +26,35 @@ function getDeviceKey(request: Request) {
 }
 
 function credentialFailure() {
-  return noStoreJson({ error: "A valid board device key is required." }, { status: 401 });
+  return noStoreJson(
+    { error: "A valid board device key is required.", errorCode: "device_credential" },
+    { status: 401 },
+  );
 }
 
 function errorResponse(error: unknown) {
   if (error instanceof BoardDeviceCredentialError) {
     return noStoreJson(
-      { error: error.message },
+      { error: error.message, errorCode: "device_credential" },
       { status: error.reason === "disabled" ? 403 : 401 },
     );
   }
   if (error instanceof BoardDeviceAssignmentError) {
-    return noStoreJson({ error: error.message }, { status: 403 });
+    return noStoreJson(
+      { error: error.message, errorCode: "assignment_conflict" },
+      { status: 403 },
+    );
   }
   if (error instanceof LeagueMatchStateError) {
-    return noStoreJson({ error: error.message }, { status: 409 });
+    return noStoreJson(
+      { error: error.message, errorCode: "match_state_conflict" },
+      { status: 409 },
+    );
   }
-  const message = error instanceof Error ? error.message : "Board device service is unavailable.";
+  const message =
+    error instanceof Error ? error.message : "Board device service is unavailable.";
   console.error("Board device request failed.", error);
-  return noStoreJson({ error: message }, { status: 400 });
+  return noStoreJson({ error: message, errorCode: "board_service_error" }, { status: 400 });
 }
 
 export async function GET(request: Request) {
@@ -70,16 +80,28 @@ export async function POST(request: Request) {
   try {
     input = (await request.json()) as LeagueMatchMutationRequest;
   } catch {
-    return noStoreJson({ error: "Invalid board device match request." }, { status: 400 });
+    return noStoreJson(
+      { error: "Invalid board device match request.", errorCode: "invalid_request" },
+      { status: 400 },
+    );
   }
-  if (!input.matchId) return noStoreJson({ error: "matchId is required." }, { status: 400 });
+  if (!input.matchId) {
+    return noStoreJson(
+      { error: "matchId is required.", errorCode: "invalid_request" },
+      { status: 400 },
+    );
+  }
 
   try {
     if (input.action === "start") {
-      return noStoreJson({ match: await startBoardDeviceMatchForCredential(deviceKey, input.matchId) });
+      return noStoreJson({
+        match: await startBoardDeviceMatchForCredential(deviceKey, input.matchId),
+      });
     }
     if (input.action === "undo") {
-      return noStoreJson({ match: await undoBoardDeviceTurnForCredential(deviceKey, input.matchId) });
+      return noStoreJson({
+        match: await undoBoardDeviceTurnForCredential(deviceKey, input.matchId),
+      });
     }
     if (input.action === "score") {
       if (
@@ -90,7 +112,10 @@ export async function POST(request: Request) {
         ![1, 2, 3].includes(input.dartsThrown)
       ) {
         return noStoreJson(
-          { error: "A turn ID, score from 0-180, and 1-3 darts are required." },
+          {
+            error: "A turn ID, score from 0-180, and 1-3 darts are required.",
+            errorCode: "invalid_request",
+          },
           { status: 400 },
         );
       }
@@ -103,10 +128,14 @@ export async function POST(request: Request) {
           dartsThrown: input.dartsThrown,
           checkoutConfirmed: input.checkoutConfirmed,
           darts: input.darts,
+          expectedState: input.expectedState,
         }),
       });
     }
-    return noStoreJson({ error: "Unknown board device match action." }, { status: 400 });
+    return noStoreJson(
+      { error: "Unknown board device match action.", errorCode: "invalid_request" },
+      { status: 400 },
+    );
   } catch (error) {
     return errorResponse(error);
   }

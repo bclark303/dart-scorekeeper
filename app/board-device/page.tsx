@@ -4,11 +4,19 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { LeagueMatchScorer } from "@/components/LeagueMatchScorer";
 import type { BoardDeviceConnectionResponse } from "@/lib/league/boardDeviceContracts";
+import { countPendingBoardMutationsForDevice, getRecoverableBoardOfflineMatchForDevice } from "@/lib/persistence/boardMatchQueueStore";
 
 const STORAGE_KEY = "dart-scorekeeper:board-device-key";
 const MODE_KEY = "dart-scorekeeper:board-device-mode";
 
 type DeviceMode = "league" | "casual";
+
+function deviceIdFromKey(value: string) {
+  if (!value.startsWith("dsk_")) return null;
+  const separator = value.indexOf(".", 4);
+  if (separator <= 4) return null;
+  return value.slice(4, separator) || null;
+}
 
 export default function BoardDevicePage() {
   const [deviceKey, setDeviceKey] = useState("");
@@ -18,14 +26,24 @@ export default function BoardDevicePage() {
   const [initialized, setInitialized] = useState(false);
   const [connection, setConnection] =
     useState<BoardDeviceConnectionResponse | null>(null);
+  const [offlineMatchId, setOfflineMatchId] = useState("");
   const [loading, setLoading] = useState(false);
   const [pairing, setPairing] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
   const saveDeviceKey = useCallback((value: string) => {
+    const previousKey = window.localStorage.getItem(STORAGE_KEY) ?? "";
+    const sameRegisteredDevice =
+      deviceIdFromKey(previousKey) &&
+      deviceIdFromKey(previousKey) === deviceIdFromKey(value);
     window.localStorage.setItem(STORAGE_KEY, value);
     setDeviceKey(value);
     setConnection(null);
+    // Re-pairing/rotating credentials for the same registered board must not
+    // detach it from its durable offline match queue. A different device key
+    // can safely clear only the in-memory recovery pointer; the old queue stays
+    // persisted under the old device ID.
+    if (!sameRegisteredDevice) setOfflineMatchId("");
     setErrorMessage("");
   }, []);
 
@@ -81,9 +99,15 @@ export default function BoardDevicePage() {
       setLegacyKeyDraft(savedKey);
       setMode(savedMode);
       setInitialized(true);
+      const savedDeviceId = deviceIdFromKey(savedKey);
+      if (savedDeviceId) {
+        void getRecoverableBoardOfflineMatchForDevice(savedDeviceId).then((record) => {
+          if (record) setOfflineMatchId(record.matchId);
+        });
+      }
 
       const hashMatch = window.location.hash.match(/pair=(\d{6})/);
-      if (!savedKey && hashMatch?.[1]) {
+      if (hashMatch?.[1]) {
         setPairCode(hashMatch[1]);
         void claimPairingCode(hashMatch[1]);
       }
@@ -104,6 +128,9 @@ export default function BoardDevicePage() {
         throw new Error(result.error ?? "Could not connect this board device.");
       }
       setConnection(result);
+      if (result.assignment?.matchSessionId) {
+        setOfflineMatchId(result.assignment.matchSessionId);
+      }
       setErrorMessage("");
       if (
         result.assignment?.matchSessionId &&
@@ -113,7 +140,8 @@ export default function BoardDevicePage() {
         window.localStorage.setItem(MODE_KEY, "league");
       }
     } catch (error) {
-      setConnection(null);
+      // Keep the last successful assignment mounted. The scorer itself owns
+      // offline/reconnect behavior and must not be ejected by a failed parent poll.
       setErrorMessage(
         error instanceof Error
           ? error.message
@@ -146,12 +174,21 @@ export default function BoardDevicePage() {
     saveDeviceKey(value);
   }
 
-  function forgetRegistration() {
+  async function forgetRegistration() {
+    const registeredDeviceId = deviceIdFromKey(deviceKey);
+    if (registeredDeviceId) {
+      const pending = await countPendingBoardMutationsForDevice(registeredDeviceId);
+      if (pending > 0) {
+        setErrorMessage(`Cannot forget this device while ${pending} queued board update${pending === 1 ? " is" : "s are"} waiting to sync. Re-pair the same registered device instead so the queue is preserved.`);
+        return;
+      }
+    }
     window.localStorage.removeItem(STORAGE_KEY);
     window.localStorage.removeItem(MODE_KEY);
     setDeviceKey("");
     setLegacyKeyDraft("");
     setConnection(null);
+    setOfflineMatchId("");
     setErrorMessage("");
     setMode("league");
   }
@@ -238,20 +275,22 @@ export default function BoardDevicePage() {
     );
   }
 
+  const registeredDeviceId = deviceIdFromKey(deviceKey);
+  const liveMatchId = connection?.assignment?.matchSessionId ?? null;
+  const recoverableMatchId = liveMatchId ?? (offlineMatchId || null);
   const activeLeagueAssignment =
-    connection?.assignment?.matchSessionId &&
-    connection.assignment.gameNightStatus === "active";
-
+    liveMatchId && connection?.assignment?.gameNightStatus === "active";
   const openLeagueAssignment =
-    connection?.assignment?.matchSessionId &&
-    (mode === "league" || activeLeagueAssignment);
+    recoverableMatchId &&
+    (mode === "league" || activeLeagueAssignment || Boolean(offlineMatchId));
 
-  if (openLeagueAssignment && connection?.assignment?.matchSessionId) {
+  if (openLeagueAssignment && recoverableMatchId && registeredDeviceId) {
     return (
       <LeagueMatchScorer
-        matchId={connection.assignment.matchSessionId}
+        matchId={recoverableMatchId}
         authMode="device"
         deviceKey={deviceKey}
+        deviceId={registeredDeviceId}
         backHref="/board-device"
         backLabel="← Device Home"
       />
@@ -287,7 +326,7 @@ export default function BoardDevicePage() {
             </button>
             <button
               type="button"
-              onClick={forgetRegistration}
+              onClick={() => void forgetRegistration()}
               className="rounded-xl border border-[var(--color-panel-border)] px-4 py-2 text-sm font-bold"
             >
               Forget Device

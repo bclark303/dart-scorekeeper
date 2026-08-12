@@ -1,8 +1,10 @@
 import type { X01MatchArchive } from "./contracts";
-
-const LOCAL_PERSISTENCE_DATABASE = "dart-scorekeeper-local";
-const LOCAL_PERSISTENCE_VERSION = 1;
-const MATCH_ARCHIVE_STORE = "matchArchives";
+import {
+  MATCH_ARCHIVE_STORE,
+  openLocalPersistenceDatabase,
+  requestAsPromise,
+  transactionAsPromise,
+} from "./localDatabase";
 
 export const LOCAL_ARCHIVE_CHANGED_EVENT =
   "dart-scorekeeper-local-archive-changed";
@@ -25,60 +27,6 @@ function notifyArchiveChanged() {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event(LOCAL_ARCHIVE_CHANGED_EVENT));
   }
-}
-
-function assertIndexedDbAvailable() {
-  if (typeof indexedDB === "undefined") {
-    throw new Error("IndexedDB is not available in this environment.");
-  }
-}
-
-function openLocalPersistenceDatabase(): Promise<IDBDatabase> {
-  assertIndexedDbAvailable();
-
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(
-      LOCAL_PERSISTENCE_DATABASE,
-      LOCAL_PERSISTENCE_VERSION,
-    );
-
-    request.onupgradeneeded = () => {
-      const database = request.result;
-
-      if (!database.objectStoreNames.contains(MATCH_ARCHIVE_STORE)) {
-        const store = database.createObjectStore(MATCH_ARCHIVE_STORE, {
-          keyPath: "id",
-        });
-
-        store.createIndex("syncStatus", "syncStatus", { unique: false });
-        store.createIndex("queuedAt", "queuedAt", { unique: false });
-      }
-    };
-
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () =>
-      reject(request.error ?? new Error("Could not open local persistence DB."));
-    request.onblocked = () =>
-      reject(new Error("Local persistence DB upgrade was blocked."));
-  });
-}
-
-function requestAsPromise<T>(request: IDBRequest<T>): Promise<T> {
-  return new Promise((resolve, reject) => {
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () =>
-      reject(request.error ?? new Error("IndexedDB request failed."));
-  });
-}
-
-function transactionAsPromise(transaction: IDBTransaction): Promise<void> {
-  return new Promise((resolve, reject) => {
-    transaction.oncomplete = () => resolve();
-    transaction.onerror = () =>
-      reject(transaction.error ?? new Error("IndexedDB transaction failed."));
-    transaction.onabort = () =>
-      reject(transaction.error ?? new Error("IndexedDB transaction aborted."));
-  });
 }
 
 async function readArchiveRecord(

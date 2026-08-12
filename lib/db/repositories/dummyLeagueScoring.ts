@@ -1,4 +1,8 @@
-import type { LeagueMatchDartInput, LeagueMatchSummary } from "@/lib/league/matchContracts";
+import type {
+  LeagueMatchDartInput,
+  LeagueMatchExpectedState,
+  LeagueMatchSummary,
+} from "@/lib/league/matchContracts";
 import { calculateConfiguredDummyTurn } from "@/lib/league/dummyScoring";
 
 import { BoardDeviceAssignmentError } from "./boardDevices";
@@ -17,6 +21,7 @@ type LeagueTurnSubmission = {
   dartsThrown: 1 | 2 | 3;
   checkoutConfirmed?: boolean;
   darts?: LeagueMatchDartInput[];
+  expectedState?: LeagueMatchExpectedState;
 };
 
 function normalizeDummySubmission(
@@ -76,9 +81,9 @@ async function prepareFollowingRound(updated: LeagueMatchSummary) {
   return updated;
 }
 
-export async function submitLeagueMatchTurnForUser(input: LeagueTurnSubmission & {
-  userId: string;
-}): Promise<LeagueMatchSummary> {
+export async function submitLeagueMatchTurnForUser(
+  input: LeagueTurnSubmission & { userId: string },
+): Promise<LeagueMatchSummary> {
   const match = await getLeagueMatchForUser(input.matchId, input.userId);
   const normalized = normalizeDummySubmission(match, input);
 
@@ -89,9 +94,9 @@ export async function submitLeagueMatchTurnForUser(input: LeagueTurnSubmission &
   return prepareFollowingRound(updated);
 }
 
-export async function submitBoardDeviceTurnForCredential(input: LeagueTurnSubmission & {
-  deviceKey: string;
-}): Promise<LeagueMatchSummary> {
+export async function submitBoardDeviceTurnForCredential(
+  input: LeagueTurnSubmission & { deviceKey: string },
+): Promise<LeagueMatchSummary> {
   const connection = await getBoardDeviceConnectionForCredential(input.deviceKey);
   if (!connection.assignment?.matchSessionId) {
     throw new BoardDeviceAssignmentError(

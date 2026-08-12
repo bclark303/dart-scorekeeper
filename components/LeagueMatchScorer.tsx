@@ -1,16 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 
 import { DartEntry } from "@/components/DartEntry";
 import { authClient } from "@/lib/auth/client";
 import { calculateConfiguredDummyTurn } from "@/lib/league/dummyScoring";
-import type {
-  LeagueMatchMutationRequest,
-  LeagueMatchResponse,
-  LeagueMatchSummary,
-} from "@/lib/league/matchContracts";
+import { useLeagueMatchTransport } from "@/lib/league/useLeagueMatchTransport";
+import type { LeagueMatchMutationRequest } from "@/lib/league/matchContracts";
 import { validateTurnScore, type DartThrow, type Turn } from "@/lib/scoring";
 
 type CentralInputMode = "graphical" | "total";
@@ -30,6 +27,7 @@ type LeagueMatchScorerProps = {
   matchId: string;
   authMode?: "account" | "device";
   deviceKey?: string;
+  deviceId?: string;
   backHref?: string;
   backLabel?: string;
 };
@@ -38,53 +36,40 @@ export function LeagueMatchScorer({
   matchId,
   authMode = "account",
   deviceKey,
+  deviceId,
   backHref = "/game-nights",
   backLabel = "← Back to Game Nights",
 }: LeagueMatchScorerProps) {
   const { data: session, isPending: sessionPending } = authClient.useSession();
   const deviceMode = authMode === "device";
   const accessReady = deviceMode ? Boolean(deviceKey) : Boolean(session?.user);
-  const apiUrl = deviceMode ? "/api/board-device" : "/api/league-matches";
-  const [match, setMatch] = useState<LeagueMatchSummary | null>(null);
-  const [inputMode, setInputMode] = useState<CentralInputMode>(() => authMode === "device" ? "graphical" : "total");
+  const [inputMode, setInputMode] = useState<CentralInputMode>(() =>
+    authMode === "device" ? "graphical" : "total",
+  );
   const [scoreInput, setScoreInput] = useState("");
   const [dartsThrown, setDartsThrown] = useState<1 | 2 | 3>(3);
   const [pendingCheckout, setPendingCheckout] = useState<PendingCheckout | null>(null);
-  const [working, setWorking] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
-
-  const loadMatch = useCallback(async () => {
-    if (!matchId) return;
-    setLoading(true);
-    try {
-      const response = await fetch(`${apiUrl}?matchId=${encodeURIComponent(matchId)}`, {
-        cache: "no-store",
-        headers: deviceMode && deviceKey ? { Authorization: `Bearer ${deviceKey}` } : undefined,
-      });
-      const result = (await response.json()) as LeagueMatchResponse;
-      if (!response.ok || !result.match) {
-        throw new Error(result.error ?? "Could not load the board match.");
-      }
-      setMatch(result.match);
-      setErrorMessage("");
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Could not load the board match.");
-    } finally {
-      setLoading(false);
-    }
-  }, [apiUrl, deviceKey, deviceMode, matchId]);
-
-  useEffect(() => {
-    if (!accessReady) return;
-    const timeoutId = window.setTimeout(() => void loadMatch(), 0);
-    const intervalId = window.setInterval(() => void loadMatch(), 5000);
-    return () => {
-      window.clearTimeout(timeoutId);
-      window.clearInterval(intervalId);
-    };
-  }, [accessReady, loadMatch]);
+  const {
+    match,
+    loading,
+    working,
+    errorMessage: transportErrorMessage,
+    connectionState,
+    queue,
+    syncProgress,
+    refresh: loadMatch,
+    mutate: transportMutate,
+    retrySync,
+  } = useLeagueMatchTransport({
+    matchId,
+    authMode,
+    deviceKey,
+    deviceId,
+    accessReady,
+  });
+  const combinedErrorMessage = errorMessage || transportErrorMessage;
 
   const currentTeam = useMemo(() => {
     if (!match?.currentTeamId) return null;
@@ -152,31 +137,12 @@ export function LeagueMatchScorer({
   }, [match]);
 
   async function mutate(body: LeagueMatchMutationRequest, message?: string) {
-    setWorking(true);
     setErrorMessage("");
     setStatusMessage("");
-    try {
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(deviceMode && deviceKey ? { Authorization: `Bearer ${deviceKey}` } : {}),
-        },
-        body: JSON.stringify(body),
-      });
-      const result = (await response.json()) as LeagueMatchResponse;
-      if (!response.ok || !result.match) {
-        throw new Error(result.error ?? "League match update failed.");
-      }
-      setMatch(result.match);
-      if (message) setStatusMessage(message);
-      return result.match;
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "League match update failed.");
-      return null;
-    } finally {
-      setWorking(false);
-    }
+    const updated = await transportMutate(body);
+    if (!updated) return null;
+    if (message) setStatusMessage(message);
+    return updated;
   }
 
   async function sendScore(
@@ -268,14 +234,45 @@ export function LeagueMatchScorer({
   if (!match) {
     return (
       <main className="mx-auto max-w-5xl p-6">
-        <Link href={backHref} className="text-sm font-semibold text-[var(--color-primary)]">{backLabel}</Link>
+        <Link
+            href={backHref}
+            onClick={(event) => {
+              if (deviceMode && queue.length) {
+                event.preventDefault();
+                setStatusMessage(`${queue.length} board update${queue.length === 1 ? " is" : "s are"} still waiting to sync. Stay on this match until the queue is clear.`);
+              }
+            }}
+            className="text-sm font-semibold text-[var(--color-primary)]"
+          >
+            {backLabel}
+          </Link>
         <section className="mt-6 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-6">
           <h1 className="text-3xl font-bold">League Board Scorer</h1>
-          <p className="mt-2 text-[var(--color-text-muted)]">{loading ? "Loading board assignment…" : errorMessage || "Match not found."}</p>
+          <p className="mt-2 text-[var(--color-text-muted)]">{loading ? "Loading board assignment…" : combinedErrorMessage || "Match not found."}</p>
         </section>
       </main>
     );
   }
+
+  const queuedScoreCount = queue.filter((item) => item.action === "score").length;
+  const queuedOfflineLabel =
+    queuedScoreCount > 0
+      ? `${queuedScoreCount} turn${queuedScoreCount === 1 ? "" : "s"} queued`
+      : queue.length > 0
+        ? `${queue.length} update${queue.length === 1 ? "" : "s"} queued`
+        : "no turns queued";
+  const connectionLabel =
+    connectionState === "offline"
+      ? `OFFLINE · ${queuedOfflineLabel}`
+      : connectionState === "syncing"
+        ? syncProgress
+          ? `SYNCING ${syncProgress.completed}/${syncProgress.total}`
+          : "SYNCING"
+        : connectionState === "conflict"
+          ? "SYNC CONFLICT"
+          : connectionState === "credential"
+            ? "REGISTRATION REQUIRED"
+            : "ONLINE";
 
   const winner =
     match.winnerTeamId === match.teamA.id
@@ -288,7 +285,18 @@ export function LeagueMatchScorer({
     <main className="mx-auto max-w-6xl p-4 sm:p-6">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <Link href={backHref} className="text-sm font-semibold text-[var(--color-primary)]">{backLabel}</Link>
+          <Link
+            href={backHref}
+            onClick={(event) => {
+              if (deviceMode && queue.length) {
+                event.preventDefault();
+                setStatusMessage(`${queue.length} board update${queue.length === 1 ? " is" : "s are"} still waiting to sync. Stay on this match until the queue is clear.`);
+              }
+            }}
+            className="text-sm font-semibold text-[var(--color-primary)]"
+          >
+            {backLabel}
+          </Link>
           <div className="mt-2 text-sm uppercase tracking-wide text-[var(--color-text-muted)]">
             {match.gameNightName} · {match.seasonName}
           </div>
@@ -297,7 +305,20 @@ export function LeagueMatchScorer({
             {match.startingScore} · {match.finishRule === "double" ? "Double out" : "Straight out"} · Best of {match.legsPerMatch}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {deviceMode && (
+            <span
+              className={`rounded-full border px-3 py-1 text-xs font-bold uppercase ${
+                connectionState === "conflict" || connectionState === "credential"
+                  ? "border-red-500/50 text-red-200"
+                  : connectionState === "offline"
+                    ? "border-amber-500/50 text-amber-200"
+                    : "border-emerald-500/50 text-emerald-200"
+              }`}
+            >
+              {connectionLabel}
+            </span>
+          )}
           <span className="rounded-full border border-[var(--color-panel-border)] px-3 py-1 text-xs font-bold uppercase">
             {statusLabel(match.status)}
           </span>
@@ -307,8 +328,61 @@ export function LeagueMatchScorer({
         </div>
       </div>
 
-      {errorMessage && <div className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-100">{errorMessage}</div>}
+      {combinedErrorMessage && <div className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-100">{combinedErrorMessage}</div>}
       {statusMessage && <div className="mb-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-sm text-emerald-100">{statusMessage}</div>}
+
+      {deviceMode && (queue.length > 0 || connectionState === "conflict" || connectionState === "credential") && (
+        <section className="mb-5 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="font-bold">Queued Board Updates</h2>
+              <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+                These updates are stored on this device until the central Game Night confirms them.
+              </p>
+            </div>
+            {(connectionState === "conflict" || connectionState === "credential" || connectionState === "offline") && (
+              <button
+                type="button"
+                disabled={working}
+                onClick={() => void retrySync()}
+                className="rounded-xl border border-[var(--color-panel-border)] px-3 py-2 text-sm font-bold disabled:opacity-50"
+              >
+                Retry Sync
+              </button>
+            )}
+          </div>
+          {connectionState === "conflict" && (
+            <p className="mt-3 rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-100">
+              Central history no longer matches the queued history on this board. Automatic replay is stopped. Have the coordinator resolve the match state, then choose Retry Sync.
+            </p>
+          )}
+          {connectionState === "credential" && (
+            <p className="mt-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-100">
+              The queued turns are safe. Repair or re-pair this registered board, then retry synchronization.
+            </p>
+          )}
+          {queue.length > 0 && (
+            <div className="mt-3 space-y-2">
+              {queue.map((item, index) => (
+                <div key={item.id} className="rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-3 text-sm">
+                  {item.action === "start" ? (
+                    <span className="font-bold">Start board match</span>
+                  ) : (
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <span className="font-bold">{item.displayName}</span>
+                        <span className="text-[var(--color-text-muted)]"> · {item.teamName} · Leg {item.legNumber}</span>
+                      </div>
+                      <span className="font-bold tabular-nums">{item.request.scoreEntered} · {item.request.dartsThrown} darts</span>
+                    </div>
+                  )}
+                  <div className="mt-1 text-xs text-[var(--color-text-muted)]">Queue position {index + 1} of {queue.length}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {match.status === "scheduled" && (
         <section className="mb-5 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
@@ -395,7 +469,7 @@ export function LeagueMatchScorer({
                 fullscreenScoreCards={graphicalScoreCards}
                 lastTurn={graphicalLastTurn}
                 submitDartTurn={submitGraphicalTurn}
-                undoLastTurn={() => void mutate({ action: "undo", matchId }, "Last turn undone. Match state recalculated from central history.")}
+                undoLastTurn={() => void mutate({ action: "undo", matchId }, "Last turn undone. Local queued history or central history was recalculated safely.")}
                 startNextLeg={() => undefined}
                 replayMatch={() => undefined}
                 newGameSetup={() => undefined}
