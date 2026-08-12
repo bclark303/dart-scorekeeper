@@ -2,11 +2,11 @@ import { getRequestSession } from "@/lib/auth/server";
 import {
   assignGameNightPlayerToTeamForUser,
   createGameNightForUser,
-  getGameNightForUser,
   LeaguePermissionError,
   listGameNightsForUser,
   populateGameNightBoardsForUser,
   prepareGameNightTeamsForUser,
+  refreshGameNightForUser,
   regenerateGameNightRoundForUser,
   replaceGameNightRoundFixturesForUser,
   setGameNightStatusForUser,
@@ -115,7 +115,7 @@ export async function GET(request: Request) {
   const leagueId = url.searchParams.get("leagueId");
   try {
     if (gameNightId) {
-      return noStoreJson({ gameNight: await getGameNightForUser(gameNightId, authState.user.id) });
+      return noStoreJson({ gameNight: await refreshGameNightForUser(gameNightId, authState.user.id) });
     }
     if (!leagueId) return noStoreJson({ error: "leagueId is required." }, { status: 400 });
     return noStoreJson({ gameNights: await listGameNightsForUser(leagueId, authState.user.id) });
