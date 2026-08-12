@@ -4,13 +4,14 @@ on:
   push:
     branches:
       - main
+      - internal/dummy-balance-night-schedule
   pull_request:
     branches:
       - main
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   verify:
@@ -32,6 +33,18 @@ jobs:
         with:
           node-version: 22
           cache: npm
+
+      - name: Apply dummy balance / schedule scratch edits
+        if: github.ref == 'refs/heads/internal/dummy-balance-night-schedule'
+        run: |
+          node scripts/apply-dummy-balance-schedule-scratch.mjs
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "Apply dummy balancing and full schedule UI [skip ci]"
+            git push
+          fi
 
       - name: Install locked dependencies
         run: npm ci
@@ -86,6 +99,9 @@ jobs:
 
       - name: Exercise dummy scoring rules contract
         run: npm run dummy-scoring:test
+
+      - name: Exercise dummy team balancing contract
+        run: npm run dummy-team-balance:test
 
       - name: Exercise central league match contract
         run: npm run league-match:test
