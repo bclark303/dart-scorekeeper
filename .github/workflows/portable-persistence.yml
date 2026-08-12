@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - internal/game-night-fixture-rotation
   pull_request:
     branches:
       - main
@@ -39,10 +40,18 @@ jobs:
       - name: Prepare local database directory
         run: mkdir -p data
 
+      - name: Generate Drizzle migration
+        run: npm run db:generate
+
+      - name: Upload generated Drizzle state on fixture scratch
+        if: github.ref_name == 'internal/game-night-fixture-rotation'
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-drizzle-fixture
+          path: drizzle/
+
       - name: Verify Drizzle migrations are committed
-        run: |
-          npm run db:generate
-          git diff --exit-code -- drizzle/
+        run: git diff --exit-code -- drizzle/
 
       - name: Apply migrations to local SQLite/libSQL
         run: npm run db:migrate
