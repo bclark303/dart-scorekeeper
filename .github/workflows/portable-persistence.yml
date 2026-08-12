@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   verify:
@@ -39,18 +39,6 @@ jobs:
 
       - name: Prepare local database directory
         run: mkdir -p data
-
-      - name: Generate and commit missing Drizzle state on layout scratch
-        if: github.ref_name == 'internal/team-board-auto-optimization' && github.event_name == 'push'
-        run: |
-          npm run db:generate
-          if [ -n "$(git status --porcelain -- drizzle/)" ]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add drizzle/
-            git commit -m "Commit generated automatic layout migration [skip ci]"
-            git push origin HEAD:${GITHUB_REF_NAME}
-          fi
 
       - name: Verify Drizzle migrations are committed
         run: |
