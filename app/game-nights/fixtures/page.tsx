@@ -88,16 +88,16 @@ export default function GameNightFixturesPage() {
         throw new Error(result.error ?? "Could not load Game Nights.");
       }
       setGameNights(result.gameNights);
-      setSelectedGameNightId((current) => {
-        if (current && result.gameNights!.some((night) => night.id === current)) {
-          return current;
-        }
-        return (
-          result.gameNights!.find((night) => night.status !== "completed")?.id ??
-          result.gameNights![0]?.id ??
-          ""
-        );
-      });
+      const first =
+        result.gameNights.find((night) => night.status !== "completed") ??
+        result.gameNights[0] ??
+        null;
+      setSelectedGameNightId(first?.id ?? "");
+      setSettingsDraft(
+        first
+          ? resolveGameNightSettings(first.settings)
+          : DEFAULT_GAME_NIGHT_SETTINGS,
+      );
       setErrorMessage("");
     } catch (error) {
       setErrorMessage(
@@ -142,11 +142,6 @@ export default function GameNightFixturesPage() {
     const timer = window.setTimeout(() => void loadNights(selectedLeagueId), 0);
     return () => window.clearTimeout(timer);
   }, [loadNights, selectedLeagueId]);
-
-  useEffect(() => {
-    if (!selectedNight) return;
-    setSettingsDraft(resolveGameNightSettings(selectedNight.settings));
-  }, [selectedNight]);
 
   useEffect(() => {
     if (selectedNight?.status !== "active") return;
@@ -253,6 +248,7 @@ export default function GameNightFixturesPage() {
             onChange={(event) => {
               setSelectedLeagueId(event.target.value);
               setSelectedGameNightId("");
+              setSettingsDraft(DEFAULT_GAME_NIGHT_SETTINGS);
             }}
             className="mt-2 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-3"
           >
@@ -268,7 +264,16 @@ export default function GameNightFixturesPage() {
           Game Night
           <select
             value={selectedGameNightId}
-            onChange={(event) => setSelectedGameNightId(event.target.value)}
+            onChange={(event) => {
+              const nextId = event.target.value;
+              setSelectedGameNightId(nextId);
+              const nextNight = gameNights.find((night) => night.id === nextId);
+              setSettingsDraft(
+                nextNight
+                  ? resolveGameNightSettings(nextNight.settings)
+                  : DEFAULT_GAME_NIGHT_SETTINGS,
+              );
+            }}
             className="mt-2 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-3"
           >
             <option value="">Select Game Night</option>
