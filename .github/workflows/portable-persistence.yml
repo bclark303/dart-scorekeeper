@@ -4,13 +4,14 @@ on:
   push:
     branches:
       - main
+      - internal/board-offline-queue
   pull_request:
     branches:
       - main
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   verify:
@@ -32,6 +33,17 @@ jobs:
         with:
           node-version: 22
           cache: npm
+
+      - name: Apply board offline cleanup fixes
+        run: |
+          node scripts/fix-board-offline-cleanup.mjs
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A ':!.github/workflows/portable-persistence.yml'
+          if ! git diff --cached --quiet; then
+            git commit -m "Clean up board offline recovery UI [skip ci]"
+            git push
+          fi
 
       - name: Install locked dependencies
         run: npm ci
