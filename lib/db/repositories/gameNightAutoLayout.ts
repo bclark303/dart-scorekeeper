@@ -9,7 +9,11 @@ import {
 } from "@/lib/league/gameNightContracts";
 import { optimizeGameNightLayout } from "@/lib/league/gameNightLayout";
 import { getDatabase } from "../client";
-import { gameNightSettings } from "../game-night-schema";
+import {
+  gameNightBoardPairings,
+  gameNightBoards,
+  gameNightSettings,
+} from "../game-night-schema";
 
 function asLayoutMode(value: string): GameNightLayoutMode {
   return value === "automatic" ? "automatic" : "manual";
@@ -59,6 +63,34 @@ export function optimizeSettingsForGameNight(
   return optimizeGameNightLayout(settings, checkedInPlayerCount).settings;
 }
 
+async function syncAutomaticBoards(
+  gameNight: GameNightSummary,
+  boardCount: number,
+  now: number,
+) {
+  if (gameNight.boards.length === boardCount) return;
+
+  // Setup-only lifecycle guards prevent this from running once play begins.
+  // Rebuilding board rows here keeps the coordinator UI aligned with an Auto
+  // board-count change immediately rather than waiting for Populate Boards.
+  await getDatabase()
+    .delete(gameNightBoardPairings)
+    .where(eq(gameNightBoardPairings.gameNightId, gameNight.id));
+  await getDatabase()
+    .delete(gameNightBoards)
+    .where(eq(gameNightBoards.gameNightId, gameNight.id));
+
+  await getDatabase().insert(gameNightBoards).values(
+    Array.from({ length: boardCount }, (_, index) => ({
+      id: crypto.randomUUID(),
+      gameNightId: gameNight.id,
+      boardNumber: index + 1,
+      name: `Board ${index + 1}`,
+      createdAt: now,
+    })),
+  );
+}
+
 export async function syncAutomaticGameNightLayout(
   gameNight: GameNightSummary,
 ): Promise<ResolvedGameNightSettings> {
@@ -81,6 +113,7 @@ export async function syncAutomaticGameNightLayout(
     modes.boardCountMode === "automatic";
 
   if (shouldPersist) {
+    const now = Date.now();
     await getDatabase()
       .update(gameNightSettings)
       .set({
@@ -91,9 +124,13 @@ export async function syncAutomaticGameNightLayout(
         maxTeamPlayers: optimized.maxTeamPlayers,
         boardCountMode: optimized.boardCountMode,
         boardCount: optimized.boardCount,
-        updatedAt: Date.now(),
+        updatedAt: now,
       })
       .where(eq(gameNightSettings.gameNightId, gameNight.id));
+
+    if (modes.boardCountMode === "automatic") {
+      await syncAutomaticBoards(gameNight, optimized.boardCount, now);
+    }
   }
 
   return optimized;
