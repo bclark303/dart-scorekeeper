@@ -78,7 +78,7 @@ function chooseAutomaticTeamCount(
       if (teamCount % 2 !== 0) score += 1.25;
 
       // Exact distributions are preferable to one oversized team.
-      if (sizes.unven) score += 0.55;
+      if (sizes.uneven) score += 0.55;
 
       // Automatic sizing targets small, practical darts teams (2-3 players)
       // and only expands outside that range when the checked-in count makes it
