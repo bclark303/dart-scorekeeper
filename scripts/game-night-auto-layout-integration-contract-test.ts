@@ -27,7 +27,7 @@ async function run() {
   });
 
   const leaguePlayerIds: string[] = [];
-  for (let index = 0; index < 10; index += 1) {
+  for (let index = 0; index < 12; index += 1) {
     const leaguePlayerId = `auto-layout-league-player-${index}-${suffix}`;
     leaguePlayerIds.push(leaguePlayerId);
     await createLeaguePlayerForUser({
@@ -85,21 +85,22 @@ async function run() {
   let gameNight = await getGameNightForUser(gameNightId, userId);
   assert.equal(
     gameNight.attendance.filter((player) => player.status === "checked_in").length,
-    10,
+    12,
   );
   assert.equal(gameNight.settings.teamCountMode, "automatic");
   assert.equal(gameNight.settings.teamSizeMode, "automatic");
   assert.equal(gameNight.settings.boardCountMode, "automatic");
-  assert.equal(gameNight.settings.targetTeamCount, 4);
+  assert.equal(gameNight.settings.targetTeamCount, 6);
   assert.equal(gameNight.settings.minTeamPlayers, 2);
-  assert.equal(gameNight.settings.maxTeamPlayers, 3);
-  assert.equal(gameNight.settings.boardCount, 2);
+  assert.equal(gameNight.settings.maxTeamPlayers, 2);
+  assert.equal(gameNight.settings.boardCount, 3);
+  assert.equal(gameNight.boards.length, 3);
 
   gameNight = await prepareGameNightTeamsForUser(gameNightId, userId);
-  assert.equal(gameNight.teams.length, 4);
+  assert.equal(gameNight.teams.length, 6);
   assert.deepEqual(
     gameNight.teams.map((team) => team.members.length).sort((a, b) => a - b),
-    [2, 2, 3, 3],
+    [2, 2, 2, 2, 2, 2],
   );
   assert.equal(
     gameNight.teams.flatMap((team) => team.members).filter((member) => member.isDummy).length,
@@ -108,8 +109,8 @@ async function run() {
 
   // A late attendance change recalculates the saved Auto layout. Rebuilding
   // teams then consumes that new server-side recommendation rather than stale
-  // browser values.
-  for (let index = 8; index < 10; index += 1) {
+  // browser values. The physical board rows also shrink immediately.
+  for (let index = 10; index < 12; index += 1) {
     gameNight = await updateGameNightAttendanceForUser({
       gameNightId,
       leaguePlayerId: leaguePlayerIds[index],
@@ -121,13 +122,15 @@ async function run() {
   }
   assert.equal(gameNight.settings.targetTeamCount, 4);
   assert.equal(gameNight.settings.minTeamPlayers, 2);
-  assert.equal(gameNight.settings.maxTeamPlayers, 2);
+  assert.equal(gameNight.settings.maxTeamPlayers, 3);
   assert.equal(gameNight.settings.boardCount, 2);
+  assert.equal(gameNight.boards.length, 2);
 
   gameNight = await prepareGameNightTeamsForUser(gameNightId, userId);
+  assert.equal(gameNight.teams.length, 4);
   assert.deepEqual(
     gameNight.teams.map((team) => team.members.length).sort((a, b) => a - b),
-    [2, 2, 2, 2],
+    [2, 2, 3, 3],
   );
 
   console.log("Game Night automatic layout repository integration contract test passed.");
