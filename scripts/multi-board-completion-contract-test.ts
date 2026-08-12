@@ -163,6 +163,12 @@ async function run() {
     "Exactly one pairing should be completed after Board 1 finishes.",
   );
 
+  await assert.rejects(
+    () => setGameNightStatusForUser(gameNightId, ownerUserId, "completed"),
+    /Cannot complete the Game Night while 1 board match is unfinished/,
+    "The public lifecycle boundary must reject premature Game Night completion.",
+  );
+
   const boardTwoStillConnected = await getBoardDeviceConnectionForCredential(boardTwo.deviceKey);
   assert.equal(
     boardTwoStillConnected.assignment?.gameNightStatus,
@@ -186,6 +192,21 @@ async function run() {
     `multi-board-2-${suffix}`,
   );
   assert.equal(boardTwoFinished.status, "completed");
+
+  const completedNight = await setGameNightStatusForUser(
+    gameNightId,
+    ownerUserId,
+    "completed",
+  );
+  assert.equal(
+    completedNight.status,
+    "completed",
+    "The Game Night may be completed once every populated board match is finished.",
+  );
+  assert.equal(
+    completedNight.pairings.filter((pairing) => pairing.matchStatus === "completed").length,
+    2,
+  );
 
   console.log("Multi-board Game Night completion contract test passed.");
 }
