@@ -23,6 +23,11 @@ export type GameNightRoundStatus =
   | "completed"
   | "intermission";
 
+/**
+ * The fixture fields are optional at the type boundary so repositories can
+ * still hydrate databases created before the multi-round migration. Public
+ * fixture-aware read models normalize them to DEFAULT_GAME_NIGHT_SETTINGS.
+ */
 export type GameNightSettingsSummary = {
   teamCreationMode: TeamCreationMode;
   targetTeamCount: number;
@@ -32,15 +37,24 @@ export type GameNightSettingsSummary = {
   dummyScore: number;
   boardCount: number;
   boardRotationType: BoardRotationType;
+  roundCount?: number;
+  pairingStrategy?: FixturePairingStrategy;
+  roundAdvanceMode?: RoundAdvanceMode;
+  roundAdvanceDelaySeconds?: number;
+  intermissionAfterRounds?: number[];
+  intermissionDurationMinutes?: number;
+  legsPerMatch: number;
+  startingScore: number;
+  finishRule: GameNightFinishRule;
+};
+
+export type ResolvedGameNightSettings = GameNightSettingsSummary & {
   roundCount: number;
   pairingStrategy: FixturePairingStrategy;
   roundAdvanceMode: RoundAdvanceMode;
   roundAdvanceDelaySeconds: number;
   intermissionAfterRounds: number[];
   intermissionDurationMinutes: number;
-  legsPerMatch: number;
-  startingScore: number;
-  finishRule: GameNightFinishRule;
 };
 
 export type GameNightAttendanceSummary = {
@@ -64,7 +78,7 @@ export type GameNightTeamSummary = {
   teamIndex: number;
   name: string;
   source: "manual" | "automatic";
-  status: GameNightTeamStatus;
+  status?: GameNightTeamStatus;
   members: GameNightTeamMemberSummary[];
 };
 
@@ -110,10 +124,10 @@ export type GameNightSummary = {
   teams: GameNightTeamSummary[];
   boards: GameNightBoardSummary[];
   pairings: GameNightBoardPairingSummary[];
-  rounds: GameNightRoundSummary[];
-  currentRoundNumber: number;
-  activeRoundNumber: number | null;
-  completedRoundCount: number;
+  rounds?: GameNightRoundSummary[];
+  currentRoundNumber?: number;
+  activeRoundNumber?: number | null;
+  completedRoundCount?: number;
   unpairedTeamIds: string[];
   createdAt: number;
   updatedAt: number;
@@ -159,7 +173,7 @@ export type GameNightListResponse = {
   error?: string;
 };
 
-export const DEFAULT_GAME_NIGHT_SETTINGS: GameNightSettingsSummary = {
+export const DEFAULT_GAME_NIGHT_SETTINGS: ResolvedGameNightSettings = {
   teamCreationMode: "hybrid",
   targetTeamCount: 4,
   minTeamPlayers: 2,
@@ -178,3 +192,13 @@ export const DEFAULT_GAME_NIGHT_SETTINGS: GameNightSettingsSummary = {
   startingScore: 501,
   finishRule: "double",
 };
+
+export function resolveGameNightSettings(
+  settings: GameNightSettingsSummary,
+): ResolvedGameNightSettings {
+  return {
+    ...DEFAULT_GAME_NIGHT_SETTINGS,
+    ...settings,
+    intermissionAfterRounds: settings.intermissionAfterRounds ?? [],
+  };
+}
