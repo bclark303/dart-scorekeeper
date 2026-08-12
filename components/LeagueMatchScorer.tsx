@@ -274,7 +274,7 @@ export function LeagueMatchScorer({
           </div>
           <h1 className="text-3xl font-bold">{match.boardName}</h1>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-            {match.startingScore} · {match.finishRule === "double" ? "Double out" : "Straight out"} · {match.legsPerMatch} legs total
+            {match.startingScore} · {match.finishRule === "double" ? "Double out" : "Straight out"} · Best of {match.legsPerMatch}
           </p>
         </div>
         <div className="flex items-center gap-2">
