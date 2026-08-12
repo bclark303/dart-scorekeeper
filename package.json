@@ -18,6 +18,7 @@
     "game-night:test": "tsx scripts/game-night-contract-test.ts",
     "league-match:test": "tsx scripts/league-match-contract-test.ts",
     "board-device:test": "tsx scripts/board-device-contract-test.ts",
+    "x01:test": "tsx scripts/x01-engine-contract-test.ts",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
