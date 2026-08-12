@@ -32,10 +32,18 @@ export default function BoardDevicePage() {
   const [errorMessage, setErrorMessage] = useState("");
 
   const saveDeviceKey = useCallback((value: string) => {
+    const previousKey = window.localStorage.getItem(STORAGE_KEY) ?? "";
+    const sameRegisteredDevice =
+      deviceIdFromKey(previousKey) &&
+      deviceIdFromKey(previousKey) === deviceIdFromKey(value);
     window.localStorage.setItem(STORAGE_KEY, value);
     setDeviceKey(value);
     setConnection(null);
-    setOfflineMatchId("");
+    // Re-pairing/rotating credentials for the same registered board must not
+    // detach it from its durable offline match queue. A different device key
+    // can safely clear only the in-memory recovery pointer; the old queue stays
+    // persisted under the old device ID.
+    if (!sameRegisteredDevice) setOfflineMatchId("");
     setErrorMessage("");
   }, []);
 
@@ -180,6 +188,7 @@ export default function BoardDevicePage() {
     setDeviceKey("");
     setLegacyKeyDraft("");
     setConnection(null);
+    setOfflineMatchId("");
     setErrorMessage("");
     setMode("league");
   }
@@ -268,7 +277,7 @@ export default function BoardDevicePage() {
 
   const registeredDeviceId = deviceIdFromKey(deviceKey);
   const liveMatchId = connection?.assignment?.matchSessionId ?? null;
-  const recoverableMatchId = liveMatchId ?? offlineMatchId || null;
+  const recoverableMatchId = liveMatchId ?? (offlineMatchId || null);
   const activeLeagueAssignment =
     liveMatchId && connection?.assignment?.gameNightStatus === "active";
   const openLeagueAssignment =

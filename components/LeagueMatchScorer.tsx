@@ -7,11 +7,7 @@ import { DartEntry } from "@/components/DartEntry";
 import { authClient } from "@/lib/auth/client";
 import { calculateConfiguredDummyTurn } from "@/lib/league/dummyScoring";
 import { useLeagueMatchTransport } from "@/lib/league/useLeagueMatchTransport";
-import type {
-  LeagueMatchMutationRequest,
-  LeagueMatchResponse,
-  LeagueMatchSummary,
-} from "@/lib/league/matchContracts";
+import type { LeagueMatchMutationRequest } from "@/lib/league/matchContracts";
 import { validateTurnScore, type DartThrow, type Turn } from "@/lib/scoring";
 
 type CentralInputMode = "graphical" | "total";
@@ -259,9 +255,15 @@ export function LeagueMatchScorer({
   }
 
   const queuedScoreCount = queue.filter((item) => item.action === "score").length;
+  const queuedOfflineLabel =
+    queuedScoreCount > 0
+      ? `${queuedScoreCount} turn${queuedScoreCount === 1 ? "" : "s"} queued`
+      : queue.length > 0
+        ? `${queue.length} update${queue.length === 1 ? "" : "s"} queued`
+        : "no turns queued";
   const connectionLabel =
     connectionState === "offline"
-      ? `OFFLINE · ${queuedScoreCount} turn${queuedScoreCount === 1 ? "" : "s"} queued`
+      ? `OFFLINE · ${queuedOfflineLabel}`
       : connectionState === "syncing"
         ? syncProgress
           ? `SYNCING ${syncProgress.completed}/${syncProgress.total}`
@@ -351,7 +353,7 @@ export function LeagueMatchScorer({
           </div>
           {connectionState === "conflict" && (
             <p className="mt-3 rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-100">
-              Central history no longer matches this board's queued history. Automatic replay is stopped. Have the coordinator resolve the match state, then choose Retry Sync.
+              Central history no longer matches the queued history on this board. Automatic replay is stopped. Have the coordinator resolve the match state, then choose Retry Sync.
             </p>
           )}
           {connectionState === "credential" && (
