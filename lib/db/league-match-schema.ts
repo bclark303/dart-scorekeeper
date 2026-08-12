@@ -104,5 +104,26 @@ export const leagueMatchTurns = sqliteTable(
   ],
 );
 
+/** Exact darts recorded for a graphical league turn. */
+export const leagueMatchDarts = sqliteTable(
+  "league_match_darts",
+  {
+    id: text("id").primaryKey(),
+    turnId: text("turn_id")
+      .notNull()
+      .references(() => leagueMatchTurns.id, { onDelete: "cascade" }),
+    dartIndex: integer("dart_index").notNull(),
+    segment: text("segment").notNull(),
+    multiplier: integer("multiplier").notNull(),
+    score: integer("score").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("league_match_darts_turn_index_unique").on(table.turnId, table.dartIndex),
+    index("league_match_darts_turn_idx").on(table.turnId),
+  ],
+);
+
 export type LeagueMatchSessionRow = typeof leagueMatchSessions.$inferSelect;
 export type LeagueMatchTurnRow = typeof leagueMatchTurns.$inferSelect;
+export type LeagueMatchDartRow = typeof leagueMatchDarts.$inferSelect;

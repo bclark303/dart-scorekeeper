@@ -7,7 +7,7 @@ import type {
   BoardDeviceStatus,
   BoardDeviceSummary,
 } from "@/lib/league/boardDeviceContracts";
-import type { LeagueMatchSummary } from "@/lib/league/matchContracts";
+import type { LeagueMatchDartInput, LeagueMatchSummary } from "@/lib/league/matchContracts";
 import { getDatabase } from "../client";
 import { leagueBoardDevices } from "../board-device-schema";
 import {
@@ -391,6 +391,7 @@ export async function submitBoardDeviceTurnForCredential(input: {
   scoreEntered: number;
   dartsThrown: 1 | 2 | 3;
   checkoutConfirmed?: boolean;
+  darts?: LeagueMatchDartInput[];
 }): Promise<LeagueMatchSummary> {
   await requireAssignedMatch(input.deviceKey, input.matchId);
   return submitLeagueMatchTurnAfterAuthorization({
@@ -399,6 +400,7 @@ export async function submitBoardDeviceTurnForCredential(input: {
     scoreEntered: input.scoreEntered,
     dartsThrown: input.dartsThrown,
     checkoutConfirmed: input.checkoutConfirmed,
+    darts: input.darts,
   });
 }
 

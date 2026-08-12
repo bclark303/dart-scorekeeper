@@ -140,9 +140,16 @@ async function run() {
     turnId,
     scoreEntered: 60,
     dartsThrown: 3,
+    darts: [
+      { id: `device-dart-1-${suffix}`, segment: 20, multiplier: 1, score: 20 },
+      { id: `device-dart-2-${suffix}`, segment: 20, multiplier: 1, score: 20 },
+      { id: `device-dart-3-${suffix}`, segment: 20, multiplier: 1, score: 20 },
+    ],
   });
   assert.equal(match.turns.length, 1);
   assert.equal(match.turns[0].scoreEntered, 60);
+  assert.deepEqual(match.turns[0].darts.map((dart) => dart.score), [20, 20, 20]);
+  assert.deepEqual(match.turns[0].darts.map((dart) => dart.segment), [20, 20, 20]);
 
   match = await submitBoardDeviceTurnForCredential({
     deviceKey: registered.deviceKey,
@@ -150,6 +157,11 @@ async function run() {
     turnId,
     scoreEntered: 60,
     dartsThrown: 3,
+    darts: [
+      { id: `device-dart-1-${suffix}`, segment: 20, multiplier: 1, score: 20 },
+      { id: `device-dart-2-${suffix}`, segment: 20, multiplier: 1, score: 20 },
+      { id: `device-dart-3-${suffix}`, segment: 20, multiplier: 1, score: 20 },
+    ],
   });
   assert.equal(match.turns.length, 1, "Retrying the same device turn ID must be idempotent.");
 

@@ -3,13 +3,16 @@
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
+import { DartEntry } from "@/components/DartEntry";
 import { authClient } from "@/lib/auth/client";
 import type {
   LeagueMatchMutationRequest,
   LeagueMatchResponse,
   LeagueMatchSummary,
 } from "@/lib/league/matchContracts";
-import { validateTurnScore } from "@/lib/scoring";
+import { validateTurnScore, type DartThrow, type Turn } from "@/lib/scoring";
+
+type CentralInputMode = "graphical" | "total";
 
 type PendingCheckout = {
   scoreEntered: number;
@@ -42,6 +45,7 @@ export function LeagueMatchScorer({
   const accessReady = deviceMode ? Boolean(deviceKey) : Boolean(session?.user);
   const apiUrl = deviceMode ? "/api/board-device" : "/api/league-matches";
   const [match, setMatch] = useState<LeagueMatchSummary | null>(null);
+  const [inputMode, setInputMode] = useState<CentralInputMode>(() => authMode === "device" ? "graphical" : "total");
   const [scoreInput, setScoreInput] = useState("");
   const [dartsThrown, setDartsThrown] = useState<1 | 2 | 3>(3);
   const [pendingCheckout, setPendingCheckout] = useState<PendingCheckout | null>(null);
@@ -91,6 +95,42 @@ export function LeagueMatchScorer({
     [currentTeam, match?.currentMemberId],
   );
 
+  const graphicalLastTurn = useMemo<Turn | null>(() => {
+    const turn = match?.turns[0];
+    if (!turn || !match) return null;
+    const team = turn.teamId === match.teamA.id ? match.teamA : match.teamB;
+    return {
+      id: turn.id,
+      playerId: turn.teamId,
+      playerName: team.name,
+      throwerId: turn.teamMemberId ?? undefined,
+      throwerName: turn.displayName,
+      isDummy: turn.isDummy,
+      darts: turn.darts,
+      scoreEntered: turn.scoreEntered,
+      scoreBefore: turn.scoreBefore,
+      scoreAfter: turn.scoreAfter,
+      dartsThrown: turn.dartsThrown as 1 | 2 | 3,
+      isBust: turn.isBust,
+      isCheckout: turn.isCheckout,
+      finishRule: match.finishRule === "double" ? "double_out" : "straight_out",
+    };
+  }, [match]);
+
+  const graphicalScoreCards = useMemo(() => {
+    if (!match) return [];
+    return [match.teamA, match.teamB].map((team) => ({
+      id: team.id,
+      name: team.name,
+      throwerName:
+        team.id === match.currentTeamId
+          ? match.currentMemberName ?? team.name
+          : team.name,
+      score: team.score,
+      isCurrent: team.id === match.currentTeamId,
+    }));
+  }, [match]);
+
   async function mutate(body: LeagueMatchMutationRequest, message?: string) {
     setWorking(true);
     setErrorMessage("");
@@ -123,6 +163,7 @@ export function LeagueMatchScorer({
     scoreEntered: number,
     darts: 1 | 2 | 3,
     checkoutConfirmed = false,
+    graphicalDarts?: DartThrow[],
   ) {
     const turnId = crypto.randomUUID();
     const updated = await mutate({
@@ -132,6 +173,7 @@ export function LeagueMatchScorer({
       scoreEntered,
       dartsThrown: darts,
       checkoutConfirmed,
+      darts: graphicalDarts,
     });
     if (updated) {
       setScoreInput("");
@@ -147,6 +189,24 @@ export function LeagueMatchScorer({
         setStatusMessage(winner ? `${winner} wins the board match.` : "Board match completed as a tie.");
       }
     }
+    return updated;
+  }
+
+  function graphicalCheckoutConfirmed(darts: DartThrow[]) {
+    const lastDart = darts[darts.length - 1];
+    return lastDart?.segment === "bull" || lastDart?.multiplier === 2;
+  }
+
+  async function submitGraphicalTurn(darts: DartThrow[]) {
+    if (!match || !currentTeam || darts.length < 1 || darts.length > 3) return false;
+    const scoreEntered = darts.reduce((sum, dart) => sum + dart.score, 0);
+    const updated = await sendScore(
+      scoreEntered,
+      darts.length as 1 | 2 | 3,
+      graphicalCheckoutConfirmed(darts),
+      darts,
+    );
+    return Boolean(updated);
   }
 
   async function submitScore(event: FormEvent<HTMLFormElement>) {
@@ -291,7 +351,43 @@ export function LeagueMatchScorer({
             <div className="text-3xl font-black tabular-nums">{currentTeam.score}</div>
           </div>
 
-          {currentMember.isDummy ? (
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-2">
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wide text-[var(--color-text-muted)]">Scoring input</div>
+              <div className="text-sm font-bold">{inputMode === "graphical" ? "Graphical dartboard" : "Turn total"}</div>
+            </div>
+            <div className="grid grid-cols-2 rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-1">
+              <button type="button" onClick={() => setInputMode("graphical")} className={`rounded-md px-3 py-2 text-sm font-bold ${inputMode === "graphical" ? "bg-[var(--color-primary)] text-white" : "text-[var(--color-text-muted)]"}`}>Darts</button>
+              <button type="button" onClick={() => setInputMode("total")} className={`rounded-md px-3 py-2 text-sm font-bold ${inputMode === "total" ? "bg-[var(--color-primary)] text-white" : "text-[var(--color-text-muted)]"}`}>Turn</button>
+            </div>
+          </div>
+
+          {inputMode === "graphical" ? (
+            <div className="mt-4">
+              <DartEntry
+                message={`${currentMember.displayName} to throw`}
+                compact={deviceMode}
+                currentScore={currentTeam.score}
+                currentSideName={currentTeam.name}
+                currentThrowerName={currentMember.displayName}
+                currentLegNumber={match.currentLegNumber}
+                finishRule={match.finishRule === "double" ? "double_out" : "straight_out"}
+                fullscreenScoreCards={graphicalScoreCards}
+                lastTurn={graphicalLastTurn}
+                submitDartTurn={submitGraphicalTurn}
+                undoLastTurn={() => void mutate({ action: "undo", matchId }, "Last turn undone. Match state recalculated from central history.")}
+                startNextLeg={() => undefined}
+                replayMatch={() => undefined}
+                newGameSetup={() => undefined}
+                viewFinishedGame={() => undefined}
+                isLegComplete={false}
+                isMatchComplete={false}
+                isCurrentThrowerDummy={currentMember.isDummy}
+                dummyScore={match.dummyScore}
+                submitDummyScore={() => void sendScore(match.dummyScore, 3)}
+              />
+            </div>
+          ) : currentMember.isDummy ? (
             <div className="mt-5">
               <p className="text-sm text-[var(--color-text-muted)]">This slot is a dummy player. The configured dummy turn is {match.dummyScore}.</p>
               <button type="button" disabled={working} onClick={() => void sendScore(match.dummyScore, 3)} className="mt-3 rounded-xl bg-[var(--color-primary)] px-5 py-3 font-bold text-white disabled:opacity-50">
@@ -326,7 +422,7 @@ export function LeagueMatchScorer({
             </form>
           )}
 
-          {pendingCheckout && (
+          {inputMode === "total" && pendingCheckout && (
             <div className="mt-5 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
               <div className="font-bold text-amber-100">Double-out confirmation</div>
               <p className="mt-1 text-sm text-amber-100/80">{currentMember.displayName} reached zero. Was the final dart a double?</p>

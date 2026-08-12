@@ -105,6 +105,7 @@ export async function POST(request: Request) {
           scoreEntered: input.scoreEntered,
           dartsThrown: input.dartsThrown,
           checkoutConfirmed: input.checkoutConfirmed,
+          darts: input.darts,
         }),
       });
     }
