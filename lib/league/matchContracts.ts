@@ -58,7 +58,11 @@ export type LeagueMatchSummary = {
   startingScore: number;
   finishRule: LeagueMatchFinishRule;
   legsPerMatch: number;
+  /** Legacy fixed dummy value retained in persistence for backward compatibility. */
   dummyScore: number;
+  /** Automatic half-of-partner dummy turn shown when the current thrower is a dummy. */
+  currentDummyScore: number | null;
+  currentDummyDartsThrown: 1 | 2 | 3 | null;
   currentLegNumber: number;
   currentTeamId: string | null;
   currentMemberId: string | null;
