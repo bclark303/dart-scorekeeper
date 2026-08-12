@@ -15,7 +15,12 @@ export type GameNightAttendanceStatus = "absent" | "checked_in";
 export type GameNightDuesStatus = "unpaid" | "paid" | "waived";
 export type GameNightFinishRule = "straight" | "double";
 export type GameNightTeamStatus = "active" | "withdrawn";
-export type GameNightPairingStatus = "draft" | "ready" | "active" | "completed";
+export type GameNightPairingStatus =
+  | "scheduled"
+  | "draft"
+  | "ready"
+  | "active"
+  | "completed";
 export type GameNightRoundStatus =
   | "draft"
   | "ready"
