@@ -69,7 +69,10 @@ function resolvedSettingsFromRow(
     minTeamPlayers: row.minTeamPlayers,
     maxTeamPlayers: row.maxTeamPlayers,
     dummyPlayerMode:
-      row.dummyPlayerMode === "none" || row.dummyPlayerMode === "allow"
+      row.dummyPlayerMode === "none" ||
+      row.dummyPlayerMode === "allow" ||
+      row.dummyPlayerMode === "fill" ||
+      row.dummyPlayerMode === "balance"
         ? row.dummyPlayerMode
         : "fill",
     dummyScore: row.dummyScore,

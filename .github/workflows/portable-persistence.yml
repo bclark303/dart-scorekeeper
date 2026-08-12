@@ -87,6 +87,9 @@ jobs:
       - name: Exercise dummy scoring rules contract
         run: npm run dummy-scoring:test
 
+      - name: Exercise dummy team balancing contract
+        run: npm run dummy-team-balance:test
+
       - name: Exercise central league match contract
         run: npm run league-match:test
 

@@ -180,7 +180,13 @@ export function GameNightRulesPanel({
                 <option value="none">Independent — no dummy</option>
                 <option value="allow">Allow dummy if needed</option>
                 <option value="fill">Auto-fill to minimum</option>
+                <option value="balance">Balance all teams with dummies</option>
               </select>
+              {settings.dummyPlayerMode === "balance" && (
+                <span className="mt-1 block text-xs text-emerald-200">
+                  Shorter teams receive dummy slots until every team has the same number of players as the largest real team.
+                </span>
+              )}
             </label>
           </div>
 

@@ -21,6 +21,7 @@
     "game-night:fixtures:test": "tsx scripts/fixture-engine-contract-test.ts && tsx scripts/game-night-fixture-contract-test.ts",
     "game-night:layout:test": "tsx scripts/game-night-layout-contract-test.ts && tsx scripts/game-night-auto-layout-integration-contract-test.ts",
     "dummy-scoring:test": "tsx scripts/dummy-scoring-contract-test.ts && tsx scripts/dummy-scoring-integration-contract-test.ts",
+    "dummy-team-balance:test": "tsx scripts/dummy-team-balance-contract-test.ts && tsx scripts/dummy-team-balance-integration-contract-test.ts",
     "league-match:test": "tsx scripts/league-match-contract-test.ts",
     "board-device:test": "tsx scripts/board-device-contract-test.ts",
     "board-device:pairing:test": "tsx scripts/board-device-pairing-contract-test.ts",

@@ -73,7 +73,7 @@ function validSettings(settings: ResolvedGameNightSettings) {
     Number.isInteger(settings.maxTeamPlayers) &&
     settings.maxTeamPlayers >= settings.minTeamPlayers &&
     settings.maxTeamPlayers <= 32 &&
-    ["none", "allow", "fill"].includes(settings.dummyPlayerMode) &&
+    ["none", "allow", "fill", "balance"].includes(settings.dummyPlayerMode) &&
     Number.isInteger(settings.dummyScore) &&
     settings.dummyScore >= 0 &&
     settings.dummyScore <= 180 &&
