@@ -32,6 +32,12 @@ export {
   type UpdateGameNightSettingsForUserInput,
 } from "./gameNights";
 export {
+  hydrateGameNightAutoLayout,
+  hydrateGameNightAutoLayouts,
+  optimizeSettingsForGameNight,
+  syncAutomaticGameNightLayout,
+} from "./gameNightAutoLayout";
+export {
   assignGameNightPlayerToTeamForUser,
   prepareGameNightTeamsForUser,
   updateGameNightAttendanceForUser,
