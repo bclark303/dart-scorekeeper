@@ -74,6 +74,7 @@ async function run() {
       maxTeamPlayers: 2,
       dummyPlayerMode: "none",
       boardCount: 1,
+      roundCount: 1,
       legsPerMatch: 1,
       startingScore: 301,
       finishRule: "double",
@@ -92,7 +93,12 @@ async function run() {
     });
   }
   await prepareGameNightTeamsForUser(gameNightId, ownerUserId);
-  await populateGameNightBoardsForUser(gameNightId, ownerUserId);
+  const populated = await populateGameNightBoardsForUser(gameNightId, ownerUserId);
+  assert.equal(populated.rounds?.[0].status, "draft");
+  assert.ok(
+    populated.rounds?.[0].pairings[0]?.matchSessionId,
+    "The coordinator's draft must already have a central match session.",
+  );
 
   const registered = await registerBoardDeviceForUser({
     id: `device-${suffix}`,
@@ -109,28 +115,48 @@ async function run() {
   const devices = await listBoardDevicesForUser(leagueId, ownerUserId);
   assert.equal(devices.length, 1);
   assert.equal(devices[0].id, registered.device.id);
-  assert.equal("deviceKey" in devices[0], false, "Plaintext device keys must never appear in list results.");
+  assert.equal(
+    "deviceKey" in devices[0],
+    false,
+    "Plaintext device keys must never appear in list results.",
+  );
 
-  const authenticated = await authenticateBoardDeviceCredential(registered.deviceKey);
+  const authenticated = await authenticateBoardDeviceCredential(
+    registered.deviceKey,
+  );
   assert.equal(authenticated.id, registered.device.id);
-  assert.ok(authenticated.lastSeenAt, "Successful device authentication should update last-seen state.");
+  assert.ok(
+    authenticated.lastSeenAt,
+    "Successful device authentication should update last-seen state.",
+  );
 
-  let connection = await getBoardDeviceConnectionForCredential(registered.deviceKey);
+  let connection = await getBoardDeviceConnectionForCredential(
+    registered.deviceKey,
+  );
   assert.equal(connection.assignment?.gameNightId, gameNightId);
   assert.equal(connection.assignment?.boardNumber, 1);
-  assert.ok(connection.assignment?.matchSessionId, "Populated board should expose a central match session.");
+  assert.equal(
+    connection.assignment?.matchSessionId ?? null,
+    null,
+    "A generated draft round must not become a playable board assignment before the Game Night starts.",
+  );
+  assert.equal(connection.match, null);
+
+  await setGameNightStatusForUser(gameNightId, ownerUserId, "active");
+  connection = await getBoardDeviceConnectionForCredential(registered.deviceKey);
+  assert.equal(connection.assignment?.roundNumber, 1);
+  assert.ok(
+    connection.assignment?.matchSessionId,
+    "Starting the Game Night must release the Round 1 central match to its registered board.",
+  );
   assert.equal(connection.match?.status, "scheduled");
   const matchId = connection.assignment?.matchSessionId;
   assert.ok(matchId);
 
-  await assert.rejects(
-    () => startBoardDeviceMatchForCredential(registered.deviceKey, matchId),
-    /Start the game night/,
-    "Device must not start a board match before the overall game night is active.",
+  let match = await startBoardDeviceMatchForCredential(
+    registered.deviceKey,
+    matchId,
   );
-
-  await setGameNightStatusForUser(gameNightId, ownerUserId, "active");
-  let match = await startBoardDeviceMatchForCredential(registered.deviceKey, matchId);
   assert.equal(match.status, "active");
 
   const turnId = `device-turn-${suffix}`;
@@ -141,15 +167,36 @@ async function run() {
     scoreEntered: 60,
     dartsThrown: 3,
     darts: [
-      { id: `device-dart-1-${suffix}`, segment: 20, multiplier: 1, score: 20 },
-      { id: `device-dart-2-${suffix}`, segment: 20, multiplier: 1, score: 20 },
-      { id: `device-dart-3-${suffix}`, segment: 20, multiplier: 1, score: 20 },
+      {
+        id: `device-dart-1-${suffix}`,
+        segment: 20,
+        multiplier: 1,
+        score: 20,
+      },
+      {
+        id: `device-dart-2-${suffix}`,
+        segment: 20,
+        multiplier: 1,
+        score: 20,
+      },
+      {
+        id: `device-dart-3-${suffix}`,
+        segment: 20,
+        multiplier: 1,
+        score: 20,
+      },
     ],
   });
   assert.equal(match.turns.length, 1);
   assert.equal(match.turns[0].scoreEntered, 60);
-  assert.deepEqual(match.turns[0].darts.map((dart) => dart.score), [20, 20, 20]);
-  assert.deepEqual(match.turns[0].darts.map((dart) => dart.segment), [20, 20, 20]);
+  assert.deepEqual(
+    match.turns[0].darts.map((dart) => dart.score),
+    [20, 20, 20],
+  );
+  assert.deepEqual(
+    match.turns[0].darts.map((dart) => dart.segment),
+    [20, 20, 20],
+  );
 
   match = await submitBoardDeviceTurnForCredential({
     deviceKey: registered.deviceKey,
@@ -158,15 +205,41 @@ async function run() {
     scoreEntered: 60,
     dartsThrown: 3,
     darts: [
-      { id: `device-dart-1-${suffix}`, segment: 20, multiplier: 1, score: 20 },
-      { id: `device-dart-2-${suffix}`, segment: 20, multiplier: 1, score: 20 },
-      { id: `device-dart-3-${suffix}`, segment: 20, multiplier: 1, score: 20 },
+      {
+        id: `device-dart-1-${suffix}`,
+        segment: 20,
+        multiplier: 1,
+        score: 20,
+      },
+      {
+        id: `device-dart-2-${suffix}`,
+        segment: 20,
+        multiplier: 1,
+        score: 20,
+      },
+      {
+        id: `device-dart-3-${suffix}`,
+        segment: 20,
+        multiplier: 1,
+        score: 20,
+      },
     ],
   });
-  assert.equal(match.turns.length, 1, "Retrying the same device turn ID must be idempotent.");
+  assert.equal(
+    match.turns.length,
+    1,
+    "Retrying the same device turn ID must be idempotent.",
+  );
 
-  match = await undoBoardDeviceTurnForCredential(registered.deviceKey, matchId);
-  assert.equal(match.turns.length, 0, "Device undo should void the central turn and recalculate state.");
+  match = await undoBoardDeviceTurnForCredential(
+    registered.deviceKey,
+    matchId,
+  );
+  assert.equal(
+    match.turns.length,
+    0,
+    "Device undo should void the central turn and recalculate state.",
+  );
   assert.equal(match.status, "active");
 
   const rotated = await rotateBoardDeviceKeyForUser({
@@ -191,7 +264,8 @@ async function run() {
   });
   await assert.rejects(
     () => authenticateBoardDeviceCredential(rotated.deviceKey),
-    (error: unknown) => error instanceof BoardDeviceCredentialError && error.reason === "disabled",
+    (error: unknown) =>
+      error instanceof BoardDeviceCredentialError && error.reason === "disabled",
     "Disabled board devices must be rejected even with the correct key.",
   );
 
@@ -199,6 +273,9 @@ async function run() {
 }
 
 run().catch((error) => {
-  console.error("Board device registration and connector contract test failed.", error);
+  console.error(
+    "Board device registration and connector contract test failed.",
+    error,
+  );
   process.exitCode = 1;
 });
