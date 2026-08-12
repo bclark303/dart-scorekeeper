@@ -71,11 +71,17 @@ jobs:
       - name: Exercise game-night lifecycle contract
         run: npm run game-night:test
 
+      - name: Exercise Game Night stats and Best-of contract
+        run: npm run game-night:stats:test
+
       - name: Exercise central league match contract
         run: npm run league-match:test
 
       - name: Exercise board device connector contract
         run: npm run board-device:test
+
+      - name: Exercise board device pairing contract
+        run: npm run board-device:pairing:test
 
       - name: Lint
         run: npm run lint
