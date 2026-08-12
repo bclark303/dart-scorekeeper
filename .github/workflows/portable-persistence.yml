@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - internal/dummy-scoring-complete
   pull_request:
     branches:
       - main
