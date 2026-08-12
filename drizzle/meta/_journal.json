@@ -64,20 +64,6 @@
       "when": 1786493704550,
       "tag": "0008_solid_terror",
       "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "6",
-      "when": 1786544421464,
-      "tag": "0009_rare_dust",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "6",
-      "when": 1786547061646,
-      "tag": "0010_flat_doctor_spectrum",
-      "breakpoints": true
     }
   ]
 }
