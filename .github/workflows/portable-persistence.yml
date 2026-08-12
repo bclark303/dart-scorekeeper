@@ -38,6 +38,7 @@ jobs:
         if: github.ref == 'refs/heads/internal/dummy-balance-night-schedule'
         run: |
           node scripts/apply-dummy-balance-schedule-scratch.mjs
+          git restore .github/workflows/portable-persistence.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
