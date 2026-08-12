@@ -27,13 +27,16 @@ export {
   type MutateSeasonRosterForUserInput,
 } from "./leagueRoster";
 export {
-  assignGameNightPlayerToTeamForUser,
-  prepareGameNightTeamsForUser,
-  updateGameNightAttendanceForUser,
   type CreateGameNightForUserInput,
   type UpdateGameNightAttendanceForUserInput,
   type UpdateGameNightSettingsForUserInput,
 } from "./gameNights";
+export {
+  assignGameNightPlayerToTeamForUser,
+  prepareGameNightTeamsForUser,
+  updateGameNightAttendanceForUser,
+  updateGameNightSettingsForUser,
+} from "./gameNightSetupLifecycle";
 export {
   createGameNightForUser,
   getGameNightForUser,
@@ -43,7 +46,6 @@ export {
   replaceGameNightRoundFixturesForUser,
   setGameNightTeamStatusForUser,
   startNextGameNightRoundForUser,
-  updateGameNightSettingsForUser,
 } from "./gameNightFixtures";
 export { refreshGameNightForUser } from "./gameNightFixtureRefresh";
 export { setGameNightStatusForUser } from "./gameNightLifecycle";
