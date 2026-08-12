@@ -5,7 +5,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { DartEntry } from "@/components/DartEntry";
 import { authClient } from "@/lib/auth/client";
-import { calculateHalfActualDummyTurn } from "@/lib/league/dummyScoring";
+import { calculateConfiguredDummyTurn } from "@/lib/league/dummyScoring";
 import type {
   LeagueMatchMutationRequest,
   LeagueMatchResponse,
@@ -99,16 +99,20 @@ export function LeagueMatchScorer({
   const automaticDummyTurn = useMemo(() => {
     if (!match || !currentTeam || !currentMember?.isDummy) return null;
     const partnerTurn = match.turns.find(
-      (turn) => turn.teamId === currentTeam.id && !turn.isDummy,
+      (turn) =>
+        turn.legNumber === match.currentLegNumber &&
+        turn.teamId === currentTeam.id &&
+        !turn.isDummy,
     );
-    return calculateHalfActualDummyTurn(
-      partnerTurn
+    return calculateConfiguredDummyTurn({
+      dummyScore: match.dummyScore,
+      partnerTurn: partnerTurn
         ? {
             scoreEntered: partnerTurn.scoreEntered,
             darts: partnerTurn.darts,
           }
         : null,
-    );
+    });
   }, [currentMember?.isDummy, currentTeam, match]);
 
   const graphicalLastTurn = useMemo<Turn | null>(() => {
@@ -409,7 +413,9 @@ export function LeagueMatchScorer({
             <div className="mt-5 rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-4">
               <div className="font-bold">Automatic dummy turn</div>
               <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                Half of the partner&apos;s previous real turn, calculated per dart and rounded down. Misses remain zero.
+                {automaticDummyTurn?.rule === "fixed"
+                  ? `Fixed league rule: ${automaticDummyTurn.scoreEntered} points per dummy turn.`
+                  : "Half of the most recent real teammate turn in this leg, calculated per dart and rounded down. Misses remain zero."}
               </p>
               <div className="mt-3 text-sm text-[var(--color-text-muted)]">
                 Calculated dummy score: <span className="font-bold text-[var(--color-text)]">{automaticDummyTurn?.scoreEntered ?? 0}</span>
