@@ -5,17 +5,16 @@ import {
   type Dispatch,
   type SetStateAction,
   useEffect,
-  useMemo,
   useState,
 } from "react";
 
+import { GameNightDraftRoundEditor } from "@/components/GameNightDraftRoundEditor";
 import {
   resolveGameNightSettings,
   type FixturePairingStrategy,
   type GameNightSettingsSummary,
   type GameNightSummary,
 } from "@/lib/league/gameNightContracts";
-import type { FixtureRoundPairing } from "@/lib/league/fixtureEngine";
 
 type FixtureAction = (body: object, message?: string) => Promise<void> | void;
 
@@ -49,40 +48,23 @@ export function GameNightFixturePanel({
   const resolved = resolveGameNightSettings(settings);
   const rounds = gameNight.rounds ?? [];
   const [now, setNow] = useState(() => Date.now());
-  const [editingRound, setEditingRound] = useState<number | null>(null);
-  const [fixtureDraft, setFixtureDraft] = useState<FixtureRoundPairing[]>([]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, []);
 
-  const draftRound = useMemo(
-    () => [...rounds].reverse().find((round) => round.status === "draft") ?? null,
-    [rounds],
+  const draftRound =
+    [...rounds].reverse().find((round) => round.status === "draft") ?? null;
+  const activeTeams = gameNight.teams.filter(
+    (team) => team.status !== "withdrawn",
   );
-
-  useEffect(() => {
-    if (!draftRound) {
-      setEditingRound(null);
-      setFixtureDraft([]);
-      return;
-    }
-    setEditingRound(draftRound.roundNumber);
-    setFixtureDraft(
-      draftRound.pairings.map((pairing) => ({
-        boardId: pairing.boardId,
-        teamAId: pairing.teamAId,
-        teamBId: pairing.teamBId,
-      })),
-    );
-  }, [draftRound]);
-
-  const activeTeams = gameNight.teams.filter((team) => team.status !== "withdrawn");
   const teamById = new Map(gameNight.teams.map((team) => [team.id, team]));
   const boardById = new Map(gameNight.boards.map((board) => [board.id, board]));
   const previousRound = draftRound
-    ? rounds.find((round) => round.roundNumber === draftRound.roundNumber - 1) ?? null
+    ? rounds.find(
+        (round) => round.roundNumber === draftRound.roundNumber - 1,
+      ) ?? null
     : null;
   const breakActive = Boolean(
     previousRound?.intermissionEndsAt && previousRound.intermissionEndsAt > now,
@@ -105,18 +87,6 @@ export function GameNightFixturePanel({
     );
   }
 
-  function updateFixture(
-    index: number,
-    key: keyof FixtureRoundPairing,
-    value: string,
-  ) {
-    setFixtureDraft((current) =>
-      current.map((pairing, pairingIndex) =>
-        pairingIndex === index ? { ...pairing, [key]: value } : pairing,
-      ),
-    );
-  }
-
   const canEditRules =
     gameNight.status !== "active" && gameNight.status !== "completed";
   const finalRound = rounds.find(
@@ -135,7 +105,8 @@ export function GameNightFixturePanel({
           </p>
         </div>
         <div className="rounded-full border border-[var(--color-panel-border)] px-3 py-1 text-xs font-bold uppercase">
-          {gameNight.completedRoundCount ?? 0} / {resolved.roundCount} rounds complete
+          {gameNight.completedRoundCount ?? 0} / {resolved.roundCount} rounds
+          complete
         </div>
       </div>
 
@@ -157,6 +128,7 @@ export function GameNightFixturePanel({
                 className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-2.5"
               />
             </label>
+
             <label className="text-sm">
               Pairing method
               <select
@@ -176,6 +148,7 @@ export function GameNightFixturePanel({
                 <option value="manual">Manual coordinator</option>
               </select>
             </label>
+
             <label className="text-sm">
               Round advance
               <select
@@ -193,6 +166,7 @@ export function GameNightFixturePanel({
                 <option value="automatic">Automatic after delay</option>
               </select>
             </label>
+
             <label className="text-sm">
               Automatic delay (seconds)
               <input
@@ -314,7 +288,11 @@ export function GameNightFixturePanel({
                         status:
                           team.status === "withdrawn" ? "active" : "withdrawn",
                       },
-                      `${team.name} ${team.status === "withdrawn" ? "returned to" : "withdrawn from"} future rounds.`,
+                      `${team.name} ${
+                        team.status === "withdrawn"
+                          ? "returned to"
+                          : "withdrawn from"
+                      } future rounds.`,
                     )
                   }
                   className="rounded-lg border border-[var(--color-panel-border)] px-3 py-2 text-sm font-bold disabled:opacity-50"
@@ -410,146 +388,20 @@ export function GameNightFixturePanel({
         )}
       </div>
 
-      {draftRound && editingRound === draftRound.roundNumber && (
-        <div className="mt-5 rounded-xl border border-[var(--color-primary)] bg-[var(--color-panel-soft)] p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h3 className="text-lg font-bold">
-                Edit Round {draftRound.roundNumber} Draft
-              </h3>
-              <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                Change teams or boards before this round is released. Duplicate
-                teams/boards are rejected when saved.
-              </p>
-            </div>
-            <button
-              type="button"
-              disabled={disabled}
-              onClick={() =>
-                void onAction(
-                  {
-                    action: "regenerateRound",
-                    gameNightId: gameNight.id,
-                    roundNumber: draftRound.roundNumber,
-                    strategy: resolved.pairingStrategy,
-                  },
-                  `Round ${draftRound.roundNumber} regenerated using ${strategyLabel(resolved.pairingStrategy)}.`,
-                )
-              }
-              className="rounded-lg border border-[var(--color-panel-border)] px-3 py-2 text-sm font-bold disabled:opacity-50"
-            >
-              Regenerate Round
-            </button>
-          </div>
-
-          <div className="mt-4 space-y-3">
-            {fixtureDraft.map((pairing, index) => (
-              <div
-                key={index}
-                className="grid gap-2 rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-3 md:grid-cols-3"
-              >
-                <select
-                  value={pairing.boardId}
-                  disabled={disabled}
-                  onChange={(event) =>
-                    updateFixture(index, "boardId", event.target.value)
-                  }
-                  className="rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-2"
-                >
-                  {gameNight.boards.map((board) => (
-                    <option key={board.id} value={board.id}>
-                      {board.name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={pairing.teamAId}
-                  disabled={disabled}
-                  onChange={(event) =>
-                    updateFixture(index, "teamAId", event.target.value)
-                  }
-                  className="rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-2"
-                >
-                  {activeTeams.map((team) => (
-                    <option key={team.id} value={team.id}>
-                      {team.name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={pairing.teamBId}
-                  disabled={disabled}
-                  onChange={(event) =>
-                    updateFixture(index, "teamBId", event.target.value)
-                  }
-                  className="rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-2"
-                >
-                  {activeTeams.map((team) => (
-                    <option key={team.id} value={team.id}>
-                      {team.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={disabled}
-              onClick={() =>
-                void onAction(
-                  {
-                    action: "replaceRoundFixtures",
-                    gameNightId: gameNight.id,
-                    roundNumber: draftRound.roundNumber,
-                    pairings: fixtureDraft,
-                  },
-                  `Round ${draftRound.roundNumber} fixture edits saved.`,
-                )
-              }
-              className="rounded-xl bg-[var(--color-primary)] px-4 py-2.5 font-bold text-white disabled:opacity-50"
-            >
-              Save Fixture Edits
-            </button>
-
-            {gameNight.status === "active" && previousRound?.completedAt && (
-              <button
-                type="button"
-                disabled={disabled}
-                onClick={() =>
-                  void onAction(
-                    {
-                      action: "startNextRound",
-                      gameNightId: gameNight.id,
-                      endIntermissionEarly: breakActive,
-                    },
-                    breakActive
-                      ? `Intermission ended. Round ${draftRound.roundNumber} is now live.`
-                      : `Round ${draftRound.roundNumber} is now live.`,
-                  )
-                }
-                className="rounded-xl bg-emerald-600 px-4 py-2.5 font-bold text-white disabled:opacity-50"
-              >
-                {breakActive
-                  ? `End Intermission & Start Round ${draftRound.roundNumber}`
-                  : `Start Round ${draftRound.roundNumber}`}
-              </button>
-            )}
-          </div>
-
-          {gameNight.status === "active" &&
-            resolved.roundAdvanceMode === "automatic" &&
-            previousRound?.completedAt &&
-            !breakActive && (
-              <p className="mt-3 text-xs text-[var(--color-text-muted)]">
-                Automatic mode releases this round after{" "}
-                {resolved.roundAdvanceDelaySeconds}s. A coordinator can still
-                start it early.
-              </p>
-            )}
-        </div>
+      {draftRound && (
+        <GameNightDraftRoundEditor
+          key={draftRound.pairings.map((pairing) => pairing.id).join(":")}
+          gameNightId={gameNight.id}
+          gameNightStatus={gameNight.status}
+          round={draftRound}
+          previousRound={previousRound}
+          boards={gameNight.boards}
+          activeTeams={activeTeams}
+          settings={resolved}
+          breakActive={breakActive}
+          disabled={disabled}
+          onAction={onAction}
+        />
       )}
 
       {finalRoundComplete && (
