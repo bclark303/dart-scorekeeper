@@ -9,9 +9,19 @@ export type GameNightStatus =
 export type TeamCreationMode = "manual" | "automatic" | "hybrid";
 export type DummyPlayerMode = "none" | "allow" | "fill";
 export type BoardRotationType = "fixed" | "rotate" | "manual";
+export type FixturePairingStrategy = "random" | "round_robin" | "swiss" | "manual";
+export type RoundAdvanceMode = "manual" | "automatic";
 export type GameNightAttendanceStatus = "absent" | "checked_in";
 export type GameNightDuesStatus = "unpaid" | "paid" | "waived";
 export type GameNightFinishRule = "straight" | "double";
+export type GameNightTeamStatus = "active" | "withdrawn";
+export type GameNightPairingStatus = "draft" | "ready" | "active" | "completed";
+export type GameNightRoundStatus =
+  | "draft"
+  | "ready"
+  | "active"
+  | "completed"
+  | "intermission";
 
 export type GameNightSettingsSummary = {
   teamCreationMode: TeamCreationMode;
@@ -22,6 +32,12 @@ export type GameNightSettingsSummary = {
   dummyScore: number;
   boardCount: number;
   boardRotationType: BoardRotationType;
+  roundCount: number;
+  pairingStrategy: FixturePairingStrategy;
+  roundAdvanceMode: RoundAdvanceMode;
+  roundAdvanceDelaySeconds: number;
+  intermissionAfterRounds: number[];
+  intermissionDurationMinutes: number;
   legsPerMatch: number;
   startingScore: number;
   finishRule: GameNightFinishRule;
@@ -48,6 +64,7 @@ export type GameNightTeamSummary = {
   teamIndex: number;
   name: string;
   source: "manual" | "automatic";
+  status: GameNightTeamStatus;
   members: GameNightTeamMemberSummary[];
 };
 
@@ -64,10 +81,20 @@ export type GameNightBoardPairingSummary = {
   roundNumber: number;
   teamAId: string;
   teamBId: string;
-  status: "scheduled" | "active" | "completed";
+  status: GameNightPairingStatus;
   matchSessionId: string | null;
   matchStatus: "scheduled" | "active" | "completed" | null;
   winnerTeamId: string | null;
+};
+
+export type GameNightRoundSummary = {
+  roundNumber: number;
+  status: GameNightRoundStatus;
+  pairings: GameNightBoardPairingSummary[];
+  byeTeamIds: string[];
+  completedAt: number | null;
+  intermissionScheduled: boolean;
+  intermissionEndsAt: number | null;
 };
 
 export type GameNightSummary = {
@@ -83,6 +110,10 @@ export type GameNightSummary = {
   teams: GameNightTeamSummary[];
   boards: GameNightBoardSummary[];
   pairings: GameNightBoardPairingSummary[];
+  rounds: GameNightRoundSummary[];
+  currentRoundNumber: number;
+  activeRoundNumber: number | null;
+  completedRoundCount: number;
   unpairedTeamIds: string[];
   createdAt: number;
   updatedAt: number;
@@ -137,6 +168,12 @@ export const DEFAULT_GAME_NIGHT_SETTINGS: GameNightSettingsSummary = {
   dummyScore: 0,
   boardCount: 2,
   boardRotationType: "rotate",
+  roundCount: 3,
+  pairingStrategy: "random",
+  roundAdvanceMode: "manual",
+  roundAdvanceDelaySeconds: 60,
+  intermissionAfterRounds: [],
+  intermissionDurationMinutes: 10,
   legsPerMatch: 3,
   startingScore: 501,
   finishRule: "double",
