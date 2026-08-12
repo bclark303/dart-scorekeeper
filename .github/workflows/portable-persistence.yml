@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   verify:
@@ -33,19 +33,6 @@ jobs:
         with:
           node-version: 22
           cache: npm
-
-      - name: Apply dummy balance / schedule scratch edits
-        if: github.ref == 'refs/heads/internal/dummy-balance-night-schedule'
-        run: |
-          node scripts/apply-dummy-balance-schedule-scratch.mjs
-          git restore .github/workflows/portable-persistence.yml
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          if ! git diff --cached --quiet; then
-            git commit -m "Apply dummy balancing and full schedule UI [skip ci]"
-            git push
-          fi
 
       - name: Install locked dependencies
         run: npm ci
