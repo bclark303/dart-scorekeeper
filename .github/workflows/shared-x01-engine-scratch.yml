@@ -1,0 +1,107 @@
+name: Shared X01 engine scratch verification
+
+on:
+  push:
+    branches:
+      - internal/shared-x01-engine
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    env:
+      DB_PROVIDER: libsql
+      DATABASE_URL: file:./data/shared-x01-scratch-ci.db
+      DATABASE_AUTH_TOKEN: ""
+      BETTER_AUTH_SECRET: ci-only-dart-scorekeeper-auth-secret-123456789
+      BETTER_AUTH_URL: http://localhost:3000
+      NEXT_TELEMETRY_DISABLED: "1"
+
+    steps:
+      - name: Check out scratch branch
+        uses: actions/checkout@v4
+        with:
+          ref: internal/shared-x01-engine
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply shared X01 engine refactor
+        run: node scripts/apply-shared-x01-engine.mjs
+
+      - name: Verify refactor requires no migration
+        run: |
+          npm run db:generate
+          git diff --exit-code -- drizzle/
+
+      - name: Prepare local database directory
+        run: mkdir -p data
+
+      - name: Apply migrations
+        run: npm run db:migrate
+
+      - name: Exercise shared X01 rules contract
+        run: npm run x01:test
+
+      - name: Exercise database repository contract
+        run: npm run db:test
+
+      - name: Exercise browser archive queue contract
+        run: npm run local:test
+
+      - name: Exercise authentication and sync ownership contract
+        run: npm run auth:test
+
+      - name: Exercise self-hosted database setup contract
+        run: npm run setup:test
+
+      - name: Exercise league framework contract
+        run: npm run league:test
+
+      - name: Exercise league player and roster contract
+        run: npm run league:roster:test
+
+      - name: Exercise game-night lifecycle contract
+        run: npm run game-night:test
+
+      - name: Exercise central league match contract
+        run: npm run league-match:test
+
+      - name: Exercise board device connector contract
+        run: npm run board-device:test
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build Next.js
+        run: npm run build
+
+      - name: Build Docker portability target
+        run: docker build -t dart-scorekeeper-shared-x01-scratch .
+
+      - name: Commit validated refactor files
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            lib/scoring.ts \
+            lib/x01Engine.ts \
+            components/DartEntry.tsx \
+            lib/db/repositories/leagueMatches.ts \
+            scripts/x01-engine-contract-test.ts \
+            package.json \
+            .github/workflows/portable-persistence.yml
+          if ! git diff --cached --quiet; then
+            git commit -m "Share X01 rules across local and league scoring"
+            git push
+          fi
