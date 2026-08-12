@@ -177,7 +177,6 @@ const boardTargets`;
     "remove duplicated graphical rule helpers",
   );
 
-  // Remove the old independent graphical validation call if present.
   source = source.replace(/\n\s*validateGraphicalDarts\(input\.darts, input\.scoreEntered, input\.dartsThrown\);/g, "");
 
   const outcomePattern = /  const scoreBefore = state\.currentTeamId === teamA\.id \? state\.teamAScore : state\.teamBScore;[\s\S]*?  const turnIndex = turns\.length \? Math\.max\(\.\.\.turns\.map\(\(turn\) => turn\.turnIndex\)\) \+ 1 : 1;/;
@@ -190,8 +189,6 @@ const boardTargets`;
       finishRule: context.session.finishRule === "double" ? "double_out" : "straight_out",
       dartsThrown: input.dartsThrown,
       darts: input.darts,
-      // Device/browser total entry must provide positive checkout evidence.
-      // Undefined therefore means "not confirmed" on the authoritative server.
       checkoutConfirmed: input.darts === undefined ? input.checkoutConfirmed === true : undefined,
     });
   } catch (error) {
@@ -202,13 +199,15 @@ const boardTargets`;
   const turnIndex = turns.length ? Math.max(...turns.map((turn) => turn.turnIndex)) + 1 : 1;`;
   source = replaceOnce(source, outcomePattern, outcomeReplacement, "central X01 outcome delegation");
 
-  // Persist whether a double-out checkout was actually accepted by the engine.
   source = source.replace(
-    /checkoutConfirmed:\s*(?:exactCheckoutConfirmed|input\.checkoutConfirmed === true),/g,
+    /checkoutConfirmed:\s*(?:exactCheckoutConfirmed|graphicalCheckoutConfirmed|input\.checkoutConfirmed === true),/g,
     'checkoutConfirmed: isCheckout && context.session.finishRule === "double",',
   );
-
-  // Any leftover exact-checkout declaration belonged to the removed rule block.
   source = source.replace(/\n\s*const exactCheckoutConfirmed =[^;]+;/g, "");
+  source = source.replace(/\n\s*const graphicalCheckoutConfirmed =[^;]+;/g, "");
+  if (source.includes("graphicalCheckoutConfirmed") || source.includes("exactCheckoutConfirmed")) {
+    throw new Error("Patch failed: stale checkout helper remains");
+  }
+
   fs.writeFileSync(path, source);
 }
