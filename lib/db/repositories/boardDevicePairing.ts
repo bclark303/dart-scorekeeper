@@ -1,4 +1,4 @@
-import { randomBytes, randomInt } from "node:crypto";
+import { createHash, randomBytes, randomInt } from "node:crypto";
 
 import { and, eq } from "drizzle-orm";
 
@@ -12,7 +12,6 @@ const PAIRING_PREFIX = "board-device-pair:";
 const DEVICE_PAIRING_PREFIX = "board-device-pair-device:";
 
 function hashCredential(value: string) {
-  const { createHash } = require("node:crypto") as typeof import("node:crypto");
   return createHash("sha256").update(value, "utf8").digest("hex");
 }
 
