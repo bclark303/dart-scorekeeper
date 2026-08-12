@@ -18,6 +18,7 @@
     "game-night:test": "tsx scripts/game-night-contract-test.ts",
     "game-night:stats:test": "tsx scripts/game-night-stats-contract-test.ts",
     "game-night:multi-board:test": "tsx scripts/multi-board-completion-contract-test.ts",
+    "game-night:fixtures:test": "tsx scripts/fixture-engine-contract-test.ts && tsx scripts/game-night-fixture-contract-test.ts",
     "dummy-scoring:test": "tsx scripts/dummy-scoring-contract-test.ts && tsx scripts/dummy-scoring-integration-contract-test.ts",
     "league-match:test": "tsx scripts/league-match-contract-test.ts",
     "board-device:test": "tsx scripts/board-device-contract-test.ts",
