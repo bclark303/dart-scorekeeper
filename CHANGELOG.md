@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Player check-in workflow (v0.5.0-alpha.5)
+- Added a dedicated Game Night Player Check-in screen backed by the existing authoritative attendance mutation.
+- Check-in is explicitly tied to a selected Game Night; league membership and season roster membership remain persistent and independent.
+- The check-in screen automatically selects the active or nearest open Game Night for the active league, while allowing administrators to switch leagues and nights.
+- Added search, checked-in/roster counts, dues status controls, and Check In / Check Out actions.
+- Completed and cancelled Game Nights are shown read-only.
+- Added a direct Game Night Check-in shortcut above the Player Directory so administrators can move from assigning league/season membership into attendance without hunting through the older setup page.
+- No database migration was required because Game Night attendance already existed and remains the single source of truth.
+
 ### Master player directory (v0.5.0-alpha.4)
 - Replaced league-local player creation with one canonical Player Directory shared across the leagues an administrator can access.
 - Existing players can be added to another league with one action; repeated assignment reuses the existing league membership instead of duplicating the master player.
