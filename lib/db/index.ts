@@ -6,6 +6,7 @@ export {
 // Persistence callers should import repository operations from this public
 // boundary rather than importing Drizzle, libSQL, or adapters directly.
 export {
+  addExistingPlayerToLeagueForUser,
   addLeaguePlayerToSeasonForUser,
   archivePlayer,
   assignGameNightPlayerToTeamForUser,
@@ -35,6 +36,7 @@ export {
   listGameNightTemplatesForUser,
   listLeaguePlayersForUser,
   listLeaguesForUser,
+  listPlayerDirectoryForUser,
   listPlayers,
   listRecentX01MatchSummaries,
   listX01MatchArchivesForUser,
@@ -67,6 +69,7 @@ export {
   updateGameNightAttendanceForUser,
   updateGameNightSettingsForUser,
   updateGameNightTemplateForUser,
+  type AddExistingPlayerToLeagueForUserInput,
   type CreateGameNightForUserInput,
   type CreateGameNightTemplateForUserInput,
   type CreateLeagueForUserInput,
