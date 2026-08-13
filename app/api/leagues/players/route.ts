@@ -4,6 +4,7 @@ import {
   createLeaguePlayerForUser,
   LeaguePermissionError,
   listLeaguePlayersForUser,
+  listPlayerDirectoryForUser,
 } from "@/lib/db";
 import type {
   CreateLeaguePlayerRequest,
@@ -74,6 +75,16 @@ export async function POST(request: Request) {
   }
 
   try {
+    if (playerId) {
+      const directory = await listPlayerDirectoryForUser(user.id);
+      if (!directory.some((player) => player.playerId === playerId)) {
+        return noStoreJson(
+          { error: "That player is not available through your leagues." } satisfies CreateLeaguePlayerResponse,
+          { status: 403 },
+        );
+      }
+    }
+
     const player = playerId
       ? await addExistingPlayerToLeagueForUser({
           playerId,
