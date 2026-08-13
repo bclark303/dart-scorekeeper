@@ -242,10 +242,10 @@ export default function LeagueDevicesPage() {
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
           <Link
-            href="/game-nights"
+            href="/league-play"
             className="text-sm font-semibold text-[var(--color-primary)]"
           >
-            ← Back to Game Nights
+            ← League Play
           </Link>
           <h1 className="mt-2 text-3xl font-bold">Board Devices</h1>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">

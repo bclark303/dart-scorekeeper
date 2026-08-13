@@ -1,10 +1,9 @@
 import { FinishRule, StartingScore } from "@/lib/scoring";
-
 import {
   BestOfLegs,
   RotationMode,
-  TeamSize,
   ScoreEntryMode,
+  TeamSize,
 } from "@/lib/types";
 
 type GameSetupProps = {
@@ -42,6 +41,11 @@ type GameSetupProps = {
   setDummyScore: (dummyScore: number) => void;
 };
 
+const selectClass =
+  "w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-3";
+const inputClass =
+  "w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-3";
+
 export function GameSetup({
   teamOneName,
   teamTwoName,
@@ -76,353 +80,335 @@ export function GameSetup({
   setRotationMode,
   setDummyScore,
 }: GameSetupProps) {
+  const singles = sideOneSize === 1 && sideTwoSize === 1;
+
   return (
-    <section className="rounded-2xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] p-6 mb-8">
-      <h2 className="text-2xl font-bold mb-6">Game Setup</h2>
+    <section className="mb-8">
+      <div className="mb-6">
+        <div className="text-xs font-black uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
+          Local · no account required
+        </div>
+        <h2 className="mt-1 text-3xl font-black">Casual Play Setup</h2>
+        <p className="mt-2 max-w-2xl text-sm text-[var(--color-text-muted)]">
+          Enter the players and basic rules. Starting the match opens the focused
+          scoring board.
+        </p>
+      </div>
 
-      <div className="mb-8">
-        <h3 className="text-lg font-bold mb-3 text-[var(--color-text-main)]">
-          Match
-        </h3>
+      <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
+        <div className="space-y-5">
+          <section className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
+            <h3 className="text-lg font-black">{singles ? "Players" : "Players & Teams"}</h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-5 lg:grid-cols-4 xl:grid-cols-8 gap-4">
-          <label className="block">
-            <span className="block text-[var(--color-text-muted)] mb-2">
-              Team A Size
-            </span>
-            <select
-              className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
-              value={sideOneSize}
-              onChange={(event) =>
-                resizeSideOneMembers(Number(event.target.value) as TeamSize)
-              }
-            >
-              <option value={1}>1 player</option>
-              <option value={2}>2 players</option>
-              <option value={3}>3 players</option>
-              <option value={4}>4 players</option>
-              <option value={5}>5 players</option>
-            </select>
-          </label>
+            {singles ? (
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <label className="text-sm font-bold">
+                  Player 1
+                  <input
+                    value={teamOneMemberNames[0] ?? ""}
+                    onChange={(event) => setTeamOneMemberNames([event.target.value])}
+                    placeholder="Player 1"
+                    className={`mt-2 ${inputClass}`}
+                  />
+                </label>
+                <label className="text-sm font-bold">
+                  Player 2
+                  <input
+                    value={teamTwoMemberNames[0] ?? ""}
+                    onChange={(event) => setTeamTwoMemberNames([event.target.value])}
+                    placeholder="Player 2"
+                    className={`mt-2 ${inputClass}`}
+                  />
+                </label>
+              </div>
+            ) : (
+              <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                <div className="rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-4">
+                  <label className="text-sm font-bold">
+                    Team A
+                    <input
+                      value={teamOneName}
+                      onChange={(event) => setTeamOneName(event.target.value)}
+                      placeholder="Team A"
+                      className="mt-2 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-3"
+                    />
+                  </label>
+                  <div className="mt-3 space-y-3">
+                    {teamOneMemberNames.map((member, index) => (
+                      <input
+                        key={index}
+                        value={member}
+                        onChange={(event) => {
+                          const next = [...teamOneMemberNames];
+                          next[index] = event.target.value;
+                          setTeamOneMemberNames(next);
+                        }}
+                        placeholder={`Player ${index + 1}`}
+                        className="w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-3"
+                      />
+                    ))}
+                  </div>
+                </div>
 
-          <label className="block">
-            <span className="block text-[var(--color-text-muted)] mb-2">
-              Team B Size
-            </span>
-            <select
-              className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
-              value={sideTwoSize}
-              onChange={(event) =>
-                resizeSideTwoMembers(Number(event.target.value) as TeamSize)
-              }
-            >
-              <option value={1}>1 player</option>
-              <option value={2}>2 players</option>
-              <option value={3}>3 players</option>
-              <option value={4}>4 players</option>
-              <option value={5}>5 players</option>
-            </select>
-          </label>
+                <div className="rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-4">
+                  <label className="text-sm font-bold">
+                    Team B
+                    <input
+                      value={teamTwoName}
+                      onChange={(event) => setTeamTwoName(event.target.value)}
+                      placeholder="Team B"
+                      className="mt-2 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-3"
+                    />
+                  </label>
+                  <div className="mt-3 space-y-3">
+                    {teamTwoMemberNames.map((member, index) => (
+                      <input
+                        key={index}
+                        value={member}
+                        onChange={(event) => {
+                          const next = [...teamTwoMemberNames];
+                          next[index] = event.target.value;
+                          setTeamTwoMemberNames(next);
+                        }}
+                        placeholder={`Player ${index + 1}`}
+                        className="w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-3"
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
 
-          {sideOneSize !== sideTwoSize && (
-            <>
-              <label className="block">
-                <span className="block text-[var(--color-text-muted)] mb-2">
-                  Rotation
-                </span>
+          <section className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
+            <h3 className="text-lg font-black">Game Rules</h3>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <label className="text-sm font-bold">
+                Starting score
                 <select
-                  className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
-                  value={rotationMode}
+                  value={startingScore}
                   onChange={(event) =>
-                    setRotationMode(event.target.value as RotationMode)
+                    setStartingScore(Number(event.target.value) as StartingScore)
                   }
+                  className={`mt-2 ${selectClass}`}
                 >
-                  <option value="independent">Independent</option>
-                  <option value="dummy">Use Dummy Score</option>
+                  <option value={301}>301</option>
+                  <option value={501}>501</option>
+                  <option value={701}>701</option>
                 </select>
               </label>
 
-              {rotationMode === "dummy" && (
-                <label className="block">
-                  <span className="block text-[var(--color-text-muted)] mb-2">
-                    Dummy Score
-                  </span>
+              <label className="text-sm font-bold">
+                Finish
+                <select
+                  value={finishRule}
+                  onChange={(event) =>
+                    setFinishRule(event.target.value as FinishRule)
+                  }
+                  className={`mt-2 ${selectClass}`}
+                >
+                  <option value="double_out">Double Out</option>
+                  <option value="straight_out">Straight Out</option>
+                </select>
+              </label>
+
+              <label className="text-sm font-bold">
+                Match length
+                <select
+                  value={bestOfLegs}
+                  onChange={(event) =>
+                    setBestOfLegs(Number(event.target.value) as BestOfLegs)
+                  }
+                  className={`mt-2 ${selectClass}`}
+                >
+                  <option value={1}>Best of 1</option>
+                  <option value={3}>Best of 3</option>
+                  <option value={5}>Best of 5</option>
+                  <option value={7}>Best of 7</option>
+                  <option value={9}>Best of 9</option>
+                </select>
+              </label>
+
+              <label className="text-sm font-bold">
+                Scoring style
+                <select
+                  value={scoreEntryMode}
+                  onChange={(event) =>
+                    setScoreEntryMode(event.target.value as ScoreEntryMode)
+                  }
+                  className={`mt-2 ${selectClass}`}
+                >
+                  <option value="dart">Graphical Board</option>
+                  <option value="turn">Turn Total</option>
+                </select>
+              </label>
+            </div>
+          </section>
+
+          <details className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
+            <summary className="cursor-pointer font-black">More match options</summary>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <label className="text-sm font-bold">
+                Team A size
+                <select
+                  value={sideOneSize}
+                  onChange={(event) =>
+                    resizeSideOneMembers(Number(event.target.value) as TeamSize)
+                  }
+                  className={`mt-2 ${selectClass}`}
+                >
+                  {[1, 2, 3, 4, 5].map((size) => (
+                    <option key={size} value={size}>
+                      {size} {size === 1 ? "player" : "players"}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="text-sm font-bold">
+                Team B size
+                <select
+                  value={sideTwoSize}
+                  onChange={(event) =>
+                    resizeSideTwoMembers(Number(event.target.value) as TeamSize)
+                  }
+                  className={`mt-2 ${selectClass}`}
+                >
+                  {[1, 2, 3, 4, 5].map((size) => (
+                    <option key={size} value={size}>
+                      {size} {size === 1 ? "player" : "players"}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {sideOneSize !== sideTwoSize && (
+                <label className="text-sm font-bold">
+                  Uneven-team rotation
+                  <select
+                    value={rotationMode}
+                    onChange={(event) =>
+                      setRotationMode(event.target.value as RotationMode)
+                    }
+                    className={`mt-2 ${selectClass}`}
+                  >
+                    <option value="independent">Independent</option>
+                    <option value="dummy">Use Dummy Score</option>
+                  </select>
+                </label>
+              )}
+
+              {sideOneSize !== sideTwoSize && rotationMode === "dummy" && (
+                <label className="text-sm font-bold">
+                  Dummy score
                   <input
-                    className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
                     value={dummyScore}
-                    onChange={(event) => {
-                      const nextScore = Number(event.target.value);
-
-                      if (Number.isNaN(nextScore)) {
-                        setDummyScore(0);
-                        return;
-                      }
-
-                      setDummyScore(nextScore);
-                    }}
                     inputMode="numeric"
+                    onChange={(event) =>
+                      setDummyScore(Number(event.target.value) || 0)
+                    }
+                    className={`mt-2 ${inputClass}`}
                   />
                 </label>
               )}
-            </>
+            </div>
+
+            <button
+              type="button"
+              onClick={clearSavedMatch}
+              className="mt-5 text-sm font-bold text-[var(--color-text-muted)] underline underline-offset-4"
+            >
+              Clear saved local match and preferences
+            </button>
+          </details>
+
+          {isResetConfirmationVisible && (
+            <section className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-5">
+              <h3 className="text-lg font-black">Replace the current match?</h3>
+              <p className="mt-2 text-sm text-[var(--color-text-muted)]">
+                Current turns and leg progress will be reset.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={confirmResetMatch}
+                  className="rounded-xl bg-[var(--color-danger)] px-4 py-2.5 font-black text-white"
+                >
+                  Start new match
+                </button>
+                <button
+                  type="button"
+                  onClick={cancelResetMatch}
+                  className="rounded-xl border border-[var(--color-panel-border)] px-4 py-2.5 font-black"
+                >
+                  Cancel
+                </button>
+              </div>
+            </section>
           )}
 
-          <label className="block">
-            <span className="block text-[var(--color-text-muted)] mb-2">
-              Game
-            </span>
-            <select
-              className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
-              value={startingScore}
-              onChange={(event) =>
-                setStartingScore(Number(event.target.value) as StartingScore)
-              }
-            >
-              <option value={301}>301</option>
-              <option value={501}>501</option>
-              <option value={701}>701</option>
-            </select>
-          </label>
-
-          <label className="block">
-            <span className="block text-[var(--color-text-muted)] mb-2">
-              Finish
-            </span>
-            <select
-              className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
-              value={finishRule}
-              onChange={(event) =>
-                setFinishRule(event.target.value as FinishRule)
-              }
-            >
-              <option value="double_out">Double Out</option>
-              <option value="straight_out">Straight Out</option>
-            </select>
-          </label>
-
-          <label className="block">
-            <span className="block text-[var(--color-text-muted)] mb-2">
-              Score Entry
-            </span>
-            <select
-              className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
-              value={scoreEntryMode}
-              onChange={(event) =>
-                setScoreEntryMode(event.target.value as ScoreEntryMode)
-              }
-            >
-              <option value="turn">Total Turn Score</option>
-              <option value="dart">Dart-by-Dart</option>
-            </select>
-          </label>
-
-          <label className="block">
-            <span className="block text-[var(--color-text-muted)] mb-2">
-              Legs
-            </span>
-            <select
-              className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
-              value={bestOfLegs}
-              onChange={(event) =>
-                setBestOfLegs(Number(event.target.value) as BestOfLegs)
-              }
-            >
-              <option value={1}>Best of 1</option>
-              <option value={3}>Best of 3</option>
-              <option value={5}>Best of 5</option>
-              <option value={7}>Best of 7</option>
-              <option value={9}>Best of 9</option>
-            </select>
-          </label>
+          {isClearSavedConfirmationVisible && (
+            <section className="rounded-2xl border border-red-500/40 bg-red-500/10 p-5">
+              <h3 className="text-lg font-black">Clear saved local data?</h3>
+              <p className="mt-2 text-sm text-[var(--color-text-muted)]">
+                This clears the saved match and local scorer preferences from
+                this browser.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={confirmClearSavedMatch}
+                  className="rounded-xl bg-[var(--color-danger)] px-4 py-2.5 font-black text-white"
+                >
+                  Clear local data
+                </button>
+                <button
+                  type="button"
+                  onClick={cancelClearSavedMatch}
+                  className="rounded-xl border border-[var(--color-panel-border)] px-4 py-2.5 font-black"
+                >
+                  Cancel
+                </button>
+              </div>
+            </section>
+          )}
         </div>
-      </div>
 
-      <div className="mb-8">
-        <h3 className="text-lg font-bold mb-3 text-[var(--color-text-muted)]">
-          {sideOneSize === 1 && sideTwoSize === 1 ? "Players" : "Teams"}
-        </h3>
-
-        {sideOneSize === 1 && sideTwoSize === 1 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <label className="block">
-              <span className="block text-[var(--color-text-muted)] mb-2">
-                Player 1
-              </span>
-              <input
-                className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
-                value={teamOneMemberNames[0] ?? ""}
-                placeholder="Player 1"
-                onChange={(event) =>
-                  setTeamOneMemberNames([event.target.value])
-                }
-              />
-            </label>
-
-            <label className="block">
-              <span className="block text-[var(--color-text-muted)] mb-2">
-                Player 2
-              </span>
-              <input
-                className="w-full rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-3"
-                value={teamTwoMemberNames[0] ?? ""}
-                placeholder="Player 2"
-                onChange={(event) =>
-                  setTeamTwoMemberNames([event.target.value])
-                }
-              />
-            </label>
+        <aside className="h-fit rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5 lg:sticky lg:top-5">
+          <div className="text-xs font-black uppercase tracking-wide text-[var(--color-text-muted)]">
+            Match summary
           </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-4">
-              <h4 className="font-bold mb-3">Team A</h4>
-
-              <div className="grid grid-cols-1 gap-4">
-                <label className="block">
-                  <span className="block text-[var(--color-text-muted)] mb-2">
-                    Team Name
-                  </span>
-                  <input
-                    className="w-full rounded-xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] p-3"
-                    value={teamOneName}
-                    placeholder="Team A"
-                    onChange={(event) => setTeamOneName(event.target.value)}
-                  />
-                </label>
-
-                {teamOneMemberNames.map((memberName, index) => (
-                  <label key={index} className="block">
-                    <span className="block text-[var(--color-text-muted)] mb-2">
-                      Player {index + 1}
-                    </span>
-                    <input
-                      className="w-full rounded-xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] p-3"
-                      value={memberName}
-                      placeholder={`Player ${index + 1}-A`}
-                      onChange={(event) => {
-                        const updatedNames = [...teamOneMemberNames];
-                        updatedNames[index] = event.target.value;
-                        setTeamOneMemberNames(updatedNames);
-                      }}
-                    />
-                  </label>
-                ))}
-              </div>
+          <div className="mt-4 space-y-3 text-sm">
+            <div className="flex items-center justify-between gap-3 border-b border-[var(--color-panel-border)] pb-3">
+              <span className="text-[var(--color-text-muted)]">Players</span>
+              <strong>{sideOneSize + sideTwoSize}</strong>
             </div>
-
-            <div className="rounded-xl bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] p-4">
-              <h4 className="font-bold mb-3">Team B</h4>
-
-              <div className="grid grid-cols-1 gap-4">
-                <label className="block">
-                  <span className="block text-[var(--color-text-muted)] mb-2">
-                    Team Name
-                  </span>
-                  <input
-                    className="w-full rounded-xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] p-3"
-                    value={teamTwoName}
-                    placeholder="Team B"
-                    onChange={(event) => setTeamTwoName(event.target.value)}
-                  />
-                </label>
-
-                {teamTwoMemberNames.map((memberName, index) => (
-                  <label key={index} className="block">
-                    <span className="block text-[var(--color-text-muted)] mb-2">
-                      Player {index + 1}
-                    </span>
-                    <input
-                      className="w-full rounded-xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] p-3"
-                      value={memberName}
-                      placeholder={`Player ${index + 1}-B`}
-                      onChange={(event) => {
-                        const updatedNames = [...teamTwoMemberNames];
-                        updatedNames[index] = event.target.value;
-                        setTeamTwoMemberNames(updatedNames);
-                      }}
-                    />
-                  </label>
-                ))}
-              </div>
+            <div className="flex items-center justify-between gap-3 border-b border-[var(--color-panel-border)] pb-3">
+              <span className="text-[var(--color-text-muted)]">Game</span>
+              <strong>{startingScore}</strong>
+            </div>
+            <div className="flex items-center justify-between gap-3 border-b border-[var(--color-panel-border)] pb-3">
+              <span className="text-[var(--color-text-muted)]">Finish</span>
+              <strong>{finishRule === "double_out" ? "Double Out" : "Straight Out"}</strong>
+            </div>
+            <div className="flex items-center justify-between gap-3 border-b border-[var(--color-panel-border)] pb-3">
+              <span className="text-[var(--color-text-muted)]">Length</span>
+              <strong>Best of {bestOfLegs}</strong>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[var(--color-text-muted)]">Scoring</span>
+              <strong>{scoreEntryMode === "dart" ? "Graphical Board" : "Turn Total"}</strong>
             </div>
           </div>
-        )}
-      </div>
 
-      {isResetConfirmationVisible && (
-        <div className="mb-6 rounded-2xl border border-[var(--color-warning)]/50 bg-[var(--color-warning)]/20 p-5">
-          <div className="text-xl font-bold text-[var(--color-warning-hover)] mb-2">
-            Reset current match?
-          </div>
-
-          <p className="text-[var(--color-text-muted)] mb-4">
-            This will clear the current scores, turns, legs, and match history.
-            This cannot be undone.
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <button
-              onClick={confirmResetMatch}
-              className="rounded-xl bg-[var(--color-danger)] hover:bg-[var(--color-danger-hover)] px-6 py-3 text-lg font-bold"
-            >
-              Yes, Reset Match
-            </button>
-
-            <button
-              onClick={cancelResetMatch}
-              className="rounded-xl bg-[var(--color-panel-soft)] hover:bg-[var(--color-panel-border)] px-6 py-3 text-lg font-bold"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-
-
-      {isClearSavedConfirmationVisible && (
-        <div className="mb-6 rounded-2xl border border-[var(--color-danger)]/50 bg-[var(--color-danger)]/20 p-5">
-          <div className="text-xl font-bold text-[var(--color-danger-hover)] mb-2">
-            Clear saved match and settings?
-          </div>
-
-          <p className="text-[var(--color-text-muted)] mb-4">
-            This clears the saved match, players, game options, app name, and
-            current scores from this browser. This cannot be undone.
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <button
-              onClick={confirmClearSavedMatch}
-              className="rounded-xl bg-[var(--color-danger)] hover:bg-[var(--color-danger-hover)] px-6 py-3 text-lg font-bold"
-            >
-              Yes, Clear Everything
-            </button>
-
-            <button
-              onClick={cancelClearSavedMatch}
-              className="rounded-xl bg-[var(--color-panel-soft)] hover:bg-[var(--color-panel-border)] px-6 py-3 text-lg font-bold"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <button
-          onClick={startNewGame}
-          className="rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] px-6 py-3 text-lg font-bold"
-        >
-          Start / Reset Match
-        </button>
-
-        <button
-          onClick={clearSavedMatch}
-          className="rounded-xl bg-[var(--color-panel-soft)] hover:bg-[var(--color-panel-border)] px-6 py-3 text-lg font-bold"
-        >
-          Clear Saved Match
-        </button>
+          <button
+            type="button"
+            onClick={startNewGame}
+            className="mt-6 w-full rounded-xl bg-emerald-600 px-5 py-4 text-lg font-black text-white hover:bg-emerald-500"
+          >
+            🎯 Start Match
+          </button>
+        </aside>
       </div>
     </section>
   );

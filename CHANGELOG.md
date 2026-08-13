@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Redesign validation (v0.5.0-alpha.3)
+- Rebuilt the app hierarchy around a two-choice Home screen: Casual Play or League Play.
+- Moved local scoring into a focused Casual Play setup → scoring flow with Match Options, Help, Settings, and a clear Home exit.
+- Added a League Play login/device gate and a five-area league menu: League Setup, Game Night, Players, Devices, and Play.
+- Added a state-aware Game Night Control dashboard for readiness, live room status, next actions, and completion, while preserving the existing detailed setup and fixture workspaces.
+- Added active-league context shared across the redesigned league entry points.
+- Simplified paired board devices to an appliance-style Casual Play / League Play experience with device Settings and Help.
+- Added contextual Help / Feedback with searchable help topics.
+- Kept scoring, fixture, persistence, authentication, offline queue, pairing, and league API contracts unchanged beneath the new navigation shell.
+
+
 ### Added
 - Shared League Workspace navigation across league administration pages.
 - Complete League landing shortcuts for Game Nights, league/season setup, players/rosters, rules templates, and board devices.

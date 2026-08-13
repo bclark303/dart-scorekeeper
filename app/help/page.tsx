@@ -1,0 +1,47 @@
+"use client";
+
+import Link from "next/link";
+import { useMemo, useState, useSyncExternalStore } from "react";
+import type { FormEvent } from "react";
+import { APP_VERSION } from "@/lib/appInfo";
+
+const topics = [
+  { key: "home", title: "Getting started", body: "Home has two paths: Casual Play for local games and League Play for connected league nights." },
+  { key: "casual", title: "Casual Play", body: "Enter players and the basic X01 rules, then start the graphical scorer. Match Options returns to setup without discarding the active game." },
+  { key: "league", title: "League Play", body: "League Play checks connected access first. Sign in for league administration, or use Device Setup to pair a dedicated scoring board." },
+  { key: "game-night", title: "Game Night", body: "Game Night Control is the parent dashboard. Check-in, teams, boards and fixtures are child workspaces used only when details need attention." },
+  { key: "devices", title: "Devices", body: "Paired boards are scoring appliances: Casual Play or their assigned League Play match, plus device-local Settings and Help." },
+  { key: "scoring", title: "Scoring", body: "Graphical dart entry is the default. Undo reverses the newest valid turn; league matches continue to use the central authoritative turn history." },
+];
+
+const subscribeToLocation = () => () => undefined;
+const readContext = () => new URLSearchParams(window.location.search).get("from") ?? "home";
+
+export default function HelpPage() {
+  const from = useSyncExternalStore(subscribeToLocation, readContext, () => "home");
+  const [query, setQuery] = useState("");
+  const [feedback, setFeedback] = useState("");
+  const [sent, setSent] = useState(false);
+
+  const visible = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return topics;
+    return topics.filter((topic) => `${topic.title} ${topic.body}`.toLowerCase().includes(needle));
+  }, [query]);
+
+  function captureFeedback(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSent(true);
+  }
+
+  return (
+    <main className="min-h-screen bg-[var(--color-app-bg)] p-4 text-[var(--color-text-main)] sm:p-6">
+      <div className="mx-auto max-w-5xl">
+        <header className="mb-6"><Link href="/" className="text-sm font-black text-[var(--color-primary)]">← Home</Link><h1 className="mt-2 text-3xl font-black">Help & Feedback</h1><p className="mt-1 text-sm text-[var(--color-text-muted)]">Context: {from} · v{APP_VERSION}</p></header>
+        <label className="block font-bold">Search help<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search scoring, Game Night, devices…" className="mt-2 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] px-4 py-3" /></label>
+        <div className="mt-6 grid gap-3 md:grid-cols-2">{visible.map((topic) => <article key={topic.key} className={`rounded-2xl border bg-[var(--color-panel)] p-5 ${from.includes(topic.key) ? "border-[var(--color-primary)]" : "border-[var(--color-panel-border)]"}`}><h2 className="text-lg font-black">{topic.title}</h2><p className="mt-2 text-sm leading-6 text-[var(--color-text-muted)]">{topic.body}</p></article>)}</div>
+        <form onSubmit={captureFeedback} className="mt-8 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5"><h2 className="text-xl font-black">Feedback / problem report</h2><p className="mt-1 text-sm text-[var(--color-text-muted)]">The current help context and app version are shown here so feedback can be tied to the right screen.</p>{sent ? <div className="mt-4 rounded-xl bg-emerald-500/10 p-4 text-emerald-200">Feedback noted for this validation build.</div> : <><textarea required value={feedback} onChange={(event) => setFeedback(event.target.value)} rows={4} className="mt-4 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-3" placeholder="What happened, or what would make this page clearer?" /><button className="mt-3 rounded-xl bg-[var(--color-primary)] px-4 py-2.5 font-black text-white">Capture Feedback</button></>}</form>
+      </div>
+    </main>
+  );
+}

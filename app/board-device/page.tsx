@@ -201,7 +201,7 @@ export default function BoardDevicePage() {
   function openCasualScorer() {
     setMode("casual");
     window.localStorage.setItem(MODE_KEY, "casual");
-    window.location.href = "/?boardDevice=casual";
+    window.location.href = "/casual?boardDevice=casual";
   }
 
   if (!initialized) {
@@ -315,22 +315,15 @@ export default function BoardDevicePage() {
               </p>
             )}
           </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => void loadConnection()}
-              className="rounded-xl border border-[var(--color-panel-border)] px-4 py-2 text-sm font-bold disabled:opacity-50"
-            >
-              Refresh
-            </button>
-            <button
-              type="button"
-              onClick={() => void forgetRegistration()}
-              className="rounded-xl border border-[var(--color-panel-border)] px-4 py-2 text-sm font-bold"
-            >
-              Forget Device
-            </button>
+          <div className="flex items-start gap-2">
+            <a href="/help?from=device" className="rounded-xl border border-[var(--color-panel-border)] px-4 py-2 text-sm font-bold">? Help</a>
+            <details className="relative">
+              <summary className="cursor-pointer list-none rounded-xl border border-[var(--color-panel-border)] px-4 py-2 text-sm font-bold">⚙ Settings</summary>
+              <div className="absolute right-0 z-20 mt-2 w-64 space-y-2 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-3 shadow-xl">
+                <button type="button" disabled={loading} onClick={() => void loadConnection()} className="w-full rounded-xl border border-[var(--color-panel-border)] px-4 py-2 text-left text-sm font-bold disabled:opacity-50">Refresh connection</button>
+                <button type="button" onClick={() => void forgetRegistration()} className="w-full rounded-xl border border-rose-500/40 px-4 py-2 text-left text-sm font-bold text-rose-200">Forget / re-pair device</button>
+              </div>
+            </details>
           </div>
         </div>
 
@@ -351,9 +344,9 @@ export default function BoardDevicePage() {
             }`}
           >
             <div className="text-sm font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
-              League Mode
+              League Play
             </div>
-            <div className="mt-1 text-2xl font-bold">Central League Scoring</div>
+            <div className="mt-1 text-2xl font-bold">League Play</div>
             <p className="mt-2 text-sm text-[var(--color-text-muted)]">
               Wait for this board&apos;s centrally assigned league match.
               Active league assignments automatically take control of the
@@ -367,9 +360,9 @@ export default function BoardDevicePage() {
             className="rounded-2xl border border-[var(--color-panel-border)] p-5 text-left hover:bg-[var(--color-panel-soft)]"
           >
             <div className="text-sm font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
-              Casual Mode
+              Casual Play
             </div>
-            <div className="mt-1 text-2xl font-bold">Local Casual Game</div>
+            <div className="mt-1 text-2xl font-bold">Casual Play</div>
             <p className="mt-2 text-sm text-[var(--color-text-muted)]">
               Open the normal local-first scorer for non-league play. No
               central assignment or account is required.

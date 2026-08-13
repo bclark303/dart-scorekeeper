@@ -211,7 +211,7 @@ export default function GameNightFixturesPage() {
             href="/game-nights"
             className="text-sm font-bold text-[var(--color-primary)]"
           >
-            ← Game Night setup
+            ← Game Night Control
           </Link>
           <h1 className="mt-2 text-3xl font-bold">Fixture & Round Control</h1>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">

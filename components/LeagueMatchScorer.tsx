@@ -37,15 +37,13 @@ export function LeagueMatchScorer({
   authMode = "account",
   deviceKey,
   deviceId,
-  backHref = "/game-nights",
-  backLabel = "← Back to Game Nights",
+  backHref = "/league-play/play",
+  backLabel = "← League Play",
 }: LeagueMatchScorerProps) {
   const { data: session, isPending: sessionPending } = authClient.useSession();
   const deviceMode = authMode === "device";
   const accessReady = deviceMode ? Boolean(deviceKey) : Boolean(session?.user);
-  const [inputMode, setInputMode] = useState<CentralInputMode>(() =>
-    authMode === "device" ? "graphical" : "total",
-  );
+  const [inputMode, setInputMode] = useState<CentralInputMode>("graphical");
   const [scoreInput, setScoreInput] = useState("");
   const [dartsThrown, setDartsThrown] = useState<1 | 2 | 3>(3);
   const [pendingCheckout, setPendingCheckout] = useState<PendingCheckout | null>(null);
