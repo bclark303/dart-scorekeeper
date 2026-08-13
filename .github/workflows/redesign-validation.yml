@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   redesign-and-verify:
-    if: github.actor != 'github-actions[bot]'
+    if: github.actor != 'github-actions[bot]' && contains(github.event.head_commit.message, '[run-redesign]')
     runs-on: ubuntu-latest
     env:
       DB_PROVIDER: libsql
@@ -84,7 +84,7 @@ jobs:
 
       - name: Commit clean validated redesign
         run: |
-          rm -f .github/redesign_apply.py .github/workflows/redesign-validation.yml
+          rm -f .github/redesign_apply.py .github/redesign_code_payload.txt .github/redesign_payload_*.txt .github/workflows/redesign-validation.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
