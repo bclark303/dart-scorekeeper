@@ -10,6 +10,7 @@ export {
   savePlayer,
   type SavePlayerInput,
 } from "./players";
+export { getPlayerCareerStatsForUser } from "./playerStats";
 export {
   createLeagueForUser,
   createSeasonForUser,
@@ -19,10 +20,13 @@ export {
   type CreateSeasonForUserInput,
 } from "./leagues";
 export {
+  addExistingPlayerToLeagueForUser,
   addLeaguePlayerToSeasonForUser,
   createLeaguePlayerForUser,
   listLeaguePlayersForUser,
+  listPlayerDirectoryForUser,
   removeLeaguePlayerFromSeasonForUser,
+  type AddExistingPlayerToLeagueForUserInput,
   type CreateLeaguePlayerForUserInput,
   type MutateSeasonRosterForUserInput,
 } from "./leagueRoster";

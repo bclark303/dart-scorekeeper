@@ -1,9 +1,13 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
 
-import type { LeaguePlayerSummary, LeaguePlayerStatus } from "@/lib/league/rosterContracts";
+import type {
+  LeaguePlayerStatus,
+  LeaguePlayerSummary,
+  PlayerDirectoryPlayer,
+} from "@/lib/league/rosterContracts";
 import { getDatabase } from "../client";
 import { leaguePlayers, seasonRosterEntries } from "../league-schema";
-import { leagueMemberships, players, seasons } from "../schema";
+import { leagueMemberships, leagues, players, seasons } from "../schema";
 import { LeaguePermissionError } from "./leagues";
 
 export type CreateLeaguePlayerForUserInput = {
@@ -12,6 +16,14 @@ export type CreateLeaguePlayerForUserInput = {
   leagueId: string;
   userId: string;
   displayName: string;
+  now?: number;
+};
+
+export type AddExistingPlayerToLeagueForUserInput = {
+  playerId: string;
+  leaguePlayerId: string;
+  leagueId: string;
+  userId: string;
   now?: number;
 };
 
@@ -95,6 +107,92 @@ async function toLeaguePlayerSummary(
     status: asLeaguePlayerStatus(row.status),
     seasonIds: rosterRows.map((entry) => entry.seasonId),
   };
+}
+
+/**
+ * Return the canonical player directory visible through the caller's leagues.
+ *
+ * A master player appears only once even when the same player belongs to many
+ * leagues. Memberships remain separate records so league/season statistics can
+ * later be filtered without duplicating the player's identity.
+ */
+export async function listPlayerDirectoryForUser(
+  userId: string,
+): Promise<PlayerDirectoryPlayer[]> {
+  const database = getDatabase();
+  const membershipRows = await database
+    .select({
+      playerId: players.id,
+      displayName: players.displayName,
+      playerCreatedAt: players.createdAt,
+      playerUpdatedAt: players.updatedAt,
+      leaguePlayerId: leaguePlayers.id,
+      leagueId: leaguePlayers.leagueId,
+      leagueName: leagues.name,
+      leaguePlayerStatus: leaguePlayers.status,
+    })
+    .from(players)
+    .innerJoin(leaguePlayers, eq(leaguePlayers.playerId, players.id))
+    .innerJoin(leagues, eq(leaguePlayers.leagueId, leagues.id))
+    .innerJoin(
+      leagueMemberships,
+      and(
+        eq(leagueMemberships.leagueId, leaguePlayers.leagueId),
+        eq(leagueMemberships.userId, userId),
+        eq(leagueMemberships.status, "active"),
+      ),
+    )
+    .where(and(eq(leaguePlayers.status, "active"), isNull(players.archivedAt)))
+    .orderBy(asc(players.displayName), asc(leagues.name));
+
+  const rosterRows = await database
+    .select({
+      leaguePlayerId: seasonRosterEntries.leaguePlayerId,
+      seasonId: seasonRosterEntries.seasonId,
+    })
+    .from(seasonRosterEntries)
+    .innerJoin(
+      leaguePlayers,
+      eq(seasonRosterEntries.leaguePlayerId, leaguePlayers.id),
+    )
+    .innerJoin(
+      leagueMemberships,
+      and(
+        eq(leagueMemberships.leagueId, leaguePlayers.leagueId),
+        eq(leagueMemberships.userId, userId),
+        eq(leagueMemberships.status, "active"),
+      ),
+    )
+    .where(eq(seasonRosterEntries.status, "active"));
+
+  const seasonIdsByMembership = new Map<string, string[]>();
+  for (const row of rosterRows) {
+    const current = seasonIdsByMembership.get(row.leaguePlayerId) ?? [];
+    current.push(row.seasonId);
+    seasonIdsByMembership.set(row.leaguePlayerId, current);
+  }
+
+  const directory = new Map<string, PlayerDirectoryPlayer>();
+  for (const row of membershipRows) {
+    const player = directory.get(row.playerId) ?? {
+      playerId: row.playerId,
+      displayName: row.displayName,
+      memberships: [],
+      createdAt: row.playerCreatedAt,
+      updatedAt: row.playerUpdatedAt,
+    };
+
+    player.memberships.push({
+      leaguePlayerId: row.leaguePlayerId,
+      leagueId: row.leagueId,
+      leagueName: row.leagueName,
+      status: asLeaguePlayerStatus(row.leaguePlayerStatus),
+      seasonIds: seasonIdsByMembership.get(row.leaguePlayerId) ?? [],
+    });
+    directory.set(row.playerId, player);
+  }
+
+  return [...directory.values()];
 }
 
 export async function listLeaguePlayersForUser(
@@ -188,6 +286,54 @@ export async function createLeaguePlayerForUser(
     createdAt: now,
     updatedAt: now,
   };
+}
+
+/** Attach an existing master-directory player to another league. */
+export async function addExistingPlayerToLeagueForUser(
+  input: AddExistingPlayerToLeagueForUserInput,
+): Promise<LeaguePlayerSummary> {
+  await requireLeagueAdmin(input.leagueId, input.userId);
+  const database = getDatabase();
+  const now = input.now ?? Date.now();
+
+  const [player] = await database
+    .select({ id: players.id })
+    .from(players)
+    .where(and(eq(players.id, input.playerId), isNull(players.archivedAt)))
+    .limit(1);
+  if (!player) throw new Error("Master player was not found.");
+
+  const [existing] = await database
+    .select({ id: leaguePlayers.id, status: leaguePlayers.status })
+    .from(leaguePlayers)
+    .where(
+      and(
+        eq(leaguePlayers.leagueId, input.leagueId),
+        eq(leaguePlayers.playerId, input.playerId),
+      ),
+    )
+    .limit(1);
+
+  if (existing) {
+    if (existing.status !== "active") {
+      await database
+        .update(leaguePlayers)
+        .set({ status: "active", updatedAt: now })
+        .where(eq(leaguePlayers.id, existing.id));
+    }
+    return toLeaguePlayerSummary(existing.id);
+  }
+
+  await database.insert(leaguePlayers).values({
+    id: input.leaguePlayerId,
+    leagueId: input.leagueId,
+    playerId: input.playerId,
+    status: "active",
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  return toLeaguePlayerSummary(input.leaguePlayerId);
 }
 
 async function verifyRosterTargets(leagueId: string, seasonId: string, leaguePlayerId: string) {

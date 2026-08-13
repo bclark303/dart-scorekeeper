@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Master player directory (v0.5.0-alpha.4)
+- Replaced league-local player creation with one canonical Player Directory shared across the leagues an administrator can access.
+- Existing players can be added to another league with one action; repeated assignment reuses the existing league membership instead of duplicating the master player.
+- Kept league membership separate from season-roster participation so one player can participate in different leagues and seasons independently.
+- Added search-first player creation so existing identities are reused by default and exact-name matches are surfaced before a new player is created.
+- Added overall, per-league, and per-season scoring statistics derived from authoritative central turn history, including turns, points, average per turn, 100+, 140+, 180s, highest turn, double outs, and highest checkout.
+- Added a dedicated cross-league contract proving one master player can belong to two leagues and independent seasons without duplicate identities.
+- Restricted reuse of an existing player to identities visible through leagues the signed-in administrator can access.
+- No database migration was required because the existing `players`, `league_players`, and `season_roster_entries` hierarchy already supported the model.
+
 ### Redesign validation (v0.5.0-alpha.3)
 - Rebuilt the app hierarchy around a two-choice Home screen: Casual Play or League Play.
 - Moved local scoring into a focused Casual Play setup → scoring flow with Match Options, Help, Settings, and a clear Home exit.
