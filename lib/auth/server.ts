@@ -39,7 +39,10 @@ function createAuth() {
     session: {
       expiresIn: 60 * 60 * 24 * 30,
       updateAge: 60 * 60 * 24,
-      deferSessionRefresh: true,
+      // Better Auth 1.6.x can issue a bodyless POST to /get-session when
+      // deferred refresh is enabled. Next.js/Vercel rejects that request with
+      // 415, so keep refresh synchronous until the upstream bug is fixed.
+      deferSessionRefresh: false,
     },
     advanced: {
       cookiePrefix: "dart-scorekeeper",
