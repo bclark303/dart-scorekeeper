@@ -1,5 +1,6 @@
 import { getRequestSession } from "@/lib/auth/server";
 import {
+  addExistingPlayerToLeagueForUser,
   createLeaguePlayerForUser,
   LeaguePermissionError,
   listLeaguePlayersForUser,
@@ -62,27 +63,41 @@ export async function POST(request: Request) {
     return noStoreJson({ error: "Invalid player request." }, { status: 400 });
   }
 
-  if (!input.leagueId?.trim() || !validName(input.displayName)) {
+  const leagueId = input.leagueId?.trim() ?? "";
+  const playerId = input.playerId?.trim() ?? "";
+  const hasNewPlayerName = validName(input.displayName);
+  if (!leagueId || (!playerId && !hasNewPlayerName)) {
     return noStoreJson(
-      { error: "League and a player name between 1 and 80 characters are required." },
+      { error: "League and either an existing player or a new player name are required." },
       { status: 400 },
     );
   }
 
   try {
-    const player = await createLeaguePlayerForUser({
-      playerId: crypto.randomUUID(),
-      leaguePlayerId: crypto.randomUUID(),
-      leagueId: input.leagueId,
-      userId: user.id,
-      displayName: input.displayName,
-    });
+    const player = playerId
+      ? await addExistingPlayerToLeagueForUser({
+          playerId,
+          leaguePlayerId: crypto.randomUUID(),
+          leagueId,
+          userId: user.id,
+        })
+      : await createLeaguePlayerForUser({
+          playerId: crypto.randomUUID(),
+          leaguePlayerId: crypto.randomUUID(),
+          leagueId,
+          userId: user.id,
+          displayName: input.displayName as string,
+        });
+
     return noStoreJson({ player } satisfies CreateLeaguePlayerResponse, { status: 201 });
   } catch (error) {
     if (error instanceof LeaguePermissionError) {
       return noStoreJson({ error: error.message } satisfies CreateLeaguePlayerResponse, { status: 403 });
     }
-    console.error("Could not create league player.", error);
-    return noStoreJson({ error: "The player could not be created." } satisfies CreateLeaguePlayerResponse, { status: 503 });
+    console.error("Could not add player to league.", error);
+    return noStoreJson(
+      { error: "The player could not be added to the league." } satisfies CreateLeaguePlayerResponse,
+      { status: 503 },
+    );
   }
 }
