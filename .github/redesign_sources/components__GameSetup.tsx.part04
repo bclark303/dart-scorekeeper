@@ -1,0 +1,89 @@
+                      {size} {size === 1 ? "player" : "players"}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="text-sm font-bold">
+                Team B size
+                <select
+                  value={sideTwoSize}
+                  onChange={(event) =>
+                    resizeSideTwoMembers(Number(event.target.value) as TeamSize)
+                  }
+                  className={`mt-2 ${selectClass}`}
+                >
+                  {[1, 2, 3, 4, 5].map((size) => (
+                    <option key={size} value={size}>
+                      {size} {size === 1 ? "player" : "players"}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {sideOneSize !== sideTwoSize && (
+                <label className="text-sm font-bold">
+                  Uneven-team rotation
+                  <select
+                    value={rotationMode}
+                    onChange={(event) =>
+                      setRotationMode(event.target.value as RotationMode)
+                    }
+                    className={`mt-2 ${selectClass}`}
+                  >
+                    <option value="independent">Independent</option>
+                    <option value="dummy">Use Dummy Score</option>
+                  </select>
+                </label>
+              )}
+
+              {sideOneSize !== sideTwoSize && rotationMode === "dummy" && (
+                <label className="text-sm font-bold">
+                  Dummy score
+                  <input
+                    value={dummyScore}
+                    inputMode="numeric"
+                    onChange={(event) =>
+                      setDummyScore(Number(event.target.value) || 0)
+                    }
+                    className={`mt-2 ${inputClass}`}
+                  />
+                </label>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={clearSavedMatch}
+              className="mt-5 text-sm font-bold text-[var(--color-text-muted)] underline underline-offset-4"
+            >
+              Clear saved local match and preferences
+            </button>
+          </details>
+
+          {isResetConfirmationVisible && (
+            <section className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-5">
+              <h3 className="text-lg font-black">Replace the current match?</h3>
+              <p className="mt-2 text-sm text-[var(--color-text-muted)]">
+                Current turns and leg progress will be reset.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={confirmResetMatch}
+                  className="rounded-xl bg-[var(--color-danger)] px-4 py-2.5 font-black text-white"
+                >
+                  Start new match
+                </button>
+                <button
+                  type="button"
+                  onClick={cancelResetMatch}
+                  className="rounded-xl border border-[var(--color-panel-border)] px-4 py-2.5 font-black"
+                >
+                  Cancel
+                </button>
+              </div>
+            </section>
+          )}
+
+          {isClearSavedConfirmationVisible && (

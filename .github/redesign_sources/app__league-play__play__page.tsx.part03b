@@ -1,0 +1,20 @@
+                    {pairing.matchSessionId ? (
+                      <Link href={`/league-match/${pairing.matchSessionId}`} className="mt-5 flex justify-center rounded-xl bg-[var(--color-primary)] px-4 py-3 font-black text-white">
+                        {pairing.matchStatus === "completed" ? "Review Match" : "Open Scorer"}
+                      </Link>
+                    ) : (
+                      <div className="mt-5 rounded-xl bg-[var(--color-panel-soft)] p-3 text-center text-sm text-[var(--color-text-muted)]">Waiting for the coordinator to release this match.</div>
+                    )}
+                  </article>
+                );
+              })}
+              {!currentPairings.length && (
+                <section className="rounded-2xl border border-dashed border-[var(--color-panel-border)] bg-[var(--color-panel)] p-6 text-[var(--color-text-muted)] lg:col-span-2">No matches are available in the current round yet.</section>
+              )}
+            </div>
+          </>
+        ) : null}
+      </div>
+    </main>
+  );
+}

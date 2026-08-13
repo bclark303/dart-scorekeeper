@@ -1,0 +1,103 @@
+"use client";
+
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+import { authClient } from "@/lib/auth/client";
+import type { LeagueListResponse, LeagueSummary } from "@/lib/league/contracts";
+import type { GameNightSummary } from "@/lib/league/gameNightContracts";
+
+const ACTIVE_LEAGUE_KEY = "dart-scorekeeper:active-league-id";
+
+export default function LeaguePlayCurrentPage() {
+  const { data: session, isPending } = authClient.useSession();
+  const [league, setLeague] = useState<LeagueSummary | null>(null);
+  const [night, setNight] = useState<GameNightSummary | null>(null);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const loadCurrentPlay = useCallback(async () => {
+    setErrorMessage("");
+    try {
+      const leagueResponse = await fetch("/api/leagues", { cache: "no-store" });
+      const leagueResult = (await leagueResponse.json()) as LeagueListResponse & {
+        error?: string;
+      };
+      if (!leagueResponse.ok) {
+        throw new Error(leagueResult.error ?? "Could not load leagues.");
+      }
+
+      const remembered = window.localStorage.getItem(ACTIVE_LEAGUE_KEY);
+      const activeLeague =
+        (remembered &&
+          leagueResult.leagues.find((item) => item.id === remembered)) ||
+        leagueResult.leagues[0] ||
+        null;
+      setLeague(activeLeague);
+      if (!activeLeague) {
+        setNight(null);
+        return;
+      }
+
+      const nightResponse = await fetch(
+        `/api/leagues/game-nights?leagueId=${encodeURIComponent(activeLeague.id)}`,
+        { cache: "no-store" },
+      );
+      const nightResult = (await nightResponse.json()) as {
+        gameNights?: GameNightSummary[];
+        error?: string;
+      };
+      if (!nightResponse.ok || !nightResult.gameNights) {
+        throw new Error(nightResult.error ?? "Could not load Game Night.");
+      }
+
+      const currentNight =
+        nightResult.gameNights.find((item) => item.status === "active") ??
+        nightResult.gameNights.find(
+          (item) => !["completed", "cancelled"].includes(item.status),
+        ) ??
+        null;
+      setNight(currentNight);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Could not load current play.",
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!session?.user) return;
+    const timer = window.setTimeout(() => void loadCurrentPlay(), 0);
+    const interval = window.setInterval(() => void loadCurrentPlay(), 5000);
+    return () => {
+      window.clearTimeout(timer);
+      window.clearInterval(interval);
+    };
+  }, [loadCurrentPlay, session?.user]);
+
+  const currentRoundNumber =
+    night?.activeRoundNumber ?? night?.currentRoundNumber ?? 1;
+
+  const currentPairings = useMemo(() => {
+    if (!night) return [];
+    const round =
+      night.rounds?.find((item) => item.status === "active") ??
+      night.rounds?.find((item) => item.roundNumber === currentRoundNumber);
+    return (
+      round?.pairings ??
+      night.pairings.filter(
+        (pairing) => pairing.roundNumber === currentRoundNumber,
+      )
+    );
+  }, [currentRoundNumber, night]);
+
+  if (isPending) {
+    return (
+      <main className="mx-auto max-w-6xl p-6 text-[var(--color-text-muted)]">
+        Checking account…
+      </main>
+    );
+  }
+
+  if (!session?.user) {
+    return (
+      <main className="mx-auto max-w-3xl p-6">

@@ -1,0 +1,23 @@
+                <p className="mt-2 text-[var(--color-text-muted)]">Create your first league and season to unlock the league workflow.</p>
+                <Link href="/leagues" className="mt-5 inline-flex rounded-xl bg-[var(--color-primary)] px-5 py-3 font-black text-white">Open League Setup</Link>
+              </section>
+            ) : (
+              <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {leagueMenu.map((item) => (
+                  <Link key={item.href} href={item.href} className="group rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5 transition hover:-translate-y-0.5 hover:border-[var(--color-primary)]">
+                    <div className="text-2xl">{item.icon}</div>
+                    <div className="mt-3 flex items-center justify-between gap-3">
+                      <h2 className="text-xl font-black">{item.title}</h2>
+                      <span className="text-xl text-[var(--color-text-muted)] transition group-hover:translate-x-1">→</span>
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-[var(--color-text-muted)]">{item.description}</p>
+                  </Link>
+                ))}
+              </section>
+            )}
+          </>
+        )}
+      </div>
+    </main>
+  );
+}

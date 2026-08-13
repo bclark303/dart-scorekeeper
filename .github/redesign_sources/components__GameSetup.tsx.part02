@@ -1,0 +1,69 @@
+                    value={teamOneMemberNames[0] ?? ""}
+                    onChange={(event) => setTeamOneMemberNames([event.target.value])}
+                    placeholder="Player 1"
+                    className={`mt-2 ${inputClass}`}
+                  />
+                </label>
+                <label className="text-sm font-bold">
+                  Player 2
+                  <input
+                    value={teamTwoMemberNames[0] ?? ""}
+                    onChange={(event) => setTeamTwoMemberNames([event.target.value])}
+                    placeholder="Player 2"
+                    className={`mt-2 ${inputClass}`}
+                  />
+                </label>
+              </div>
+            ) : (
+              <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                <div className="rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-4">
+                  <label className="text-sm font-bold">
+                    Team A
+                    <input
+                      value={teamOneName}
+                      onChange={(event) => setTeamOneName(event.target.value)}
+                      placeholder="Team A"
+                      className="mt-2 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-3"
+                    />
+                  </label>
+                  <div className="mt-3 space-y-3">
+                    {teamOneMemberNames.map((member, index) => (
+                      <input
+                        key={index}
+                        value={member}
+                        onChange={(event) => {
+                          const next = [...teamOneMemberNames];
+                          next[index] = event.target.value;
+                          setTeamOneMemberNames(next);
+                        }}
+                        placeholder={`Player ${index + 1}`}
+                        className="w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-3"
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-4">
+                  <label className="text-sm font-bold">
+                    Team B
+                    <input
+                      value={teamTwoName}
+                      onChange={(event) => setTeamTwoName(event.target.value)}
+                      placeholder="Team B"
+                      className="mt-2 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-3"
+                    />
+                  </label>
+                  <div className="mt-3 space-y-3">
+                    {teamTwoMemberNames.map((member, index) => (
+                      <input
+                        key={index}
+                        value={member}
+                        onChange={(event) => {
+                          const next = [...teamTwoMemberNames];
+                          next[index] = event.target.value;
+                          setTeamTwoMemberNames(next);
+                        }}
+                        placeholder={`Player ${index + 1}`}
+                        className="w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-3"
+                      />
+                    ))}

@@ -1,0 +1,18 @@
+              <div><div className="text-xs font-black uppercase tracking-wide text-[var(--color-text-muted)]">Next action</div><div className="mt-1 font-black">{checkedIn < 2 ? "Check in players" : teamCount < 2 ? "Prepare teams" : boardCount < 1 ? "Set up boards" : fixtureCount < 1 ? "Generate fixtures" : "Start the Game Night"}</div></div>
+              {checkedIn < 2 || teamCount < 2 || boardCount < 1 ? <Link href="/game-nights" className="rounded-xl bg-[var(--color-primary)] px-5 py-3 text-center font-black text-white">Open Setup</Link> : fixtureCount < 1 ? <Link href="/game-nights/fixtures" className="rounded-xl bg-[var(--color-primary)] px-5 py-3 text-center font-black text-white">Open Fixtures</Link> : <button disabled={working} onClick={() => void changeStatus("active")} className="rounded-xl bg-emerald-600 px-5 py-3 font-black text-white disabled:opacity-50">Start Game Night</button>}
+            </section>
+          </>
+        ) : night.status === "active" ? (
+          <>
+            <section className="mb-4"><div className="text-xs font-black uppercase tracking-[0.14em] text-[var(--color-primary)]">Live room</div><h2 className="text-2xl font-black">Round {roundNumber}</h2><p className="text-sm text-[var(--color-text-muted)]">{pairings.length} matches · {completed} complete · {live} playing</p></section>
+            <section className="grid gap-3 lg:grid-cols-2">
+              {pairings.map((pairing) => {
+                const board = night.boards.find((item) => item.id === pairing.boardId);
+                const teamA = night.teams.find((team) => team.id === pairing.teamAId);
+                const teamB = night.teams.find((team) => team.id === pairing.teamBId);
+                return <article key={pairing.id} className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5"><div className="flex items-center justify-between"><h3 className="font-black">{board?.name ?? `Board ${pairing.boardNumber}`}</h3><span className="text-xs font-black uppercase">{pairing.matchStatus ?? pairing.status}</span></div><div className="mt-4 text-center text-lg font-black">{teamA?.name ?? "Team A"} <span className="font-normal text-[var(--color-text-muted)]">vs</span> {teamB?.name ?? "Team B"}</div>{pairing.matchSessionId && <Link href={`/league-match/${pairing.matchSessionId}`} className="mt-4 inline-flex rounded-xl border border-[var(--color-panel-border)] px-4 py-2.5 text-sm font-black">{pairing.matchStatus === "completed" ? "Review Match" : "View Match"} →</Link>}</article>;
+              })}
+            </section>
+            <section className="mt-5 flex flex-col gap-3 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5 sm:flex-row sm:items-center sm:justify-between"><div><div className="text-xs font-black uppercase tracking-wide text-[var(--color-text-muted)]">Next action</div><div className="mt-1 font-black">Continue from Fixture & Round Control</div></div><div className="flex flex-wrap gap-2"><Link href="/game-nights/fixtures" className="rounded-xl bg-[var(--color-primary)] px-5 py-3 font-black text-white">Open Round Control</Link><button disabled={working} onClick={() => void changeStatus("completed")} className="rounded-xl border border-[var(--color-panel-border)] px-4 py-3 font-black">Complete Night</button></div></section>
+          </>
+        ) : (
