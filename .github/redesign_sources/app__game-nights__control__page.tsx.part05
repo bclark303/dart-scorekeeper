@@ -1,6 +1,0 @@
-          <section className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-6"><div className="text-xs font-black uppercase tracking-wide text-[var(--color-text-muted)]">Game Night complete</div><h2 className="mt-1 text-2xl font-black">{night.name}</h2><p className="mt-2 text-[var(--color-text-muted)]">Review completed matches from round control and the existing night statistics.</p><div className="mt-5 flex gap-3"><Link href="/game-nights/fixtures" className="rounded-xl bg-[var(--color-primary)] px-4 py-2.5 font-black text-white">Review Results</Link><Link href="/game-nights" className="rounded-xl border border-[var(--color-panel-border)] px-4 py-2.5 font-black">Game Night Details</Link></div></section>
-        )}
-      </div>
-    </main>
-  );
-}
