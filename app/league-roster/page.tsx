@@ -359,6 +359,12 @@ export default function LeagueRosterPage() {
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                           <h3 className="text-xl font-black">{player.displayName}</h3>
+                          <Link
+                            href={`/players/${encodeURIComponent(player.playerId)}`}
+                            className="mt-1 inline-block text-sm font-bold text-[var(--color-primary)]"
+                          >
+                            View overall & league stats →
+                          </Link>
                           <div className="mt-2 flex flex-wrap gap-2">
                             {player.memberships.map((item) => (
                               <span key={item.leaguePlayerId} className="rounded-full bg-[var(--color-panel-soft)] px-3 py-1 text-xs font-bold">
@@ -438,7 +444,7 @@ export default function LeagueRosterPage() {
             <section className="rounded-2xl border border-sky-500/30 bg-sky-500/10 p-5 text-sm">
               <div className="font-black">One identity, many contexts</div>
               <p className="mt-1 opacity-80">
-                The master player ID is shared across leagues. League memberships and season rosters stay separate, so upcoming statistics can show overall career results or filter the same person by league and season without duplicate profiles.
+                The master player ID is shared across leagues. League memberships and season rosters stay separate, while career statistics roll the same authoritative scoring history up overall, by league and by season.
               </p>
             </section>
           </>
