@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import type { FormEvent } from "react";
 import { APP_VERSION } from "@/lib/appInfo";
 
 const topics = [
@@ -15,11 +15,15 @@ const topics = [
 ];
 
 export default function HelpPage() {
-  const searchParams = useSearchParams();
-  const from = searchParams.get("from") ?? "home";
+  const [from, setFrom] = useState("home");
   const [query, setQuery] = useState("");
   const [feedback, setFeedback] = useState("");
   const [sent, setSent] = useState(false);
+
+  useEffect(() => {
+    const context = new URLSearchParams(window.location.search).get("from") ?? "home";
+    setFrom(context);
+  }, []);
 
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
