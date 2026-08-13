@@ -1,0 +1,80 @@
+name: Internal Game Night template generator
+
+on:
+  push:
+    branches:
+      - internal/game-night-templates-run
+
+permissions:
+  contents: write
+
+jobs:
+  generate-and-verify:
+    runs-on: ubuntu-latest
+    env:
+      DB_PROVIDER: libsql
+      DATABASE_URL: file:./data/ci.db
+      DATABASE_AUTH_TOKEN: ""
+      BETTER_AUTH_SECRET: ci-only-dart-scorekeeper-auth-secret-123456789
+      BETTER_AUTH_URL: http://localhost:3000
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - name: Check out scratch branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Synchronize lockfile and install dependencies
+        run: |
+          npm install --package-lock-only --ignore-scripts
+          npm ci
+
+      - name: Generate and apply Drizzle migration
+        run: |
+          mkdir -p data
+          npm run db:generate
+          npm run db:migrate
+
+      - name: Run all contract tests
+        run: |
+          npm run db:test
+          npm run local:test
+          npm run auth:test
+          npm run setup:test
+          npm run x01:test
+          npm run league:test
+          npm run league:roster:test
+          npm run game-night:test
+          npm run game-night:templates:test
+          npm run game-night:stats:test
+          npm run game-night:multi-board:test
+          npm run game-night:fixtures:test
+          npm run game-night:layout:test
+          npm run dummy-scoring:test
+          npm run dummy-team-balance:test
+          npm run league-match:test
+          npm run board-device:test
+          npm run board-device:offline:test
+          npm run board-device:pairing:test
+
+      - name: Lint and production build
+        run: |
+          npm run lint
+          npm run build
+
+      - name: Build Docker portability target
+        run: docker build -t dart-scorekeeper-template-check .
+
+      - name: Commit generated clean scratch tree
+        run: |
+          rm .github/workflows/internal-template-generator.yml
+          git config user.name "Ben Clark"
+          git config user.email "bclark303@gmail.com"
+          git add -A
+          git commit -m "Generate template migration and validate v0.5.0-alpha.1 [skip ci]"
+          git push origin HEAD:${GITHUB_REF_NAME}
