@@ -1,5 +1,7 @@
 import { getRequestSession } from "@/lib/auth/server";
-import { listPlayerDirectoryForUser } from "@/lib/db";
+import { LeaguePermissionError, listPlayerDirectoryForUser } from "@/lib/db";
+import { getPlayerCareerStatsForUser } from "@/lib/db/repositories";
+import type { PlayerCareerStatsResponse } from "@/lib/league/playerStatsContracts";
 import type { PlayerDirectoryListResponse } from "@/lib/league/rosterContracts";
 
 export const runtime = "nodejs";
@@ -24,14 +26,21 @@ export async function GET(request: Request) {
   const user = await authenticatedUser(request);
   if (!user) return noStoreJson({ error: "Authentication required." }, { status: 401 });
 
+  const playerId = new URL(request.url).searchParams.get("playerId")?.trim() ?? "";
+
   try {
+    if (playerId) {
+      const player = await getPlayerCareerStatsForUser(playerId, user.id);
+      return noStoreJson({ player } satisfies PlayerCareerStatsResponse);
+    }
+
     const players = await listPlayerDirectoryForUser(user.id);
     return noStoreJson({ players } satisfies PlayerDirectoryListResponse);
   } catch (error) {
-    console.error("Could not list the player directory.", error);
-    return noStoreJson(
-      { error: "Player directory is unavailable." } satisfies PlayerDirectoryListResponse,
-      { status: 503 },
-    );
+    if (error instanceof LeaguePermissionError) {
+      return noStoreJson({ error: error.message }, { status: 403 });
+    }
+    console.error("Could not load player data.", error);
+    return noStoreJson({ error: "Player service is unavailable." }, { status: 503 });
   }
 }
