@@ -20,11 +20,12 @@ function StatGrid({ totals }: { totals: PlayerStatTotals }) {
     ["140+", totals.count140Plus.toLocaleString()],
     ["180s", totals.count180s.toLocaleString()],
     ["High turn", totals.highestTurn.toLocaleString()],
+    ["Double outs", totals.doubleOuts.toLocaleString()],
     ["High checkout", totals.highestCheckout.toLocaleString()],
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
       {items.map(([label, value]) => (
         <div key={label} className="rounded-xl bg-[var(--color-panel-soft)] p-3">
           <div className="text-xs font-bold uppercase tracking-wide text-[var(--color-text-muted)]">{label}</div>
@@ -100,7 +101,7 @@ export default function PlayerStatsPage() {
               <section className="space-y-4">
                 <div>
                   <h2 className="text-2xl font-black">By League</h2>
-                  <p className="text-sm text-[var(--color-text-muted)]">League totals roll up only that league's authoritative match turns.</p>
+                  <p className="text-sm text-[var(--color-text-muted)]">League totals roll up only authoritative turns from that league.</p>
                 </div>
                 {player.leagues.map((league) => (
                   <article key={league.leagueId} className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
