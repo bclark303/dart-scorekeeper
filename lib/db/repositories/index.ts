@@ -10,6 +10,7 @@ export {
   savePlayer,
   type SavePlayerInput,
 } from "./players";
+export { getPlayerCareerStatsForUser } from "./playerStats";
 export {
   createLeagueForUser,
   createSeasonForUser,
