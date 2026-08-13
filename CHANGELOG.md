@@ -3,6 +3,8 @@
 ## Unreleased
 
 ### Added
+- Shared League Workspace navigation across league administration pages.
+- Complete League landing shortcuts for Game Nights, league/season setup, players/rosters, rules templates, and board devices.
 - Portable persistence foundation for v0.4.0.
 - SQLite-compatible Drizzle schema and migration tooling.
 - Provider boundary under `lib/db/adapters/` and repository boundary under `lib/db/repositories/`.
@@ -32,6 +34,8 @@
 - Session storage persistence for full-screen board state across dummy turns.
 
 ### Changed
+- Grouped the scorer navigation into Play and Manage areas; renamed Game to New Match, App to Settings, and Game Mode to Focused Play.
+- Updated preview version to v0.5.0-alpha.2 for the cursory navigation pass.
 - Updated development version to v0.4.0-alpha.1.
 - Enabled Next.js standalone output so the same app can run as a normal Node/Docker deployment.
 - Production database configuration now requires an explicit `DATABASE_URL`; local-file fallback is development-only.
