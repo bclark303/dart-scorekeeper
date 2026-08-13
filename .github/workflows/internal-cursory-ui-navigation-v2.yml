@@ -1,0 +1,114 @@
+name: Internal cursory UI navigation pass v2
+
+on:
+  push:
+    branches:
+      - internal/cursory-ui-navigation
+    paths:
+      - .github/workflows/internal-cursory-ui-navigation-v2.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out scratch branch
+        uses: actions/checkout@v4
+        with:
+          ref: internal/cursory-ui-navigation
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply navigation pass and bump preview version
+        shell: bash
+        env:
+          NAV_B64: ICBmdW5jdGlvbiByZW5kZXJGdWxsTmF2aWdhdGlvbigpIHsKICAgIHJldHVybiAoCiAgICAgIDxuYXYKICAgICAgICBjbGFzc05hbWU9Im1iLTggZ3JpZCBnYXAtMyBsZzpncmlkLWNvbHMtWzJmcl8xZnJdIgogICAgICAgIGFyaWEtbGFiZWw9IkFwcGxpY2F0aW9uIHNlY3Rpb25zIgogICAgICA+CiAgICAgICAgPGRpdiBjbGFzc05hbWU9InJvdW5kZWQtMnhsIGJvcmRlciBib3JkZXItW3ZhcigtLWNvbG9yLXBhbmVsLWJvcmRlcildIGJnLVt2YXIoLS1jb2xvci1wYW5lbCldIHAtMyI+CiAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT0icHgtMSB0ZXh0LXhzIGZvbnQtYm9sZCB1cHBlcmNhc2UgdHJhY2tpbmctWzAuMTRlbV0gdGV4dC1bdmFyKC0tY29sb3ItdGV4dC1tdXRlZCldIj4KICAgICAgICAgICAgUGxheQogICAgICAgICAgPC9kaXY+CiAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT0ibXQtMiBncmlkIGdyaWQtY29scy0yIGdhcC0yIHNtOmdyaWQtY29scy00Ij4KICAgICAgICAgICAgPGJ1dHRvbgogICAgICAgICAgICAgIG9uQ2xpY2s9eygpID0+IHNldEFjdGl2ZVZpZXcoInNjb3JlIil9CiAgICAgICAgICAgICAgY2xhc3NOYW1lPXtnZXRUYWJDbGFzcygic2NvcmUiKX0KICAgICAgICAgICAgPgogICAgICAgICAgICAgIFNjb3JlCiAgICAgICAgICAgIDwvYnV0dG9uPgoKICAgICAgICAgICAgPGJ1dHRvbgogICAgICAgICAgICAgIG9uQ2xpY2s9eygpID0+IHNldEFjdGl2ZVZpZXcoImdhbWUiKX0KICAgICAgICAgICAgICBjbGFzc05hbWU9e2dldFRhYkNsYXNzKCJnYW1lIil9CiAgICAgICAgICAgID4KICAgICAgICAgICAgICBOZXcgTWF0Y2gKICAgICAgICAgICAgPC9idXR0b24+CgogICAgICAgICAgICA8YnV0dG9uCiAgICAgICAgICAgICAgb25DbGljaz17KCkgPT4gc2V0QWN0aXZlVmlldygic3RhdHMiKX0KICAgICAgICAgICAgICBjbGFzc05hbWU9e2dldFRhYkNsYXNzKCJzdGF0cyIpfQogICAgICAgICAgICA+CiAgICAgICAgICAgICAgU3RhdHMKICAgICAgICAgICAgPC9idXR0b24+CgogICAgICAgICAgICA8YnV0dG9uCiAgICAgICAgICAgICAgb25DbGljaz17KCkgPT4gc2V0QWN0aXZlVmlldygiaGlzdG9yeSIpfQogICAgICAgICAgICAgIGNsYXNzTmFtZT17Z2V0VGFiQ2xhc3MoImhpc3RvcnkiKX0KICAgICAgICAgICAgPgogICAgICAgICAgICAgIEhpc3RvcnkKICAgICAgICAgICAgPC9idXR0b24+CiAgICAgICAgICA8L2Rpdj4KICAgICAgICA8L2Rpdj4KCiAgICAgICAgPGRpdiBjbGFzc05hbWU9InJvdW5kZWQtMnhsIGJvcmRlciBib3JkZXItW3ZhcigtLWNvbG9yLXBhbmVsLWJvcmRlcildIGJnLVt2YXIoLS1jb2xvci1wYW5lbCldIHAtMyI+CiAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT0icHgtMSB0ZXh0LXhzIGZvbnQtYm9sZCB1cHBlcmNhc2UgdHJhY2tpbmctWzAuMTRlbV0gdGV4dC1bdmFyKC0tY29sb3ItdGV4dC1tdXRlZCldIj4KICAgICAgICAgICAgTWFuYWdlCiAgICAgICAgICA8L2Rpdj4KICAgICAgICAgIDxkaXYgY2xhc3NOYW1lPSJtdC0yIGdyaWQgZ3JpZC1jb2xzLTIgZ2FwLTIiPgogICAgICAgICAgICA8YnV0dG9uCiAgICAgICAgICAgICAgb25DbGljaz17KCkgPT4gc2V0QWN0aXZlVmlldygibGVhZ3VlIil9CiAgICAgICAgICAgICAgY2xhc3NOYW1lPXtnZXRUYWJDbGFzcygibGVhZ3VlIil9CiAgICAgICAgICAgID4KICAgICAgICAgICAgICBMZWFndWUKICAgICAgICAgICAgPC9idXR0b24+CgogICAgICAgICAgICA8YnV0dG9uCiAgICAgICAgICAgICAgb25DbGljaz17KCkgPT4gc2V0QWN0aXZlVmlldygiYXBwIil9CiAgICAgICAgICAgICAgY2xhc3NOYW1lPXtnZXRUYWJDbGFzcygiYXBwIil9CiAgICAgICAgICAgID4KICAgICAgICAgICAgICBTZXR0aW5ncwogICAgICAgICAgICA8L2J1dHRvbj4KICAgICAgICAgIDwvZGl2PgogICAgICAgIDwvZGl2PgogICAgICA8L25hdj4KICAgICk7CiAgfQo=
+          LEAGUE_B64: aW1wb3J0IExpbmsgZnJvbSAibmV4dC9saW5rIjsKCmNvbnN0IHNldHVwQ2FyZHMgPSBbCiAgewogICAgaHJlZjogIi9sZWFndWVzIiwKICAgIHRpdGxlOiAiTGVhZ3VlICYgU2Vhc29ucyIsCiAgICBkZXNjcmlwdGlvbjogIkNyZWF0ZSB0aGUgbGVhZ3VlIGFuZCBvcmdhbml6ZSBpdHMgY29tcGV0aXRpb24gc2Vhc29ucy4iLAogIH0sCiAgewogICAgaHJlZjogIi9sZWFndWUtcm9zdGVyIiwKICAgIHRpdGxlOiAiUGxheWVycyAmIFJvc3RlcnMiLAogICAgZGVzY3JpcHRpb246ICJNYWludGFpbiBsZWFndWUgcGxheWVycyBhbmQgY2hvb3NlIHRoZSBhY3RpdmUgcm9zdGVyIGZvciBlYWNoIHNlYXNvbi4iLAogIH0sCiAgewogICAgaHJlZjogIi9nYW1lLW5pZ2h0LXRlbXBsYXRlcyIsCiAgICB0aXRsZTogIlJ1bGVzIFRlbXBsYXRlcyIsCiAgICBkZXNjcmlwdGlvbjogIlNhdmUgcmV1c2FibGUgR2FtZSBOaWdodCBydWxlcyBhbmQgY2hvb3NlIHRoZSBsZWFndWUgZGVmYXVsdCBwcmVzZXQuIiwKICB9LAogIHsKICAgIGhyZWY6ICIvbGVhZ3VlLWRldmljZXMiLAogICAgdGl0bGU6ICJCb2FyZCBEZXZpY2VzIiwKICAgIGRlc2NyaXB0aW9uOiAiUmVnaXN0ZXIsIHBhaXIsIGFuZCBtYW5hZ2UgdGhlIHNjb3JlciBhc3NpZ25lZCB0byBlYWNoIHBoeXNpY2FsIGJvYXJkLiIsCiAgfSwKXSBhcyBjb25zdDsKCmV4cG9ydCBmdW5jdGlvbiBMZWFndWVDb250cm9sc1NlY3Rpb24oKSB7CiAgcmV0dXJuICgKICAgIDw+CiAgICAgIDxzZWN0aW9uIGNsYXNzTmFtZT0ibWItOCByb3VuZGVkLTJ4bCBib3JkZXIgYm9yZGVyLVt2YXIoLS1jb2xvci1wYW5lbC1ib3JkZXIpXSBiZy1bdmFyKC0tY29sb3ItcGFuZWwpXSBwLTUgc206cC02Ij4KICAgICAgICA8ZGl2IGNsYXNzTmFtZT0ibWItNSI+CiAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT0idGV4dC1zbSBmb250LWJvbGQgdXBwZXJjYXNlIHRyYWNraW5nLXdpZGUgdGV4dC1bdmFyKC0tY29sb3ItdGV4dC1tdXRlZCldIj4KICAgICAgICAgICAgTGVhZ3VlIFdvcmtzcGFjZQogICAgICAgICAgPC9kaXY+CiAgICAgICAgICA8aDIgY2xhc3NOYW1lPSJtdC0xIHRleHQtM3hsIGZvbnQtYm9sZCI+TGVhZ3VlPC9oMj4KICAgICAgICAgIDxwIGNsYXNzTmFtZT0ibXQtMiBtYXgtdy0zeGwgdGV4dC1zbSB0ZXh0LVt2YXIoLS1jb2xvci10ZXh0LW11dGVkKV0iPgogICAgICAgICAgICBSdW4gYSBsZWFndWUgbmlnaHQgb3IgbWFuYWdlIHRoZSByZXVzYWJsZSBzZXR1cCBiZWhpbmQgaXQuIExlYWd1ZSBhZG1pbmlzdHJhdGlvbgogICAgICAgICAgICB1c2VzIENvbm5lY3RlZCBTdG9yYWdlOyBjYXN1YWwgcGxheSByZW1haW5zIGxvY2FsLWZpcnN0IGFuZCBpbmRlcGVuZGVudC4KICAgICAgICAgIDwvcD4KICAgICAgICA8L2Rpdj4KCiAgICAgICAgPExpbmsKICAgICAgICAgIGhyZWY9Ii9nYW1lLW5pZ2h0cyIKICAgICAgICAgIGNsYXNzTmFtZT0iZ3JvdXAgbWItNCBibG9jayByb3VuZGVkLTJ4bCBib3JkZXIgYm9yZGVyLVt2YXIoLS1jb2xvci1wcmltYXJ5KV0vNjAgYmctW3ZhcigtLWNvbG9yLXBhbmVsLXNvZnQpXSBwLTUgdHJhbnNpdGlvbiBob3Zlcjpib3JkZXItW3ZhcigtLWNvbG9yLXByaW1hcnkpXSBob3ZlcjpiZy1bdmFyKC0tY29sb3ItcGFuZWwtYm9yZGVyKV0iCiAgICAgICAgPgogICAgICAgICAgPGRpdiBjbGFzc05hbWU9ImZsZXggaXRlbXMtY2VudGVyIGp1c3RpZnktYmV0d2VlbiBnYXAtNCI+CiAgICAgICAgICAgIDxkaXY+CiAgICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9InRleHQteHMgZm9udC1ib2xkIHVwcGVyY2FzZSB0cmFja2luZy1bMC4xNGVtXSB0ZXh0LVt2YXIoLS1jb2xvci1wcmltYXJ5KV0iPgogICAgICAgICAgICAgICAgUnVuIC8gVGVzdAogICAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICAgIDxoMyBjbGFzc05hbWU9Im10LTEgdGV4dC0yeGwgZm9udC1ib2xkIj5HYW1lIE5pZ2h0czwvaDM+CiAgICAgICAgICAgICAgPHAgY2xhc3NOYW1lPSJtdC0yIG1heC13LTJ4bCB0ZXh0LXNtIGxlYWRpbmctNiB0ZXh0LVt2YXIoLS1jb2xvci10ZXh0LW11dGVkKV0iPgogICAgICAgICAgICAgICAgU2NoZWR1bGUgdGhlIG5pZ2h0LCBjaGVjayBwbGF5ZXJzIGluLCBidWlsZCB0ZWFtcywgcmV2aWV3IHRoZSBmdWxsIGZpeHR1cmUKICAgICAgICAgICAgICAgIHNjaGVkdWxlLCBwb3B1bGF0ZSBib2FyZHMsIGFuZCBmb2xsb3cgbGl2ZSBtYXRjaGVzLgogICAgICAgICAgICAgIDwvcD4KICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgIDxzcGFuCiAgICAgICAgICAgICAgY2xhc3NOYW1lPSJ0ZXh0LTJ4bCB0ZXh0LVt2YXIoLS1jb2xvci10ZXh0LW11dGVkKV0gdHJhbnNpdGlvbiBncm91cC1ob3Zlcjp0cmFuc2xhdGUteC0xIGdyb3VwLWhvdmVyOnRleHQtW3ZhcigtLWNvbG9yLXRleHQtbWFpbildIgogICAgICAgICAgICAgIGFyaWEtaGlkZGVuPSJ0cnVlIgogICAgICAgICAgICA+CiAgICAgICAgICAgICAg4oaSCiAgICAgICAgICAgIDwvc3Bhbj4KICAgICAgICAgIDwvZGl2PgogICAgICAgIDwvTGluaz4KCiAgICAgICAgPGRpdiBjbGFzc05hbWU9ImdyaWQgZ2FwLTMgc206Z3JpZC1jb2xzLTIiPgogICAgICAgICAge3NldHVwQ2FyZHMubWFwKChjYXJkKSA9PiAoCiAgICAgICAgICAgIDxMaW5rCiAgICAgICAgICAgICAga2V5PXtjYXJkLmhyZWZ9CiAgICAgICAgICAgICAgaHJlZj17Y2FyZC5ocmVmfQogICAgICAgICAgICAgIGNsYXNzTmFtZT0iZ3JvdXAgcm91bmRlZC0yeGwgYm9yZGVyIGJvcmRlci1bdmFyKC0tY29sb3ItcGFuZWwtYm9yZGVyKV0gYmctW3ZhcigtLWNvbG9yLXBhbmVsLXNvZnQpXSBwLTQgdHJhbnNpdGlvbiBob3Zlcjpib3JkZXItW3ZhcigtLWNvbG9yLXByaW1hcnkpXSBob3ZlcjpiZy1bdmFyKC0tY29sb3ItcGFuZWwtYm9yZGVyKV0iCiAgICAgICAgICAgID4KICAgICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT0iZmxleCBpdGVtcy1jZW50ZXIganVzdGlmeS1iZXR3ZWVuIGdhcC0zIj4KICAgICAgICAgICAgICAgIDxoMyBjbGFzc05hbWU9InRleHQtbGcgZm9udC1ib2xkIj57Y2FyZC50aXRsZX08L2gzPgogICAgICAgICAgICAgICAgPHNwYW4KICAgICAgICAgICAgICAgICAgYXJpYS1oaWRkZW49InRydWUiCiAgICAgICAgICAgICAgICAgIGNsYXNzTmFtZT0idGV4dC1sZyB0ZXh0LVt2YXIoLS1jb2xvci10ZXh0LW11dGVkKV0gdHJhbnNpdGlvbiBncm91cC1ob3Zlcjp0cmFuc2xhdGUteC0xIgogICAgICAgICAgICAgICAgPgogICAgICAgICAgICAgICAgICDihpIKICAgICAgICAgICAgICAgIDwvc3Bhbj4KICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgICA8cCBjbGFzc05hbWU9Im10LTIgdGV4dC1zbSBsZWFkaW5nLTYgdGV4dC1bdmFyKC0tY29sb3ItdGV4dC1tdXRlZCldIj4KICAgICAgICAgICAgICAgIHtjYXJkLmRlc2NyaXB0aW9ufQogICAgICAgICAgICAgIDwvcD4KICAgICAgICAgICAgPC9MaW5rPgogICAgICAgICAgKSl9CiAgICAgICAgPC9kaXY+CiAgICAgIDwvc2VjdGlvbj4KCiAgICAgIDxzZWN0aW9uIGNsYXNzTmFtZT0ibWItOCByb3VuZGVkLTJ4bCBib3JkZXIgYm9yZGVyLVt2YXIoLS1jb2xvci1wYW5lbC1ib3JkZXIpXSBiZy1bdmFyKC0tY29sb3ItcGFuZWwpXSBwLTUgc206cC02Ij4KICAgICAgICA8aDIgY2xhc3NOYW1lPSJ0ZXh0LXhsIGZvbnQtYm9sZCI+VHlwaWNhbCBsZWFndWUtbmlnaHQgZmxvdzwvaDI+CiAgICAgICAgPHAgY2xhc3NOYW1lPSJtdC0xIHRleHQtc20gdGV4dC1bdmFyKC0tY29sb3ItdGV4dC1tdXRlZCldIj4KICAgICAgICAgIFNldHVwIGFyZWFzIGFyZSByZXVzYWJsZTsgR2FtZSBOaWdodHMgYXJlIHdoZXJlIHRoZSBsaXZlIHNlc3Npb24gaGFwcGVucy4KICAgICAgICA8L3A+CiAgICAgICAgPGRpdiBjbGFzc05hbWU9Im10LTQgZ3JpZCBnYXAtMyBzbTpncmlkLWNvbHMtMiBsZzpncmlkLWNvbHMtNCI+CiAgICAgICAgICB7WwogICAgICAgICAgICBbIjEiLCAiTGVhZ3VlICYgc2Vhc29uIiwgIkNob29zZSB0aGUgY29tcGV0aXRpb24gcGVyaW9kLiJdLAogICAgICAgICAgICBbIjIiLCAiUm9zdGVyIiwgIkNvbmZpcm0gd2hvIGlzIGVsaWdpYmxlIHRvIHBsYXkuIl0sCiAgICAgICAgICAgIFsiMyIsICJSdWxlcyAmIGJvYXJkcyIsICJSZXVzZSBwcmVzZXRzIGFuZCByZWdpc3RlcmVkIGRldmljZXMuIl0sCiAgICAgICAgICAgIFsiNCIsICJHYW1lIE5pZ2h0IiwgIkNoZWNrIGluLCBidWlsZCB0ZWFtcywgYW5kIHJ1biB0aGUgcm91bmRzLiJdLAogICAgICAgICAgXS5tYXAoKFtzdGVwLCB0aXRsZSwgZGVzY3JpcHRpb25dKSA9PiAoCiAgICAgICAgICAgIDxkaXYKICAgICAgICAgICAgICBrZXk9e3N0ZXB9CiAgICAgICAgICAgICAgY2xhc3NOYW1lPSJyb3VuZGVkLXhsIGJvcmRlciBib3JkZXItW3ZhcigtLWNvbG9yLXBhbmVsLWJvcmRlcildIGJnLVt2YXIoLS1jb2xvci1wYW5lbC1zb2Z0KV0gcC00IgogICAgICAgICAgICA+CiAgICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9InRleHQteHMgZm9udC1ib2xkIHVwcGVyY2FzZSB0cmFja2luZy13aWRlIHRleHQtW3ZhcigtLWNvbG9yLXRleHQtbXV0ZWQpXSI+CiAgICAgICAgICAgICAgICBTdGVwIHtzdGVwfQogICAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICAgIDxkaXYgY2xhc3NOYW1lPSJtdC0xIGZvbnQtYm9sZCI+e3RpdGxlfTwvZGl2PgogICAgICAgICAgICAgIDxkaXYgY2xhc3NOYW1lPSJtdC0xIHRleHQtc20gdGV4dC1bdmFyKC0tY29sb3ItdGV4dC1tdXRlZCldIj4KICAgICAgICAgICAgICAgIHtkZXNjcmlwdGlvbn0KICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICApKX0KICAgICAgICA8L2Rpdj4KICAgICAgPC9zZWN0aW9uPgogICAgPC8+CiAgKTsKfQo=
+          LAYOUT_B64: aW1wb3J0IHsgTGVhZ3VlV29ya3NwYWNlTmF2IH0gZnJvbSAiQC9jb21wb25lbnRzL0xlYWd1ZVdvcmtzcGFjZU5hdiI7CgpleHBvcnQgZGVmYXVsdCBmdW5jdGlvbiBMZWFndWVXb3Jrc3BhY2VMYXlvdXQoewogIGNoaWxkcmVuLAp9OiBSZWFkb25seTx7IGNoaWxkcmVuOiBSZWFjdC5SZWFjdE5vZGUgfT4pIHsKICByZXR1cm4gKAogICAgPD4KICAgICAgPExlYWd1ZVdvcmtzcGFjZU5hdiAvPgogICAgICB7Y2hpbGRyZW59CiAgICA8Lz4KICApOwp9Cg==
+        run: |
+          npm version 0.5.0-alpha.2 --no-git-tag-version
+          python <<'PY'
+          import base64
+          import os
+          from pathlib import Path
+          app = Path("app/page.tsx")
+          text = app.read_text()
+          start = text.index("  function renderFullNavigation() {")
+          end = text.index("\n  function renderGameModeHeader()", start)
+          navigation = base64.b64decode(os.environ["NAV_B64"]).decode()
+          text = text[:start] + navigation + text[end:]
+          text = text.replace('return "Game Setup";', 'return "New Match";')
+          text = text.replace('return "App Settings";', 'return "Settings";')
+          text = text.replace("                  Game Setup\n", "                  New Match\n")
+          text = text.replace("                  App Settings\n", "                  Settings\n")
+          text = text.replace("                      Game Mode\n", "                      Focused Play\n")
+          text = text.replace("                  Show full tabs\n", "                  Exit Focused Play\n")
+          app.write_text(text)
+          app_info = Path("lib/appInfo.ts")
+          app_info.write_text(app_info.read_text().replace("0.5.0-alpha.1", "0.5.0-alpha.2"))
+          Path("components/LeagueControlsSection.tsx").write_text(base64.b64decode(os.environ["LEAGUE_B64"]).decode())
+          layout = base64.b64decode(os.environ["LAYOUT_B64"]).decode()
+          for route in ["game-nights", "league-roster", "game-night-templates", "league-devices"]:
+              (Path("app") / route / "layout.tsx").write_text(layout)
+          changelog = Path("CHANGELOG.md")
+          changelog_text = changelog.read_text()
+          changelog_text = changelog_text.replace("### Added\n", "### Added\n- Shared League Workspace navigation across league administration pages.\n- Complete League landing shortcuts for Game Nights, league/season setup, players/rosters, rules templates, and board devices.\n", 1)
+          changelog_text = changelog_text.replace("### Changed\n", "### Changed\n- Grouped the scorer navigation into Play and Manage areas; renamed Game to New Match, App to Settings, and Game Mode to Focused Play.\n- Updated preview version to v0.5.0-alpha.2 for the cursory navigation pass.\n", 1)
+          changelog.write_text(changelog_text)
+          PY
+
+      - name: Prepare local database
+        run: |
+          mkdir -p data
+          npm run db:migrate
+
+      - name: Run regression contracts
+        run: |
+          npm run db:test
+          npm run local:test
+          npm run auth:test
+          npm run setup:test
+          npm run x01:test
+          npm run league:test
+          npm run league:roster:test
+          npm run game-night:test
+          npm run game-night:templates:test
+          npm run game-night:stats:test
+          npm run game-night:multi-board:test
+          npm run game-night:fixtures:test
+          npm run game-night:layout:test
+          npm run dummy-scoring:test
+          npm run dummy-team-balance:test
+          npm run league-match:test
+          npm run board-device:test
+          npm run board-device:pairing:test
+          npm run board-device:offline:test
+
+      - name: Lint and production build
+        run: |
+          npm run lint
+          npm run build
+
+      - name: Build Docker portability target
+        run: docker build -t dart-scorekeeper-cursory-ui .
+
+      - name: Commit clean scratch result
+        shell: bash
+        run: |
+          rm -f .github/workflows/internal-cursory-ui-navigation.yml
+          rm -f .github/workflows/internal-cursory-ui-navigation-v2.yml
+          git config user.name "Ben Clark"
+          git config user.email "bclark303@gmail.com"
+          git add -A
+          git commit -m "Apply cursory navigation pass [skip ci]"
+          git push origin HEAD:internal/cursory-ui-navigation
