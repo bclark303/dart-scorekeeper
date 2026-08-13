@@ -2,6 +2,8 @@ import { getRequestSession } from "@/lib/auth/server";
 import {
   assignGameNightPlayerToTeamForUser,
   createGameNightForUser,
+  getDefaultGameNightTemplateForUser,
+  getGameNightTemplateForUser,
   hydrateGameNightAutoLayout,
   hydrateGameNightAutoLayouts,
   LeaguePermissionError,
@@ -150,6 +152,7 @@ export async function POST(request: Request) {
     name?: string;
     scheduledAt?: number;
     settings?: Partial<GameNightSettingsSummary>;
+    templateId?: string;
   };
   try {
     input = await request.json();
@@ -163,12 +166,38 @@ export async function POST(request: Request) {
   if (typeof input.scheduledAt !== "number" || !Number.isFinite(input.scheduledAt)) {
     return noStoreJson({ error: "A valid scheduled date/time is required." }, { status: 400 });
   }
-  const settings = resolveGameNightSettings({ ...DEFAULT_GAME_NIGHT_SETTINGS, ...input.settings });
-  if (!validSettings(settings)) {
-    return noStoreJson({ error: "Game-night rules are invalid." }, { status: 400 });
-  }
 
   try {
+    let settings: ResolvedGameNightSettings;
+    if (input.templateId) {
+      const template = await getGameNightTemplateForUser(
+        input.templateId,
+        authState.user.id,
+      );
+      if (template.leagueId !== input.leagueId) {
+        return noStoreJson(
+          { error: "The selected template belongs to another league." },
+          { status: 400 },
+        );
+      }
+      settings = template.settings;
+    } else {
+      const leagueDefault = await getDefaultGameNightTemplateForUser(
+        input.leagueId,
+        authState.user.id,
+      );
+      settings =
+        leagueDefault?.settings ??
+        resolveGameNightSettings({
+          ...DEFAULT_GAME_NIGHT_SETTINGS,
+          ...input.settings,
+        });
+    }
+
+    if (!validSettings(settings)) {
+      return noStoreJson({ error: "Game-night rules are invalid." }, { status: 400 });
+    }
+
     return noStoreJson(
       await gameNightPayload(
         createGameNightForUser({

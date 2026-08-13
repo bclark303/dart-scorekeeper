@@ -72,6 +72,9 @@ jobs:
       - name: Exercise game-night lifecycle contract
         run: npm run game-night:test
 
+      - name: Exercise Game Night template contract
+        run: npm run game-night:templates:test
+
       - name: Exercise Game Night stats and Best-of contract
         run: npm run game-night:stats:test
 

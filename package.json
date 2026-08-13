@@ -1,6 +1,6 @@
 {
   "name": "dart-scorekeeper",
-  "version": "0.4.0-alpha.1",
+  "version": "0.5.0-alpha.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -16,6 +16,7 @@
     "league:test": "tsx scripts/league-framework-contract-test.ts",
     "league:roster:test": "tsx scripts/league-roster-contract-test.ts",
     "game-night:test": "tsx scripts/game-night-contract-test.ts",
+    "game-night:templates:test": "tsx scripts/game-night-template-contract-test.ts",
     "game-night:stats:test": "tsx scripts/game-night-stats-contract-test.ts",
     "game-night:multi-board:test": "tsx scripts/multi-board-completion-contract-test.ts",
     "game-night:fixtures:test": "tsx scripts/fixture-engine-contract-test.ts && tsx scripts/game-night-fixture-contract-test.ts",

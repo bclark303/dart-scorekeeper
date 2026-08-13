@@ -32,6 +32,15 @@ export {
   type UpdateGameNightSettingsForUserInput,
 } from "./gameNights";
 export {
+  createGameNightTemplateForUser,
+  getDefaultGameNightTemplateForUser,
+  getGameNightTemplateForUser,
+  listGameNightTemplatesForUser,
+  updateGameNightTemplateForUser,
+  type CreateGameNightTemplateForUserInput,
+  type UpdateGameNightTemplateForUserInput,
+} from "./gameNightTemplates";
+export {
   hydrateGameNightAutoLayout,
   hydrateGameNightAutoLayouts,
   optimizeSettingsForGameNight,
