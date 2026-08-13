@@ -1,0 +1,42 @@
+name: Master player directory validation
+
+on:
+  push:
+    branches:
+      - internal/master-player-directory
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      DB_PROVIDER: libsql
+      DATABASE_URL: file:./data/ci.db
+      DATABASE_AUTH_TOKEN: ""
+      BETTER_AUTH_SECRET: ci-only-dart-scorekeeper-auth-secret-123456789
+      BETTER_AUTH_URL: http://localhost:3000
+      NEXT_TELEMETRY_DISABLED: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: mkdir -p data
+      - name: Migration drift
+        run: |
+          npm run db:generate
+          git diff --exit-code -- drizzle/
+          test -z "$(git status --porcelain -- drizzle/)"
+      - run: npm run db:migrate
+      - run: npm run league:roster:test
+      - run: npm run game-night:test
+      - run: npm run league-match:test
+      - run: npm run board-device:test
+      - run: npm run lint
+      - run: npm run build
+      - run: docker build -t dart-scorekeeper-player-directory .
