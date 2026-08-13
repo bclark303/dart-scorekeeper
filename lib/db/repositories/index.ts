@@ -19,10 +19,13 @@ export {
   type CreateSeasonForUserInput,
 } from "./leagues";
 export {
+  addExistingPlayerToLeagueForUser,
   addLeaguePlayerToSeasonForUser,
   createLeaguePlayerForUser,
   listLeaguePlayersForUser,
+  listPlayerDirectoryForUser,
   removeLeaguePlayerFromSeasonForUser,
+  type AddExistingPlayerToLeagueForUserInput,
   type CreateLeaguePlayerForUserInput,
   type MutateSeasonRosterForUserInput,
 } from "./leagueRoster";
