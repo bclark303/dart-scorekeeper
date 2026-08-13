@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - internal/fix-account-session-refresh
   pull_request:
     branches:
       - main
