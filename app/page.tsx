@@ -556,11 +556,11 @@ export default function Home() {
       case "score":
         return "Score";
       case "game":
-        return "Game Setup";
+        return "New Match";
       case "league":
         return "League";
       case "app":
-        return "App Settings";
+        return "Settings";
       case "stats":
         return "Stats";
       case "history":
@@ -1725,48 +1725,65 @@ export default function Home() {
 
   function renderFullNavigation() {
     return (
-      <nav className="grid grid-cols-2 gap-3 mb-8 sm:grid-cols-3 lg:grid-cols-6">
-        <button
-          onClick={() => setActiveView("score")}
-          className={getTabClass("score")}
-        >
-          Score
-        </button>
+      <nav
+        className="mb-8 grid gap-3 lg:grid-cols-[2fr_1fr]"
+        aria-label="Application sections"
+      >
+        <div className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-3">
+          <div className="px-1 text-xs font-bold uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
+            Play
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <button
+              onClick={() => setActiveView("score")}
+              className={getTabClass("score")}
+            >
+              Score
+            </button>
 
-        <button
-          onClick={() => setActiveView("game")}
-          className={getTabClass("game")}
-        >
-          Game
-        </button>
+            <button
+              onClick={() => setActiveView("game")}
+              className={getTabClass("game")}
+            >
+              New Match
+            </button>
 
-        <button
-          onClick={() => setActiveView("league")}
-          className={getTabClass("league")}
-        >
-          League
-        </button>
+            <button
+              onClick={() => setActiveView("stats")}
+              className={getTabClass("stats")}
+            >
+              Stats
+            </button>
 
-        <button
-          onClick={() => setActiveView("app")}
-          className={getTabClass("app")}
-        >
-          App
-        </button>
+            <button
+              onClick={() => setActiveView("history")}
+              className={getTabClass("history")}
+            >
+              History
+            </button>
+          </div>
+        </div>
 
-        <button
-          onClick={() => setActiveView("stats")}
-          className={getTabClass("stats")}
-        >
-          Stats
-        </button>
+        <div className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-3">
+          <div className="px-1 text-xs font-bold uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
+            Manage
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <button
+              onClick={() => setActiveView("league")}
+              className={getTabClass("league")}
+            >
+              League
+            </button>
 
-        <button
-          onClick={() => setActiveView("history")}
-          className={getTabClass("history")}
-        >
-          History
-        </button>
+            <button
+              onClick={() => setActiveView("app")}
+              className={getTabClass("app")}
+            >
+              Settings
+            </button>
+          </div>
+        </div>
       </nav>
     );
   }
@@ -1845,7 +1862,7 @@ export default function Home() {
                   onClick={() => openGameMenuView("game")}
                   className={getGameMenuButtonClass("game")}
                 >
-                  Game Setup
+                  New Match
                 </button>
 
                 <button
@@ -1859,7 +1876,7 @@ export default function Home() {
                   onClick={() => openGameMenuView("app")}
                   className={getGameMenuButtonClass("app")}
                 >
-                  App Settings
+                  Settings
                 </button>
 
                 <button
@@ -1895,7 +1912,7 @@ export default function Home() {
                   }}
                   className="rounded-xl bg-slate-800 px-4 py-3 text-left font-bold text-slate-100 hover:bg-slate-700"
                 >
-                  Show full tabs
+                  Exit Focused Play
                 </button>
               </div>
             </div>
@@ -1953,7 +1970,7 @@ export default function Home() {
                       onClick={() => setIsGameModeActive(true)}
                       className="rounded-xl bg-[var(--color-panel-soft)] hover:bg-[var(--color-panel-border)] px-4 py-2 text-sm font-bold text-[var(--color-text-main)]"
                     >
-                      Game Mode
+                      Focused Play
                     </button>
                   )}
                 </div>
