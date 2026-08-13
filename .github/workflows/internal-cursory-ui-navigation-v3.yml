@@ -1,0 +1,126 @@
+name: Internal cursory UI navigation final scratch run
+
+on:
+  push:
+    branches:
+      - internal/cursory-ui-navigation
+    paths:
+      - .github/workflows/internal-cursory-ui-navigation-v3.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-latest
+    env:
+      DB_PROVIDER: libsql
+      DATABASE_URL: file:./data/ci.db
+      DATABASE_AUTH_TOKEN: ""
+      BETTER_AUTH_SECRET: ci-only-dart-scorekeeper-auth-secret-123456789
+      BETTER_AUTH_URL: http://localhost:3000
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - name: Check out scratch branch
+        uses: actions/checkout@v4
+        with:
+          ref: internal/cursory-ui-navigation
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply navigation pass
+        shell: bash
+        run: |
+          npm version 0.5.0-alpha.2 --no-git-tag-version
+          python <<'PY'
+          import base64
+          import re
+          from pathlib import Path
+          runner = Path(".github/workflows/internal-cursory-ui-navigation-v2.yml").read_text()
+          def payload(name):
+              match = re.search(rf"^\s+{name}: (\S+)\s*$", runner, re.MULTILINE)
+              if not match:
+                  raise RuntimeError(f"Could not find {name}")
+              return base64.b64decode(match.group(1)).decode()
+          app = Path("app/page.tsx")
+          text = app.read_text()
+          start = text.index("  function renderFullNavigation() {")
+          end = text.index("\n  function renderGameModeHeader()", start)
+          text = text[:start] + payload("NAV_B64") + text[end:]
+          text = text.replace('return "Game Setup";', 'return "New Match";')
+          text = text.replace('return "App Settings";', 'return "Settings";')
+          text = text.replace("                  Game Setup\n", "                  New Match\n")
+          text = text.replace("                  App Settings\n", "                  Settings\n")
+          text = text.replace("                      Game Mode\n", "                      Focused Play\n")
+          text = text.replace("                  Show full tabs\n", "                  Exit Focused Play\n")
+          app.write_text(text)
+          app_info = Path("lib/appInfo.ts")
+          app_info.write_text(app_info.read_text().replace("0.5.0-alpha.1", "0.5.0-alpha.2"))
+          Path("components/LeagueControlsSection.tsx").write_text(payload("LEAGUE_B64"))
+          layout = payload("LAYOUT_B64")
+          for route in ["game-nights", "league-roster", "game-night-templates", "league-devices"]:
+              (Path("app") / route / "layout.tsx").write_text(layout)
+          changelog = Path("CHANGELOG.md")
+          changelog_text = changelog.read_text()
+          changelog_text = changelog_text.replace("### Added\n", "### Added\n- Shared League Workspace navigation across league administration pages.\n- Complete League landing shortcuts for Game Nights, league/season setup, players/rosters, rules templates, and board devices.\n", 1)
+          changelog_text = changelog_text.replace("### Changed\n", "### Changed\n- Grouped the scorer navigation into Play and Manage areas; renamed Game to New Match, App to Settings, and Game Mode to Focused Play.\n- Updated preview version to v0.5.0-alpha.2 for the cursory navigation pass.\n", 1)
+          changelog.write_text(changelog_text)
+          PY
+
+      - name: Verify migration drift and apply database
+        run: |
+          mkdir -p data
+          npm run db:generate
+          git diff --exit-code -- drizzle/
+          test -z "$(git status --porcelain -- drizzle/)"
+          npm run db:migrate
+
+      - name: Run regression contracts
+        run: |
+          npm run db:test
+          npm run local:test
+          npm run auth:test
+          npm run setup:test
+          npm run x01:test
+          npm run league:test
+          npm run league:roster:test
+          npm run game-night:test
+          npm run game-night:templates:test
+          npm run game-night:stats:test
+          npm run game-night:multi-board:test
+          npm run game-night:fixtures:test
+          npm run game-night:layout:test
+          npm run dummy-scoring:test
+          npm run dummy-team-balance:test
+          npm run league-match:test
+          npm run board-device:test
+          npm run board-device:pairing:test
+          npm run board-device:offline:test
+
+      - name: Lint and production build
+        run: |
+          npm run lint
+          npm run build
+
+      - name: Build Docker portability target
+        run: docker build -t dart-scorekeeper-cursory-ui .
+
+      - name: Commit clean scratch result
+        shell: bash
+        run: |
+          rm -f .github/workflows/internal-cursory-ui-navigation.yml
+          rm -f .github/workflows/internal-cursory-ui-navigation-v2.yml
+          rm -f .github/workflows/internal-cursory-ui-navigation-v3.yml
+          git config user.name "Ben Clark"
+          git config user.email "bclark303@gmail.com"
+          git add -A
+          git commit -m "Apply cursory navigation pass [skip ci]"
+          git push origin HEAD:internal/cursory-ui-navigation
