@@ -1,0 +1,52 @@
+name: Live preview E2E
+
+on:
+  push:
+    branches:
+      - internal/live-preview-e2e
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      LIVE_PREVIEW_URL: https://dart-scorekeeper-git-agent-game-nig-2f9a23-ben-clark-s-projects.vercel.app
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+      E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
+      E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Verify required secrets are available
+        shell: bash
+        run: |
+          test -n "$VERCEL_AUTOMATION_BYPASS_SECRET" || { echo "::error::Missing VERCEL_AUTOMATION_BYPASS_SECRET"; exit 1; }
+          test -n "$E2E_TEST_EMAIL" || { echo "::error::Missing E2E_TEST_EMAIL"; exit 1; }
+          test -n "$E2E_TEST_PASSWORD" || { echo "::error::Missing E2E_TEST_PASSWORD"; exit 1; }
+
+      - run: npm ci
+
+      - name: Install Playwright for temporary live-preview validation
+        run: |
+          npm install --no-save @playwright/test@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Run live preview smoke test
+        run: npx playwright test --config=playwright.live.config.mjs
+
+      - name: Upload Playwright diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-preview-playwright-results
+          path: test-results/live-preview
+          if-no-files-found: ignore
+          retention-days: 3
