@@ -1,13 +1,18 @@
 import { getRequestSession } from "@/lib/auth/server";
 import {
   BoardDeviceCredentialError,
+  createPhysicalBoardForUser,
+  getVenueHardwareForUser,
   LeaguePermissionError,
-  listBoardDevicesForUser,
   registerBoardDeviceForUser,
   rotateBoardDeviceKeyForUser,
   updateBoardDeviceForUser,
+  updatePhysicalBoardForUser,
 } from "@/lib/db";
-import type { BoardDeviceStatus } from "@/lib/league/boardDeviceContracts";
+import type {
+  BoardDeviceStatus,
+  PhysicalBoardStatus,
+} from "@/lib/league/boardDeviceContracts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,7 +28,7 @@ async function getAuthenticatedUser(request: Request) {
     const session = await getRequestSession(request);
     return { user: session?.user ?? null, unavailable: false };
   } catch (error) {
-    console.error("Authentication service unavailable during board-device administration.", error);
+    console.error("Authentication service unavailable during venue hardware administration.", error);
     return { user: null, unavailable: true };
   }
 }
@@ -41,19 +46,27 @@ function errorResponse(error: unknown) {
   if (error instanceof BoardDeviceCredentialError) {
     return noStoreJson({ error: error.message }, { status: 400 });
   }
-  const message = error instanceof Error ? error.message : "Board-device administration failed.";
-  console.error("Board-device administration failed.", error);
+  const message = error instanceof Error ? error.message : "Venue hardware administration failed.";
+  console.error("Venue hardware administration failed.", error);
   return noStoreJson({ error: message }, { status: 400 });
 }
 
 export async function GET(request: Request) {
   const authState = await getAuthenticatedUser(request);
   if (!authState.user) return authFailureResponse(authState.unavailable);
-  const leagueId = new URL(request.url).searchParams.get("leagueId");
+  const url = new URL(request.url);
+  const leagueId = url.searchParams.get("leagueId");
+  const venueId = url.searchParams.get("venueId");
   if (!leagueId) return noStoreJson({ error: "leagueId is required." }, { status: 400 });
 
   try {
-    return noStoreJson({ devices: await listBoardDevicesForUser(leagueId, authState.user.id) });
+    return noStoreJson(
+      await getVenueHardwareForUser({
+        leagueId,
+        venueId,
+        userId: authState.user.id,
+      }),
+    );
   } catch (error) {
     return errorResponse(error);
   }
@@ -63,26 +76,57 @@ export async function POST(request: Request) {
   const authState = await getAuthenticatedUser(request);
   if (!authState.user) return authFailureResponse(authState.unavailable);
 
-  let input: { leagueId?: string; name?: string; boardNumber?: number };
+  let input:
+    | {
+        action?: "device";
+        leagueId?: string;
+        venueId?: string;
+        name?: string;
+        physicalBoardId?: string | null;
+        boardNumber?: number;
+      }
+    | {
+        action: "board";
+        leagueId?: string;
+        venueId?: string;
+        boardNumber?: number;
+        name?: string;
+      };
   try {
     input = await request.json();
   } catch {
-    return noStoreJson({ error: "Invalid board-device registration request." }, { status: 400 });
+    return noStoreJson({ error: "Invalid venue hardware request." }, { status: 400 });
   }
 
-  if (!input.leagueId || typeof input.name !== "string") {
-    return noStoreJson({ error: "League and device name are required." }, { status: 400 });
-  }
-  if (!Number.isInteger(input.boardNumber)) {
-    return noStoreJson({ error: "A board number is required." }, { status: 400 });
+  if (!input.leagueId || !input.venueId) {
+    return noStoreJson({ error: "League and venue are required." }, { status: 400 });
   }
 
   try {
+    if (input.action === "board") {
+      if (!Number.isInteger(input.boardNumber)) {
+        return noStoreJson({ error: "A board number is required." }, { status: 400 });
+      }
+      const board = await createPhysicalBoardForUser({
+        leagueId: input.leagueId,
+        venueId: input.venueId,
+        userId: authState.user.id,
+        boardNumber: input.boardNumber as number,
+        name: input.name,
+      });
+      return noStoreJson({ board }, { status: 201 });
+    }
+
+    if (typeof input.name !== "string") {
+      return noStoreJson({ error: "Device name is required." }, { status: 400 });
+    }
     const result = await registerBoardDeviceForUser({
       leagueId: input.leagueId,
+      venueId: input.venueId,
       userId: authState.user.id,
       name: input.name,
-      boardNumber: input.boardNumber as number,
+      physicalBoardId: input.physicalBoardId,
+      boardNumber: input.boardNumber,
     });
     return noStoreJson(result, { status: 201 });
   } catch (error) {
@@ -95,23 +139,50 @@ export async function PATCH(request: Request) {
   if (!authState.user) return authFailureResponse(authState.unavailable);
 
   let input:
-    | { action: "update"; deviceId: string; name?: string; boardNumber?: number; status?: BoardDeviceStatus }
-    | { action: "rotate"; deviceId: string };
+    | {
+        action: "update";
+        deviceId: string;
+        name?: string;
+        physicalBoardId?: string | null;
+        boardNumber?: number;
+        status?: BoardDeviceStatus;
+      }
+    | { action: "rotate"; deviceId: string }
+    | {
+        action: "board";
+        boardId: string;
+        name?: string;
+        status?: PhysicalBoardStatus;
+      };
   try {
     input = await request.json();
   } catch {
-    return noStoreJson({ error: "Invalid board-device update request." }, { status: 400 });
+    return noStoreJson({ error: "Invalid venue hardware update request." }, { status: 400 });
   }
-  if (!input.deviceId) return noStoreJson({ error: "deviceId is required." }, { status: 400 });
 
   try {
     if (input.action === "rotate") {
-      return noStoreJson(await rotateBoardDeviceKeyForUser({
-        deviceId: input.deviceId,
+      return noStoreJson(
+        await rotateBoardDeviceKeyForUser({
+          deviceId: input.deviceId,
+          userId: authState.user.id,
+        }),
+      );
+    }
+    if (input.action === "board") {
+      if (input.status && input.status !== "active" && input.status !== "out_of_service") {
+        return noStoreJson({ error: "Invalid physical board status." }, { status: 400 });
+      }
+      const board = await updatePhysicalBoardForUser({
+        boardId: input.boardId,
         userId: authState.user.id,
-      }));
+        name: input.name,
+        status: input.status,
+      });
+      return noStoreJson({ board });
     }
     if (input.action === "update") {
+      if (!input.deviceId) return noStoreJson({ error: "deviceId is required." }, { status: 400 });
       if (input.status && input.status !== "active" && input.status !== "disabled") {
         return noStoreJson({ error: "Invalid device status." }, { status: 400 });
       }
@@ -119,12 +190,13 @@ export async function PATCH(request: Request) {
         deviceId: input.deviceId,
         userId: authState.user.id,
         name: input.name,
+        physicalBoardId: input.physicalBoardId,
         boardNumber: input.boardNumber,
         status: input.status,
       });
       return noStoreJson({ device });
     }
-    return noStoreJson({ error: "Unknown board-device action." }, { status: 400 });
+    return noStoreJson({ error: "Unknown venue hardware action." }, { status: 400 });
   } catch (error) {
     return errorResponse(error);
   }
