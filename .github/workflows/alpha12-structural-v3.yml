@@ -1,0 +1,88 @@
+name: Alpha 12 structural validation v3
+
+"on":
+  push:
+    branches:
+      - internal/alpha12-venue-board-device-decoupling
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: internal/alpha12-venue-board-device-decoupling
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply structural refactor
+        run: python3 scripts/alpha12-refactor.py
+      - name: Install dependencies
+        run: npm ci
+      - name: Generate schema snapshot and install data-preserving migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          before="$(mktemp)"
+          find drizzle -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort > "$before"
+          npm run db:generate -- --name venue-hardware
+          migration=""
+          while IFS= read -r file; do
+            if ! grep -Fxq "$(basename "$file")" "$before"; then
+              migration="$file"
+              break
+            fi
+          done < <(find drizzle -maxdepth 1 -type f -name '*.sql' | sort)
+          if [ -z "$migration" ]; then
+            echo "::error::Drizzle did not create a migration file"
+            exit 1
+          fi
+          echo "Using generated migration path: $migration"
+          cp scripts/alpha12-venue-migration.sql "$migration"
+      - name: Check device runtime is no longer league-owned
+        run: |
+          ! grep -R "leagueBoardDevices\|device\.leagueId\|device\.leagueName" lib app scripts \
+            --exclude=alpha12-refactor.py --exclude=alpha12-venue-migration.sql
+      - name: Prepare and migrate local database
+        run: |
+          mkdir -p data
+          npm run db:migrate
+      - name: Run contracts
+        run: |
+          npm run db:test
+          npm run local:test
+          npm run auth:test
+          npm run setup:test
+          npm run x01:test
+          npm run league:test
+          npm run league:roster:test
+          npm run game-night:test
+          npm run game-night:templates:test
+          npm run game-night:stats:test
+          npm run game-night:multi-board:test
+          npm run game-night:fixtures:test
+          npm run game-night:layout:test
+          npm run dummy-scoring:test
+          npm run dummy-team-balance:test
+          npm run league-match:test
+          npm run board-device:test
+          npm run board-device:offline:test
+          npm run board-device:pairing:test
+      - name: Lint
+        run: npm run lint
+      - name: Build
+        run: npm run build
+      - name: Commit generated structural candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Apply alpha.12 venue hardware architecture"
+          git push origin HEAD:internal/alpha12-venue-board-device-decoupling
