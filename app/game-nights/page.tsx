@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useState } from "react";
 
-import { GameNightScheduleButton } from "@/components/GameNightScheduleButton";
 import { GameNightWorkspacePicker } from "@/components/GameNightWorkspacePicker";
 import { authClient } from "@/lib/auth/client";
 import { DEFAULT_GAME_NIGHT_SETTINGS } from "@/lib/league/gameNightContracts";
@@ -41,23 +40,6 @@ export default function GameNightsPage() {
       ? newNightSeasonId
       : workspace.league?.seasons[0]?.id ?? "";
 
-  const checkedInCount =
-    workspace.night?.attendance.filter((player) => player.status === "checked_in")
-      .length ?? 0;
-  const duesPending =
-    workspace.night?.attendance.filter(
-      (player) => player.status === "checked_in" && player.duesStatus === "unpaid",
-    ).length ?? 0;
-  const fixtureCount = useMemo(() => {
-    if (!workspace.night) return 0;
-    return (
-      workspace.night.rounds?.reduce(
-        (sum, round) => sum + round.pairings.length,
-        0,
-      ) ?? workspace.night.pairings.length
-    );
-  }, [workspace.night]);
-
   async function createGameNight(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!workspace.leagueId || !selectedSeasonId || !newNightDate) return;
@@ -86,9 +68,7 @@ export default function GameNightsPage() {
       }
 
       workspace.applyNight(result.gameNight);
-      setStatusMessage(
-        "Game Night created. Open Setup & Rules or begin Player Check-in.",
-      );
+      setStatusMessage("Game Night created and selected. Open the Control Room when ready.");
       setNewNightDate("");
     } catch (error) {
       workspace.setErrorMessage(
@@ -119,7 +99,7 @@ export default function GameNightsPage() {
           ← Back to scorekeeper
         </Link>
         <section className="mt-6 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-6">
-          <h1 className="text-3xl font-black">Game Nights</h1>
+          <h1 className="text-3xl font-black">Game Night Hub</h1>
           <p className="mt-2 text-[var(--color-text-muted)]">
             Sign in through Connected Storage before managing league Game Nights.
           </p>
@@ -129,86 +109,26 @@ export default function GameNightsPage() {
   }
 
   const night = workspace.night;
-  const managementCards = night
-    ? [
-        {
-          title: "Setup & Rules",
-          value: `${night.settings.startingScore} · Best of ${night.settings.legsPerMatch}`,
-          note: `${niceStatus(night.settings.teamCreationMode)} teams · ${night.settings.roundCount} round${night.settings.roundCount === 1 ? "" : "s"}`,
-          href: "/game-nights/setup",
-          ready: true,
-        },
-        {
-          title: "Player Check-in",
-          value: `${checkedInCount} / ${night.attendance.length} checked in`,
-          note: duesPending
-            ? `${duesPending} checked-in player${duesPending === 1 ? " has" : "s have"} dues pending`
-            : "Attendance and dues are clear",
-          href: "/game-nights/check-in",
-          ready: checkedInCount >= 2,
-        },
-        {
-          title: "Teams",
-          value: `${night.teams.length} team${night.teams.length === 1 ? "" : "s"}`,
-          note:
-            night.teams.length >= 2
-              ? "Team assignments are ready"
-              : "Prepare teams after check-in",
-          href: "/game-nights/teams",
-          ready: night.teams.length >= 2,
-        },
-        {
-          title: "Boards",
-          value: `${night.boards.length} physical board${night.boards.length === 1 ? "" : "s"}`,
-          note:
-            night.boards.length > 0
-              ? "Board layout is available"
-              : "Board layout still needs setup",
-          href: "/game-nights/boards",
-          ready: night.boards.length > 0,
-        },
-        {
-          title: "Fixtures & Rounds",
-          value: `${fixtureCount} match${fixtureCount === 1 ? "" : "es"}`,
-          note:
-            fixtureCount > 0
-              ? `${night.rounds?.length ?? 1} round${(night.rounds?.length ?? 1) === 1 ? "" : "s"} generated`
-              : "Generate Round 1 when teams are ready",
-          href: "/game-nights/fixtures",
-          ready: fixtureCount > 0,
-        },
-        {
-          title: "Stats",
-          value: night.status === "active" ? "Live highlights" : "Night statistics",
-          note: "180s, high turns, 100+, 140+, doubles and checkouts",
-          href: "/game-nights/stats",
-          ready: true,
-        },
-      ]
-    : [];
+  const checkedIn =
+    night?.attendance.filter((player) => player.status === "checked_in").length ?? 0;
+  const fixtureCount = night
+    ? night.rounds?.reduce((sum, round) => sum + round.pairings.length, 0) ??
+      night.pairings.length
+    : 0;
 
   return (
     <main className="min-h-screen bg-[var(--color-app-bg)] p-4 text-[var(--color-text-main)] sm:p-6">
       <div className="mx-auto max-w-7xl space-y-5">
-        <header className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <div className="text-xs font-black uppercase tracking-[0.14em] text-[var(--color-primary)]">
-              League workspace
-            </div>
-            <h1 className="mt-1 text-3xl font-black">Game Nights</h1>
-            <p className="mt-1 max-w-3xl text-sm text-[var(--color-text-muted)]">
-              Choose the night here, then use the focused sections above for
-              setup, check-in, teams, boards, rounds, and stats.
-            </p>
+        <header>
+          <div className="text-xs font-black uppercase tracking-[0.14em] text-[var(--color-primary)]">
+            League workspace
           </div>
-          {night && (
-            <Link
-              href="/game-nights/control"
-              className="rounded-xl bg-[var(--color-primary)] px-4 py-2.5 text-sm font-black text-white"
-            >
-              Open Control Room →
-            </Link>
-          )}
+          <h1 className="mt-1 text-3xl font-black">Game Night Hub</h1>
+          <p className="mt-1 max-w-3xl text-sm text-[var(--color-text-muted)]">
+            Choose the league night you want to work with or schedule a new one.
+            Once a night is selected, the Control Room becomes the operational
+            home for running it.
+          </p>
         </header>
 
         {workspace.errorMessage && (
@@ -238,11 +158,135 @@ export default function GameNightsPage() {
           }}
         />
 
+        {night ? (
+          <section className="rounded-2xl border border-[var(--color-primary)]/50 bg-[var(--color-panel)] p-5 shadow-sm">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-[var(--color-primary)]/15 px-3 py-1 text-xs font-black uppercase tracking-wide text-[var(--color-primary)]">
+                    Selected · {niceStatus(night.status)}
+                  </span>
+                </div>
+                <h2 className="mt-3 text-2xl font-black">{night.name}</h2>
+                <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+                  {workspace.league?.name} · {night.seasonName} · {formatScheduledAt(night.scheduledAt)}
+                </p>
+
+                <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <div className="rounded-xl bg-[var(--color-panel-soft)] p-3">
+                    <div className="text-xs font-black uppercase tracking-wide text-[var(--color-text-muted)]">
+                      Checked in
+                    </div>
+                    <div className="mt-1 text-xl font-black">{checkedIn}</div>
+                  </div>
+                  <div className="rounded-xl bg-[var(--color-panel-soft)] p-3">
+                    <div className="text-xs font-black uppercase tracking-wide text-[var(--color-text-muted)]">
+                      Teams
+                    </div>
+                    <div className="mt-1 text-xl font-black">{night.teams.length}</div>
+                  </div>
+                  <div className="rounded-xl bg-[var(--color-panel-soft)] p-3">
+                    <div className="text-xs font-black uppercase tracking-wide text-[var(--color-text-muted)]">
+                      Boards
+                    </div>
+                    <div className="mt-1 text-xl font-black">{night.boards.length}</div>
+                  </div>
+                  <div className="rounded-xl bg-[var(--color-panel-soft)] p-3">
+                    <div className="text-xs font-black uppercase tracking-wide text-[var(--color-text-muted)]">
+                      Matches
+                    </div>
+                    <div className="mt-1 text-xl font-black">{fixtureCount}</div>
+                  </div>
+                </div>
+              </div>
+
+              <Link
+                href="/game-nights/control"
+                className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[var(--color-primary)] px-6 py-3 text-center font-black text-white lg:min-w-56"
+              >
+                Open Control Room →
+              </Link>
+            </div>
+          </section>
+        ) : workspace.league && !workspace.loading ? (
+          <section className="rounded-2xl border border-dashed border-[var(--color-panel-border)] bg-[var(--color-panel)] p-6">
+            <h2 className="text-xl font-black">Choose a Game Night</h2>
+            <p className="mt-2 text-sm text-[var(--color-text-muted)]">
+              Select one below, or schedule the first Game Night for this league.
+            </p>
+          </section>
+        ) : null}
+
+        {workspace.league && (
+          <section className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-xl font-black">Scheduled Nights</h2>
+                <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+                  Select the night you want the Game Night workspace to use.
+                </p>
+              </div>
+              {workspace.loading && (
+                <span className="text-sm text-[var(--color-text-muted)]">
+                  Refreshing…
+                </span>
+              )}
+            </div>
+
+            {workspace.nights.length ? (
+              <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                {workspace.nights.map((item) => {
+                  const selected = item.id === workspace.nightId;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => {
+                        workspace.selectNight(item.id);
+                        setStatusMessage("");
+                      }}
+                      className={`rounded-xl border p-4 text-left transition-colors ${
+                        selected
+                          ? "border-[var(--color-primary)] bg-[var(--color-panel-soft)]"
+                          : "border-[var(--color-panel-border)] hover:border-[var(--color-primary)]"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="font-black">{item.name}</div>
+                        {selected && (
+                          <span className="text-xs font-black uppercase text-[var(--color-primary)]">
+                            Selected
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-1 text-xs text-[var(--color-text-muted)]">
+                        {item.seasonName} · {formatScheduledAt(item.scheduledAt)}
+                      </div>
+                      <div className="mt-3 text-xs font-black uppercase tracking-wide">
+                        {niceStatus(item.status)}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : !workspace.loading ? (
+              <div className="mt-4 rounded-xl border border-dashed border-[var(--color-panel-border)] p-4 text-sm text-[var(--color-text-muted)]">
+                No Game Nights are scheduled for this league yet.
+              </div>
+            ) : null}
+          </section>
+        )}
+
         {workspace.league && (
           <details className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
             <summary className="cursor-pointer font-black">
               + Schedule a new Game Night
             </summary>
+            <p className="mt-2 text-sm text-[var(--color-text-muted)]">
+              Create the shell here. Detailed rules, check-in, teams, and boards
+              are handled after you open its Control Room.
+            </p>
             <form
               onSubmit={createGameNight}
               className="mt-4 grid gap-3 md:grid-cols-4"
@@ -279,113 +323,11 @@ export default function GameNightsPage() {
                 disabled={working}
                 className="rounded-xl bg-[var(--color-primary)] px-4 py-3 font-black text-white disabled:opacity-50"
               >
-                Create Game Night
+                {working ? "Creating…" : "Create Game Night"}
               </button>
             </form>
           </details>
         )}
-
-        {night ? (
-          <>
-            <section className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <div className="text-xs font-black uppercase tracking-wide text-[var(--color-primary)]">
-                    {niceStatus(night.status)}
-                  </div>
-                  <h2 className="mt-1 text-2xl font-black">{night.name}</h2>
-                  <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                    {workspace.league?.name} · {night.seasonName} · {formatScheduledAt(night.scheduledAt)}
-                  </p>
-                </div>
-                <GameNightScheduleButton gameNight={night} />
-              </div>
-            </section>
-
-            <section>
-              <div className="mb-3">
-                <h2 className="text-xl font-black">Manage this Game Night</h2>
-                <p className="text-sm text-[var(--color-text-muted)]">
-                  Each card opens a focused workspace instead of expanding another
-                  section on this page.
-                </p>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {managementCards.map((card) => (
-                  <Link
-                    key={card.title}
-                    href={card.href}
-                    className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5 hover:border-[var(--color-primary)]"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <h3 className="font-black">{card.title}</h3>
-                      <span
-                        className={
-                          card.ready ? "text-emerald-300" : "text-amber-300"
-                        }
-                        aria-label={card.ready ? "Ready" : "Needs attention"}
-                      >
-                        {card.ready ? "✓" : "!"}
-                      </span>
-                    </div>
-                    <div className="mt-3 text-lg font-black">{card.value}</div>
-                    <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                      {card.note}
-                    </p>
-                    <div className="mt-4 text-sm font-black text-[var(--color-primary)]">
-                      Open {card.title} →
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
-
-            <section className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-lg font-black">Scheduled Nights</h2>
-                  <p className="text-sm text-[var(--color-text-muted)]">
-                    Switch nights without leaving the Game Night workspace.
-                  </p>
-                </div>
-                {workspace.loading && (
-                  <span className="text-sm text-[var(--color-text-muted)]">
-                    Refreshing…
-                  </span>
-                )}
-              </div>
-              <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-                {workspace.nights.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => workspace.selectNight(item.id)}
-                    className={`rounded-xl border p-3 text-left ${
-                      item.id === workspace.nightId
-                        ? "border-[var(--color-primary)] bg-[var(--color-panel-soft)]"
-                        : "border-[var(--color-panel-border)]"
-                    }`}
-                  >
-                    <div className="font-black">{item.name}</div>
-                    <div className="mt-1 text-xs text-[var(--color-text-muted)]">
-                      {item.seasonName} · {formatScheduledAt(item.scheduledAt)}
-                    </div>
-                    <div className="mt-2 text-xs font-black uppercase tracking-wide">
-                      {niceStatus(item.status)}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </section>
-          </>
-        ) : workspace.league && !workspace.loading ? (
-          <section className="rounded-2xl border border-dashed border-[var(--color-panel-border)] bg-[var(--color-panel)] p-6">
-            <h2 className="text-xl font-black">No Game Night selected</h2>
-            <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-              Schedule a Game Night above to begin.
-            </p>
-          </section>
-        ) : null}
       </div>
     </main>
   );
