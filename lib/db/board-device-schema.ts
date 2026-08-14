@@ -1,5 +1,6 @@
 import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
+import { leagues } from "./schema";
 import { physicalBoards, venues } from "./venue-schema";
 
 /**
@@ -9,14 +10,20 @@ import { physicalBoards, venues } from "./venue-schema";
  * may be assigned to one physical board at a time, or left unassigned as a
  * spare. Reassigning the device never changes a fixture or match identity.
  *
- * The legacy SQL table name is retained for this migration so existing paired
- * credentials can be moved in place without Drizzle interpreting this as an
- * unrelated table rename. The domain model contains no league ownership.
+ * The legacy SQL table name and two nullable legacy columns are retained only
+ * for the alpha.12 data migration. Runtime code never reads or writes the
+ * legacy league/board values for authorization or assignment; new devices
+ * leave them null. A later cleanup migration can remove them once all installs
+ * have crossed this schema boundary.
  */
 export const boardDevices = sqliteTable(
   "league_board_devices",
   {
     id: text("id").primaryKey(),
+    legacyLeagueId: text("league_id").references(() => leagues.id, {
+      onDelete: "set null",
+    }),
+    legacyBoardNumber: integer("board_number"),
     venueId: text("venue_id")
       .notNull()
       .references(() => venues.id, { onDelete: "cascade" }),
