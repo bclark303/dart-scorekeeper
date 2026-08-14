@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState, type SetStateAction } from "react";
 
 import { GameNightRulesPanel } from "@/components/GameNightRulesPanel";
 import { GameNightScheduleButton } from "@/components/GameNightScheduleButton";
@@ -29,20 +29,29 @@ function formatDate(value: number) {
 export default function GameNightSetupPage() {
   const { data: session, isPending } = authClient.useSession();
   const workspace = useGameNightWorkspace(Boolean(session?.user));
-  const [settingsDraft, setSettingsDraft] = useState<GameNightSettingsSummary>(
-    DEFAULT_GAME_NIGHT_SETTINGS,
-  );
+  const [settingsDraftState, setSettingsDraftState] = useState<{
+    nightId: string;
+    settings: GameNightSettingsSummary;
+  } | null>(null);
   const [working, setWorking] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
 
-  useEffect(() => {
-    setSettingsDraft(
-      workspace.night
+  const settingsDraft =
+    settingsDraftState?.nightId === workspace.night?.id
+      ? settingsDraftState.settings
+      : workspace.night
         ? resolveGameNightSettings(workspace.night.settings)
-        : DEFAULT_GAME_NIGHT_SETTINGS,
-    );
-    setStatusMessage("");
-  }, [workspace.night]);
+        : DEFAULT_GAME_NIGHT_SETTINGS;
+
+  function updateSettingsDraft(action: SetStateAction<GameNightSettingsSummary>) {
+    if (!workspace.night) return;
+    const nextSettings =
+      typeof action === "function" ? action(settingsDraft) : action;
+    setSettingsDraftState({
+      nightId: workspace.night.id,
+      settings: nextSettings,
+    });
+  }
 
   async function saveRules() {
     if (!workspace.night) return;
@@ -67,7 +76,10 @@ export default function GameNightSetupPage() {
         throw new Error(result.error ?? "Game Night rules could not be saved.");
       }
       workspace.applyNight(result.gameNight);
-      setSettingsDraft(resolveGameNightSettings(result.gameNight.settings));
+      setSettingsDraftState({
+        nightId: result.gameNight.id,
+        settings: resolveGameNightSettings(result.gameNight.settings),
+      });
       setStatusMessage(
         "Rules saved. Any setup-only board fixture draft was cleared so it can be rebuilt safely.",
       );
@@ -139,8 +151,16 @@ export default function GameNightSetupPage() {
           leagueId={workspace.leagueId}
           nights={workspace.nights}
           nightId={workspace.nightId}
-          onLeagueChange={workspace.selectLeague}
-          onNightChange={workspace.selectNight}
+          onLeagueChange={(leagueId) => {
+            workspace.selectLeague(leagueId);
+            setSettingsDraftState(null);
+            setStatusMessage("");
+          }}
+          onNightChange={(nightId) => {
+            workspace.selectNight(nightId);
+            setSettingsDraftState(null);
+            setStatusMessage("");
+          }}
         />
 
         {workspace.night ? (
@@ -164,7 +184,7 @@ export default function GameNightSetupPage() {
 
             <GameNightRulesPanel
               settings={settingsDraft}
-              setSettings={setSettingsDraft}
+              setSettings={updateSettingsDraft}
               disabled={working}
               onSave={() => void saveRules()}
             />
