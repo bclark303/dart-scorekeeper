@@ -1,17 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { GameNightFixturePanel } from "@/components/GameNightFixturePanel";
+import { GameNightWorkspacePicker } from "@/components/GameNightWorkspacePicker";
 import { authClient } from "@/lib/auth/client";
-import type { LeagueListResponse, LeagueSummary } from "@/lib/league/contracts";
 import {
   DEFAULT_GAME_NIGHT_SETTINGS,
   resolveGameNightSettings,
   type GameNightSettingsSummary,
   type GameNightSummary,
 } from "@/lib/league/gameNightContracts";
+import { useGameNightWorkspace } from "@/lib/league/useGameNightWorkspace";
 
 function formatScheduledAt(value: number) {
   return new Intl.DateTimeFormat(undefined, {
@@ -25,133 +26,34 @@ function formatScheduledAt(value: number) {
 
 export default function GameNightFixturesPage() {
   const { data: session, isPending } = authClient.useSession();
-  const [leagues, setLeagues] = useState<LeagueSummary[]>([]);
-  const [selectedLeagueId, setSelectedLeagueId] = useState("");
-  const [gameNights, setGameNights] = useState<GameNightSummary[]>([]);
-  const [selectedGameNightId, setSelectedGameNightId] = useState("");
+  const workspace = useGameNightWorkspace(Boolean(session?.user));
   const [settingsDraft, setSettingsDraft] = useState<GameNightSettingsSummary>(
     DEFAULT_GAME_NIGHT_SETTINGS,
   );
   const [working, setWorking] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
 
-  const selectedNight = useMemo(
-    () => gameNights.find((night) => night.id === selectedGameNightId) ?? null,
-    [gameNights, selectedGameNightId],
-  );
-
-  const applyNight = useCallback(
-    (night: GameNightSummary, message?: string) => {
-      setGameNights((current) =>
-        current
-          .map((item) => (item.id === night.id ? night : item))
-          .sort((a, b) => a.scheduledAt - b.scheduledAt),
-      );
-      setSelectedGameNightId(night.id);
-      setSettingsDraft(resolveGameNightSettings(night.settings));
-      if (message) setStatusMessage(message);
-    },
-    [],
-  );
-
-  const loadLeagues = useCallback(async () => {
-    try {
-      const response = await fetch("/api/leagues", { cache: "no-store" });
-      const result = (await response.json()) as LeagueListResponse & {
-        error?: string;
-      };
-      if (!response.ok) {
-        throw new Error(result.error ?? "Could not load leagues.");
-      }
-      setLeagues(result.leagues);
-      setSelectedLeagueId((current) => current || result.leagues[0]?.id || "");
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "Could not load leagues.",
-      );
-    }
-  }, []);
-
-  const loadNights = useCallback(async (leagueId: string) => {
-    if (!leagueId) return;
-    try {
-      const response = await fetch(
-        `/api/leagues/game-nights?leagueId=${encodeURIComponent(leagueId)}`,
-        { cache: "no-store" },
-      );
-      const result = (await response.json()) as {
-        gameNights?: GameNightSummary[];
-        error?: string;
-      };
-      if (!response.ok || !result.gameNights) {
-        throw new Error(result.error ?? "Could not load Game Nights.");
-      }
-      setGameNights(result.gameNights);
-      const first =
-        result.gameNights.find((night) => night.status !== "completed") ??
-        result.gameNights[0] ??
-        null;
-      setSelectedGameNightId(first?.id ?? "");
-      setSettingsDraft(
-        first
-          ? resolveGameNightSettings(first.settings)
-          : DEFAULT_GAME_NIGHT_SETTINGS,
-      );
-      setErrorMessage("");
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "Could not load Game Nights.",
-      );
-    }
-  }, []);
-
-  const refreshSelectedNight = useCallback(async () => {
-    if (!selectedGameNightId) return;
-    try {
-      const response = await fetch(
-        `/api/leagues/game-nights?gameNightId=${encodeURIComponent(selectedGameNightId)}`,
-        { cache: "no-store" },
-      );
-      const result = (await response.json()) as {
-        gameNight?: GameNightSummary;
-        error?: string;
-      };
-      if (!response.ok || !result.gameNight) {
-        throw new Error(result.error ?? "Could not refresh round status.");
-      }
-      applyNight(result.gameNight);
-      setErrorMessage("");
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Could not refresh round status.",
-      );
-    }
-  }, [applyNight, selectedGameNightId]);
+  useEffect(() => {
+    setSettingsDraft(
+      workspace.night
+        ? resolveGameNightSettings(workspace.night.settings)
+        : DEFAULT_GAME_NIGHT_SETTINGS,
+    );
+    setStatusMessage("");
+  }, [workspace.night]);
 
   useEffect(() => {
-    if (!session?.user) return;
-    const timer = window.setTimeout(() => void loadLeagues(), 0);
-    return () => window.clearTimeout(timer);
-  }, [loadLeagues, session?.user]);
-
-  useEffect(() => {
-    if (!selectedLeagueId) return;
-    const timer = window.setTimeout(() => void loadNights(selectedLeagueId), 0);
-    return () => window.clearTimeout(timer);
-  }, [loadNights, selectedLeagueId]);
-
-  useEffect(() => {
-    if (selectedNight?.status !== "active") return;
-    const timer = window.setInterval(() => void refreshSelectedNight(), 5000);
+    if (workspace.night?.status !== "active") return;
+    const timer = window.setInterval(
+      () => void workspace.refreshNight(),
+      5000,
+    );
     return () => window.clearInterval(timer);
-  }, [refreshSelectedNight, selectedNight?.status]);
+  }, [workspace.night?.status, workspace.refreshNight]);
 
   async function patchNight(body: object, message?: string) {
     setWorking(true);
-    setErrorMessage("");
+    workspace.setErrorMessage("");
     setStatusMessage("");
     try {
       const response = await fetch("/api/leagues/game-nights", {
@@ -164,12 +66,14 @@ export default function GameNightFixturesPage() {
         error?: string;
       };
       if (!response.ok || !result.gameNight) {
-        throw new Error(result.error ?? "Game-night update failed.");
+        throw new Error(result.error ?? "Game Night update failed.");
       }
-      applyNight(result.gameNight, message);
+      workspace.applyNight(result.gameNight);
+      setSettingsDraft(resolveGameNightSettings(result.gameNight.settings));
+      if (message) setStatusMessage(message);
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "Game-night update failed.",
+      workspace.setErrorMessage(
+        error instanceof Error ? error.message : "Game Night update failed.",
       );
     } finally {
       setWorking(false);
@@ -187,125 +91,77 @@ export default function GameNightFixturesPage() {
   if (!session?.user) {
     return (
       <main className="mx-auto max-w-3xl p-6">
-        <Link
-          href="/"
-          className="text-sm font-bold text-[var(--color-primary)]"
-        >
-          ← Back to scorekeeper
-        </Link>
-        <section className="mt-6 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-6">
-          <h1 className="text-3xl font-bold">Fixture & Round Control</h1>
-          <p className="mt-2 text-[var(--color-text-muted)]">
-            Sign in before running a league Game Night.
-          </p>
-        </section>
+        <h1 className="text-3xl font-black">Fixture & Round Control</h1>
+        <p className="mt-2 text-[var(--color-text-muted)]">
+          Sign in before running a league Game Night.
+        </p>
       </main>
     );
   }
 
+  const night = workspace.night;
+
   return (
-    <main className="mx-auto max-w-7xl p-4 sm:p-6">
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <Link
-            href="/game-nights"
-            className="text-sm font-bold text-[var(--color-primary)]"
-          >
-            ← Game Night Control
-          </Link>
-          <h1 className="mt-2 text-3xl font-bold">Fixture & Round Control</h1>
-          <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-            Generate synchronized fixtures, manage byes and intermissions, and
-            release each round to its boards.
-          </p>
-        </div>
-        <button
-          type="button"
-          disabled={working || !selectedGameNightId}
-          onClick={() => void refreshSelectedNight()}
-          className="rounded-xl border border-[var(--color-panel-border)] px-4 py-2.5 text-sm font-bold disabled:opacity-50"
-        >
-          Refresh
-        </button>
-      </div>
-
-      {errorMessage && (
-        <div className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-100">
-          {errorMessage}
-        </div>
-      )}
-      {statusMessage && (
-        <div className="mb-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-sm text-emerald-100">
-          {statusMessage}
-        </div>
-      )}
-
-      <section className="mb-6 grid gap-3 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5 md:grid-cols-2">
-        <label className="text-sm font-bold">
-          League
-          <select
-            value={selectedLeagueId}
-            onChange={(event) => {
-              setSelectedLeagueId(event.target.value);
-              setSelectedGameNightId("");
-              setSettingsDraft(DEFAULT_GAME_NIGHT_SETTINGS);
-            }}
-            className="mt-2 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-3"
-          >
-            <option value="">Select league</option>
-            {leagues.map((league) => (
-              <option key={league.id} value={league.id}>
-                {league.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="text-sm font-bold">
-          Game Night
-          <select
-            value={selectedGameNightId}
-            onChange={(event) => {
-              const nextId = event.target.value;
-              setSelectedGameNightId(nextId);
-              const nextNight = gameNights.find((night) => night.id === nextId);
-              setSettingsDraft(
-                nextNight
-                  ? resolveGameNightSettings(nextNight.settings)
-                  : DEFAULT_GAME_NIGHT_SETTINGS,
-              );
-            }}
-            className="mt-2 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-3"
-          >
-            <option value="">Select Game Night</option>
-            {gameNights.map((night) => (
-              <option key={night.id} value={night.id}>
-                {night.name} · {formatScheduledAt(night.scheduledAt)} ·{" "}
-                {night.status}
-              </option>
-            ))}
-          </select>
-        </label>
-      </section>
-
-      {selectedNight ? (
-        <div className="space-y-6">
-          <section className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-2xl font-bold">{selectedNight.name}</h2>
-                <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                  {selectedNight.seasonName} ·{" "}
-                  {formatScheduledAt(selectedNight.scheduledAt)}
-                </p>
-              </div>
-              <span className="rounded-full border border-[var(--color-panel-border)] px-3 py-1 text-xs font-bold uppercase">
-                {selectedNight.status}
-              </span>
+    <main className="min-h-screen bg-[var(--color-app-bg)] p-4 text-[var(--color-text-main)] sm:p-6">
+      <div className="mx-auto max-w-7xl space-y-5">
+        <header className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="text-xs font-black uppercase tracking-[0.14em] text-[var(--color-primary)]">
+              Game Night
             </div>
+            <h1 className="mt-1 text-3xl font-black">Fixture & Round Control</h1>
+            <p className="mt-1 max-w-3xl text-sm text-[var(--color-text-muted)]">
+              Generate synchronized fixtures, manage byes and intermissions, edit
+              draft rounds, and release each round to its boards.
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={working || !workspace.nightId}
+            onClick={() => void workspace.refreshNight()}
+            className="rounded-xl border border-[var(--color-panel-border)] px-4 py-2.5 text-sm font-black disabled:opacity-50"
+          >
+            Refresh
+          </button>
+        </header>
 
-            <div className="mt-4 flex flex-wrap gap-2">
-              {!selectedNight.pairings.length &&
-                selectedNight.teams.length >= 2 && (
+        {workspace.errorMessage && (
+          <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-100">
+            {workspace.errorMessage}
+          </div>
+        )}
+        {statusMessage && !workspace.errorMessage && (
+          <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-sm text-emerald-100">
+            {statusMessage}
+          </div>
+        )}
+
+        <GameNightWorkspacePicker
+          leagues={workspace.leagues}
+          leagueId={workspace.leagueId}
+          nights={workspace.nights}
+          nightId={workspace.nightId}
+          onLeagueChange={workspace.selectLeague}
+          onNightChange={workspace.selectNight}
+        />
+
+        {night ? (
+          <div className="space-y-6">
+            <section className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-2xl font-black">{night.name}</h2>
+                  <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+                    {workspace.league?.name} · {night.seasonName} · {formatScheduledAt(night.scheduledAt)}
+                  </p>
+                </div>
+                <span className="rounded-full border border-[var(--color-panel-border)] px-3 py-1 text-xs font-black uppercase">
+                  {night.status}
+                </span>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                {!night.pairings.length && night.teams.length >= 2 && (
                   <button
                     type="button"
                     disabled={working}
@@ -313,21 +169,41 @@ export default function GameNightFixturesPage() {
                       void patchNight(
                         {
                           action: "populateBoards",
-                          gameNightId: selectedNight.id,
+                          gameNightId: night.id,
                         },
                         "Round 1 fixture draft generated.",
                       )
                     }
-                    className="rounded-xl bg-[var(--color-primary)] px-4 py-2.5 font-bold text-white disabled:opacity-50"
+                    className="rounded-xl bg-[var(--color-primary)] px-4 py-2.5 font-black text-white disabled:opacity-50"
                   >
                     Generate Round 1
                   </button>
                 )}
 
-              {selectedNight.status !== "active" &&
-                selectedNight.status !== "completed" &&
-                selectedNight.status !== "cancelled" &&
-                selectedNight.pairings.length > 0 && (
+                {night.status !== "active" &&
+                  night.status !== "completed" &&
+                  night.status !== "cancelled" &&
+                  night.pairings.length > 0 && (
+                    <button
+                      type="button"
+                      disabled={working}
+                      onClick={() =>
+                        void patchNight(
+                          {
+                            action: "status",
+                            gameNightId: night.id,
+                            status: "active",
+                          },
+                          "Game Night started. Round 1 is live on registered boards.",
+                        )
+                      }
+                      className="rounded-xl bg-emerald-600 px-4 py-2.5 font-black text-white disabled:opacity-50"
+                    >
+                      Start Game Night / Round 1
+                    </button>
+                  )}
+
+                {night.status === "active" && (
                   <button
                     type="button"
                     disabled={working}
@@ -335,53 +211,46 @@ export default function GameNightFixturesPage() {
                       void patchNight(
                         {
                           action: "status",
-                          gameNightId: selectedNight.id,
-                          status: "active",
+                          gameNightId: night.id,
+                          status: "completed",
                         },
-                        "Game Night started. Round 1 is live on registered boards.",
+                        "Game Night completed.",
                       )
                     }
-                    className="rounded-xl bg-emerald-600 px-4 py-2.5 font-bold text-white disabled:opacity-50"
+                    className="rounded-xl border border-emerald-500/50 px-4 py-2.5 font-black text-emerald-200 disabled:opacity-50"
                   >
-                    Start Game Night / Round 1
+                    Complete Game Night
                   </button>
                 )}
+              </div>
 
-              {selectedNight.status === "active" && (
-                <button
-                  type="button"
-                  disabled={working}
-                  onClick={() =>
-                    void patchNight(
-                      {
-                        action: "status",
-                        gameNightId: selectedNight.id,
-                        status: "completed",
-                      },
-                      "Game Night completed.",
-                    )
-                  }
-                  className="rounded-xl border border-emerald-500/50 px-4 py-2.5 font-bold text-emerald-200 disabled:opacity-50"
-                >
-                  Complete Game Night
-                </button>
+              {!night.pairings.length && night.teams.length < 2 && (
+                <div className="mt-4 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+                  Prepare at least two teams before generating Round 1.
+                  <Link
+                    href="/game-nights/teams"
+                    className="ml-2 font-black text-[var(--color-primary)]"
+                  >
+                    Open Teams →
+                  </Link>
+                </div>
               )}
-            </div>
-          </section>
+            </section>
 
-          <GameNightFixturePanel
-            gameNight={selectedNight}
-            settings={settingsDraft}
-            setSettings={setSettingsDraft}
-            disabled={working}
-            onAction={patchNight}
-          />
-        </div>
-      ) : (
-        <section className="rounded-2xl border border-dashed border-[var(--color-panel-border)] p-6 text-sm text-[var(--color-text-muted)]">
-          Select a Game Night to manage its fixture sequence.
-        </section>
-      )}
+            <GameNightFixturePanel
+              gameNight={night}
+              settings={settingsDraft}
+              setSettings={setSettingsDraft}
+              disabled={working}
+              onAction={patchNight}
+            />
+          </div>
+        ) : !workspace.loading ? (
+          <section className="rounded-2xl border border-dashed border-[var(--color-panel-border)] bg-[var(--color-panel)] p-6 text-sm text-[var(--color-text-muted)]">
+            Select a Game Night to manage its fixture sequence.
+          </section>
+        ) : null}
+      </div>
     </main>
   );
 }
