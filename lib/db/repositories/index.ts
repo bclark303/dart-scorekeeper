@@ -61,6 +61,10 @@ export {
   updateGameNightSettingsForUser,
 } from "./gameNightSetupLifecycle";
 export {
+  assignGameNightPhysicalBoardsForUser,
+  setGameNightVenueForUser,
+} from "./gameNights";
+export {
   createGameNightForUser,
   populateGameNightBoardsForUser,
   regenerateGameNightRoundForUser,
@@ -89,8 +93,17 @@ export {
   listBoardDevicesForUser,
   registerBoardDeviceForUser,
   rotateBoardDeviceKeyForUser,
+  getVenueHardwareForUser,
   updateBoardDeviceForUser,
 } from "./boardDevices";
+export {
+  createPhysicalBoardForUser,
+  linkVenueToLeagueForUser,
+  listAdminVenuesForUser,
+  listPhysicalBoardsForVenueForUser,
+  listVenuesForLeagueForUser,
+  updatePhysicalBoardForUser,
+} from "./venueHardware";
 export {
   getBoardDeviceAssignment,
   getBoardDeviceConnectionForCredential,

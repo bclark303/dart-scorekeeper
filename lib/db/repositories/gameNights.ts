@@ -25,7 +25,14 @@ import {
 import { leaguePlayers, seasonRosterEntries } from "../league-schema";
 import { leagueMatchSessions } from "../league-match-schema";
 import { leagueMemberships, players, seasons } from "../schema";
+import { venues } from "../venue-schema";
 import { LeaguePermissionError } from "./leagues";
+import {
+  bootstrapEmptyVenueBoards,
+  ensureDefaultVenueForLeagueForUser,
+  listPhysicalBoardsForVenue,
+  requireVenueLinkedToLeague,
+} from "./venueHardware";
 
 export type CreateGameNightForUserInput = {
   id: string;
@@ -145,29 +152,98 @@ async function getGameNightContext(gameNightId: string) {
       gameNightId: gameNights.id,
       leagueId: seasons.leagueId,
       seasonId: gameNights.seasonId,
+      venueId: gameNights.venueId,
+      status: gameNights.status,
     })
     .from(gameNights)
     .innerJoin(seasons, eq(gameNights.seasonId, seasons.id))
+    .leftJoin(venues, eq(gameNights.venueId, venues.id))
     .where(eq(gameNights.id, gameNightId))
     .limit(1);
   if (!row) throw new Error("Game night was not found.");
   return row;
 }
 
-async function resetBoards(gameNightId: string, boardCount: number, now: number) {
+async function replaceBoardAllocations(
+  gameNightId: string,
+  physicalBoardIds: string[],
+  now: number,
+) {
+  const [night] = await getDatabase()
+    .select({ venueId: gameNights.venueId })
+    .from(gameNights)
+    .where(eq(gameNights.id, gameNightId))
+    .limit(1);
+  if (!night?.venueId) throw new Error("Choose a venue before assigning boards.");
+
+  const venueBoards = await listPhysicalBoardsForVenue(night.venueId);
+  const byId = new Map(venueBoards.map((board) => [board.id, board]));
+  const chosen = physicalBoardIds.map((id) => byId.get(id));
+  if (chosen.some((board) => !board)) {
+    throw new Error("A selected board does not belong to this Game Night venue.");
+  }
+  if (new Set(physicalBoardIds).size !== physicalBoardIds.length) {
+    throw new Error("Each physical board can be selected only once.");
+  }
+  if (chosen.some((board) => board?.status !== "active")) {
+    throw new Error("Out-of-service boards cannot be assigned to a Game Night.");
+  }
+
   await getDatabase().delete(gameNightBoardPairings).where(eq(gameNightBoardPairings.gameNightId, gameNightId));
   await getDatabase().delete(gameNightBoards).where(eq(gameNightBoards.gameNightId, gameNightId));
-  if (boardCount > 0) {
+  if (chosen.length) {
     await getDatabase().insert(gameNightBoards).values(
-      Array.from({ length: boardCount }, (_, index) => ({
+      chosen.map((board) => ({
         id: crypto.randomUUID(),
         gameNightId,
-        boardNumber: index + 1,
-        name: `Board ${index + 1}`,
+        physicalBoardId: board!.id,
+        boardNumber: board!.boardNumber,
+        name: board!.name,
         createdAt: now,
       })),
     );
   }
+}
+
+async function resetBoards(gameNightId: string, boardCount: number, now: number) {
+  const [night] = await getDatabase()
+    .select({ venueId: gameNights.venueId })
+    .from(gameNights)
+    .where(eq(gameNights.id, gameNightId))
+    .limit(1);
+  if (!night?.venueId) throw new Error("Choose a venue before assigning boards.");
+
+  let venueBoards = await listPhysicalBoardsForVenue(night.venueId);
+  if (venueBoards.length < boardCount) {
+    venueBoards = await bootstrapEmptyVenueBoards(night.venueId, boardCount, now);
+  }
+  const activeBoards = venueBoards.filter((board) => board.status === "active");
+  if (activeBoards.length < boardCount) {
+    throw new Error(
+      `This venue has ${activeBoards.length} active ${activeBoards.length === 1 ? "board" : "boards"}, but this Game Night needs ${boardCount}. Add or restore physical boards in Venue Hardware.`,
+    );
+  }
+
+  // Pre-play board selection may overlap another active or scheduled night.
+  // The authoritative exclusivity check runs when this Game Night starts, so
+  // administrators can prepare future nights without inventing extra hardware.
+  const existing = await getDatabase()
+    .select({ physicalBoardId: gameNightBoards.physicalBoardId })
+    .from(gameNightBoards)
+    .where(eq(gameNightBoards.gameNightId, gameNightId));
+  const existingIds = existing
+    .map((row) => row.physicalBoardId)
+    .filter((id): id is string => Boolean(id));
+  const chosenIds: string[] = [];
+  for (const id of existingIds) {
+    if (activeBoards.some((board) => board.id === id) && !chosenIds.includes(id)) chosenIds.push(id);
+    if (chosenIds.length === boardCount) break;
+  }
+  for (const board of activeBoards) {
+    if (!chosenIds.includes(board.id)) chosenIds.push(board.id);
+    if (chosenIds.length === boardCount) break;
+  }
+  await replaceBoardAllocations(gameNightId, chosenIds, now);
 }
 
 async function getSeasonRosterPlayers(seasonId: string) {
@@ -199,6 +275,8 @@ export async function getGameNightForUser(
       leagueId: seasons.leagueId,
       seasonId: seasons.id,
       seasonName: seasons.name,
+      venueId: gameNights.venueId,
+      venueName: venues.name,
       name: gameNights.name,
       scheduledAt: gameNights.scheduledAt,
       status: gameNights.status,
@@ -207,6 +285,7 @@ export async function getGameNightForUser(
     })
     .from(gameNights)
     .innerJoin(seasons, eq(gameNights.seasonId, seasons.id))
+    .leftJoin(venues, eq(gameNights.venueId, venues.id))
     .where(eq(gameNights.id, gameNightId))
     .limit(1);
   if (!night) throw new Error("Game night was not found.");
@@ -299,6 +378,7 @@ export async function getGameNightForUser(
     })),
     boards: boardRows.map((board) => ({
       id: board.id,
+      physicalBoardId: board.physicalBoardId,
       boardNumber: board.boardNumber,
       name: board.name,
     })),
@@ -351,10 +431,16 @@ export async function createGameNightForUser(
   if (!season) throw new Error("Season must belong to the selected league.");
 
   const now = input.now ?? Date.now();
+  const venue = await ensureDefaultVenueForLeagueForUser({
+    leagueId: input.leagueId,
+    userId: input.userId,
+    now,
+  });
   await getDatabase().transaction(async (tx) => {
     await tx.insert(gameNights).values({
       id: input.id,
       seasonId: input.seasonId,
+      venueId: venue.id,
       name: input.name.trim(),
       scheduledAt: input.scheduledAt,
       status: "checkin",
@@ -758,6 +844,58 @@ export async function populateGameNightBoardsForUser(
     );
   }
   await getDatabase().update(gameNights).set({ status: "ready", updatedAt: now }).where(eq(gameNights.id, gameNightId));
+  return getGameNightForUser(gameNightId, userId);
+}
+
+export async function setGameNightVenueForUser(
+  gameNightId: string,
+  venueId: string,
+  userId: string,
+): Promise<GameNightSummary> {
+  const context = await getGameNightContext(gameNightId);
+  await requireLeagueAdmin(context.leagueId, userId);
+  if (["active", "completed", "cancelled"].includes(context.status)) {
+    throw new Error("The Game Night venue is locked once play starts or closes.");
+  }
+  await requireVenueLinkedToLeague(context.leagueId, venueId);
+  const [settingsRow] = await getDatabase()
+    .select()
+    .from(gameNightSettings)
+    .where(eq(gameNightSettings.gameNightId, gameNightId))
+    .limit(1);
+  if (!settingsRow) throw new Error("Game-night settings were not found.");
+  await getDatabase()
+    .update(gameNights)
+    .set({ venueId, status: "checkin", updatedAt: Date.now() })
+    .where(eq(gameNights.id, gameNightId));
+  await resetBoards(gameNightId, settingsRow.boardCount, Date.now());
+  return getGameNightForUser(gameNightId, userId);
+}
+
+export async function assignGameNightPhysicalBoardsForUser(
+  gameNightId: string,
+  physicalBoardIds: string[],
+  userId: string,
+): Promise<GameNightSummary> {
+  const context = await getGameNightContext(gameNightId);
+  await requireLeagueAdmin(context.leagueId, userId);
+  if (["active", "completed", "cancelled"].includes(context.status)) {
+    throw new Error("Physical board assignments are locked once play starts or closes.");
+  }
+  const [settingsRow] = await getDatabase()
+    .select()
+    .from(gameNightSettings)
+    .where(eq(gameNightSettings.gameNightId, gameNightId))
+    .limit(1);
+  if (!settingsRow) throw new Error("Game-night settings were not found.");
+  if (physicalBoardIds.length !== settingsRow.boardCount) {
+    throw new Error(`Select exactly ${settingsRow.boardCount} physical ${settingsRow.boardCount === 1 ? "board" : "boards"}.`);
+  }
+  await replaceBoardAllocations(gameNightId, physicalBoardIds, Date.now());
+  await getDatabase()
+    .update(gameNights)
+    .set({ status: "checkin", updatedAt: Date.now() })
+    .where(eq(gameNights.id, gameNightId));
   return getGameNightForUser(gameNightId, userId);
 }
 

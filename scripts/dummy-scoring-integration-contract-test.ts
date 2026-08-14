@@ -206,6 +206,12 @@ async function run() {
     "A dummy starting a new leg must not inherit a partner turn from the previous leg.",
   );
 
+  // This contract runs two independent live-night scenarios against one league.
+  // With persistent physical boards, close the first scenario before the next
+  // one starts so the test does not model an impossible simultaneous claim on
+  // the same real board.
+  await setGameNightStatusForUser(half.gameNightId, ownerUserId, "cancelled");
+
   // Fixed mode: any positive dummyScore is the fixed per-turn value.
   const fixed = await createNight({
     suffix,

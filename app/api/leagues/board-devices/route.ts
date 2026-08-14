@@ -4,6 +4,7 @@ import {
   createPhysicalBoardForUser,
   getVenueHardwareForUser,
   LeaguePermissionError,
+  linkVenueToLeagueForUser,
   registerBoardDeviceForUser,
   rotateBoardDeviceKeyForUser,
   updateBoardDeviceForUser,
@@ -91,6 +92,11 @@ export async function POST(request: Request) {
         venueId?: string;
         boardNumber?: number;
         name?: string;
+      }
+    | {
+        action: "linkVenue";
+        leagueId?: string;
+        venueId?: string;
       };
   try {
     input = await request.json();
@@ -103,6 +109,14 @@ export async function POST(request: Request) {
   }
 
   try {
+    if (input.action === "linkVenue") {
+      const venue = await linkVenueToLeagueForUser({
+        leagueId: input.leagueId,
+        venueId: input.venueId,
+        userId: authState.user.id,
+      });
+      return noStoreJson({ venue }, { status: 201 });
+    }
     if (input.action === "board") {
       if (!Number.isInteger(input.boardNumber)) {
         return noStoreJson({ error: "A board number is required." }, { status: 400 });

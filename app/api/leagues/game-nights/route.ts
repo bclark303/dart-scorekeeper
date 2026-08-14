@@ -1,5 +1,6 @@
 import { getRequestSession } from "@/lib/auth/server";
 import {
+  assignGameNightPhysicalBoardsForUser,
   assignGameNightPlayerToTeamForUser,
   createGameNightForUser,
   getDefaultGameNightTemplateForUser,
@@ -14,6 +15,7 @@ import {
   regenerateGameNightRoundForUser,
   replaceGameNightRoundFixturesForUser,
   setGameNightStatusForUser,
+  setGameNightVenueForUser,
   setGameNightTeamStatusForUser,
   startNextGameNightRoundForUser,
   updateGameNightAttendanceForUser,
@@ -223,6 +225,8 @@ type PatchBody =
   | { action: "prepareTeams"; gameNightId: string }
   | { action: "assignTeam"; gameNightId: string; leaguePlayerId: string; teamId: string | null }
   | { action: "populateBoards"; gameNightId: string }
+  | { action: "venue"; gameNightId: string; venueId: string }
+  | { action: "assignPhysicalBoards"; gameNightId: string; physicalBoardIds: string[] }
   | { action: "regenerateRound"; gameNightId: string; roundNumber: number; strategy?: FixturePairingStrategy }
   | { action: "replaceRoundFixtures"; gameNightId: string; roundNumber: number; pairings: FixtureRoundPairing[] }
   | { action: "startNextRound"; gameNightId: string; endIntermissionEarly?: boolean }
@@ -286,6 +290,28 @@ export async function PATCH(request: Request) {
             input.gameNightId,
             input.leaguePlayerId,
             input.teamId,
+            authState.user.id,
+          ),
+        ),
+      );
+    }
+    if (input.action === "venue") {
+      if (!input.venueId) return noStoreJson({ error: "venueId is required." }, { status: 400 });
+      return noStoreJson(
+        await gameNightPayload(
+          setGameNightVenueForUser(input.gameNightId, input.venueId, authState.user.id),
+        ),
+      );
+    }
+    if (input.action === "assignPhysicalBoards") {
+      if (!Array.isArray(input.physicalBoardIds) || input.physicalBoardIds.some((id) => typeof id !== "string")) {
+        return noStoreJson({ error: "physicalBoardIds must be an array of board IDs." }, { status: 400 });
+      }
+      return noStoreJson(
+        await gameNightPayload(
+          assignGameNightPhysicalBoardsForUser(
+            input.gameNightId,
+            input.physicalBoardIds,
             authState.user.id,
           ),
         ),

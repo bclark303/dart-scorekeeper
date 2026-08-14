@@ -9,6 +9,7 @@ import type {
 } from "@/lib/league/contracts";
 import { getDatabase } from "../client";
 import { leagueMemberships, leagues, seasons } from "../schema";
+import { leagueVenues, venues } from "../venue-schema";
 
 export class LeaguePermissionError extends Error {
   constructor(message = "League administrator access is required.") {
@@ -89,6 +90,7 @@ export async function createLeagueForUser(
   const now = input.now ?? Date.now();
   const name = input.name.trim();
   const firstSeasonName = input.firstSeason?.name.trim();
+  const venueId = crypto.randomUUID();
 
   return getDatabase().transaction(async (tx) => {
     await tx.insert(leagues).values({
@@ -109,6 +111,21 @@ export async function createLeagueForUser(
       status: "active",
       createdAt: now,
       updatedAt: now,
+    });
+
+    await tx.insert(venues).values({
+      id: venueId,
+      name: `${name} Venue`,
+      status: "active",
+      createdByUserId: input.userId,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await tx.insert(leagueVenues).values({
+      id: crypto.randomUUID(),
+      leagueId: input.id,
+      venueId,
+      createdAt: now,
     });
 
     const seasonSummaries: LeagueSeasonSummary[] = [];

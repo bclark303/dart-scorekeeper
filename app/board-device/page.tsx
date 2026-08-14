@@ -365,7 +365,7 @@ export default function BoardDevicePage() {
           >
             <div className="font-black">Casual play</div>
             <div className="mt-1 text-sm text-[var(--color-text-muted)]">
-              Start a local game without changing this device's venue/board assignment.
+              Start a local game without changing this device&apos;s venue/board assignment.
             </div>
           </button>
         </div>

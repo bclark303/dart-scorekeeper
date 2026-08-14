@@ -11,6 +11,7 @@ export default defineConfig({
   schema: [
     "./lib/db/schema.ts",
     "./lib/db/league-schema.ts",
+    "./lib/db/venue-schema.ts",
     "./lib/db/game-night-schema.ts",
     "./lib/db/game-night-template-schema.ts",
     "./lib/db/league-match-schema.ts",

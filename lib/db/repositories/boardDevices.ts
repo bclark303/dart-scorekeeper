@@ -11,7 +11,9 @@ import { boardDevices } from "../board-device-schema";
 import { getDatabase } from "../client";
 import { physicalBoards, venues } from "../venue-schema";
 import {
+  bootstrapEmptyVenueBoards,
   getDefaultVenueForLeagueForUser,
+  listAdminVenuesForUser,
   listPhysicalBoardsForVenueForUser,
   listVenuesForLeagueForUser,
   requireLeagueAdminForVenueAccess,
@@ -133,19 +135,19 @@ async function physicalBoardForInput(input: {
     return board;
   }
   if (input.boardNumber !== undefined) {
-    const [board] = await getDatabase()
+    let boards = await getDatabase()
       .select()
       .from(physicalBoards)
       .where(eq(physicalBoards.venueId, input.venueId))
       .orderBy(asc(physicalBoards.boardNumber));
-    const match = board?.boardNumber === input.boardNumber
-      ? board
-      : (await getDatabase()
-          .select()
-          .from(physicalBoards)
-          .where(eq(physicalBoards.venueId, input.venueId))
-          .orderBy(asc(physicalBoards.boardNumber)))
-          .find((candidate) => candidate.boardNumber === input.boardNumber);
+    let match = boards.find((candidate) => candidate.boardNumber === input.boardNumber);
+    if (!match && input.boardNumber > 0) {
+      // Compatibility for pre-alpha.12 clients: an auto-managed venue can grow
+      // when a scorer is registered by board number. Explicitly managed venues
+      // never invent a physical board and will still fail below.
+      boards = await bootstrapEmptyVenueBoards(input.venueId, input.boardNumber);
+      match = boards.find((candidate) => candidate.boardNumber === input.boardNumber);
+    }
     if (!match) throw new Error(`Board ${input.boardNumber} is not configured at this venue.`);
     return match;
   }
@@ -175,7 +177,12 @@ export async function getVenueHardwareForUser(input: {
   venueId?: string | null;
 }): Promise<VenueHardwareResponse> {
   await requireLeagueAdminForVenueAccess(input.leagueId, input.userId);
-  const linkedVenues = await listVenuesForLeagueForUser(input.leagueId, input.userId);
+  const [linkedVenues, adminVenues] = await Promise.all([
+    listVenuesForLeagueForUser(input.leagueId, input.userId),
+    listAdminVenuesForUser(input.userId),
+  ]);
+  const linkedIds = new Set(linkedVenues.map((item) => item.id));
+  const availableVenues = adminVenues.filter((item) => !linkedIds.has(item.id));
   const venue = input.venueId
     ? linkedVenues.find((candidate) => candidate.id === input.venueId) ?? null
     : await getDefaultVenueForLeagueForUser(input.leagueId, input.userId);
@@ -196,6 +203,7 @@ export async function getVenueHardwareForUser(input: {
   const devices = await Promise.all(rows.map((row) => getDeviceRow(row.id)));
   return {
     venues: linkedVenues,
+    availableVenues,
     venue,
     boards,
     devices: devices

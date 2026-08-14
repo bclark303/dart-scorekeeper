@@ -8,6 +8,7 @@ import {
   getGameNightForUser,
 } from "./gameNightFixtures";
 import { setGameNightStatusForUser as setRawGameNightStatusForUser } from "./gameNights";
+import { assertGameNightPhysicalBoardsAvailable } from "./venueHardware";
 
 /**
  * Public Game Night lifecycle boundary.
@@ -26,6 +27,7 @@ export async function setGameNightStatusForUser(
     if (!before.pairings.length) {
       throw new Error("Populate the boards before starting the Game Night.");
     }
+    await assertGameNightPhysicalBoardsAvailable(gameNightId);
     await setRawGameNightStatusForUser(gameNightId, userId, "active");
     await activateGameNightRound(gameNightId, 1);
     return getGameNightForUser(gameNightId, userId);

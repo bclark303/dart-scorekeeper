@@ -135,6 +135,51 @@ export async function listVenuesForLeagueForUser(
   return rows.map(({ venue }) => summarizeVenue(venue));
 }
 
+export async function listAdminVenuesForUser(userId: string): Promise<VenueSummary[]> {
+  const rows = await getDatabase()
+    .select({ venue: venues })
+    .from(leagueVenues)
+    .innerJoin(venues, eq(leagueVenues.venueId, venues.id))
+    .innerJoin(
+      leagueMemberships,
+      and(
+        eq(leagueMemberships.leagueId, leagueVenues.leagueId),
+        eq(leagueMemberships.userId, userId),
+        eq(leagueMemberships.status, "active"),
+        inArray(leagueMemberships.role, ["owner", "admin"]),
+      ),
+    )
+    .orderBy(asc(venues.name));
+  const deduped = new Map(rows.map(({ venue }) => [venue.id, summarizeVenue(venue)]));
+  return [...deduped.values()];
+}
+
+export async function linkVenueToLeagueForUser(input: {
+  leagueId: string;
+  venueId: string;
+  userId: string;
+  now?: number;
+}) {
+  await requireLeagueAdminForVenueAccess(input.leagueId, input.userId);
+  await requireVenueAdminForUser(input.venueId, input.userId);
+  const [venue] = await getDatabase()
+    .select()
+    .from(venues)
+    .where(eq(venues.id, input.venueId))
+    .limit(1);
+  if (!venue) throw new Error("Venue was not found.");
+  await getDatabase()
+    .insert(leagueVenues)
+    .values({
+      id: crypto.randomUUID(),
+      leagueId: input.leagueId,
+      venueId: input.venueId,
+      createdAt: input.now ?? Date.now(),
+    })
+    .onConflictDoNothing({ target: [leagueVenues.leagueId, leagueVenues.venueId] });
+  return summarizeVenue(venue);
+}
+
 export async function getDefaultVenueForLeagueForUser(leagueId: string, userId: string) {
   const rows = await listVenuesForLeagueForUser(leagueId, userId);
   return rows.find((venue) => venue.status === "active") ?? rows[0] ?? null;
