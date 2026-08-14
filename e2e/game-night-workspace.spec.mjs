@@ -43,13 +43,13 @@ test("Game Night workspace is split into focused screens", async ({ page }) => {
   }
 
   await page.goto("/game-nights", { waitUntil: "domcontentloaded" });
-  const selectedNight = page.locator('select').filter({ has: page.locator('option') }).nth(1);
+  const selectedNight = page.getByLabel("Game Night", { exact: true });
+  await expect(selectedNight).not.toHaveValue("");
   const selectedNightValue = await selectedNight.inputValue();
-  expect(selectedNightValue).not.toBe("");
 
   await page.getByRole("link", { name: /Open Teams/i }).first().click();
   await expect(page).toHaveURL(/\/game-nights\/teams/);
-  const teamsNightSelector = page.locator('select').filter({ has: page.locator('option') }).nth(1);
+  const teamsNightSelector = page.getByLabel("Game Night", { exact: true });
   await expect(teamsNightSelector).toHaveValue(selectedNightValue);
 
   expect(pageErrors, `Browser page errors:\n${pageErrors.join("\n")}`).toEqual([]);
