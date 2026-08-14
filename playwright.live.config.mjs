@@ -12,7 +12,7 @@ if (!bypassSecret) {
 
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: "live-preview.spec.mjs",
+  testMatch: "*.spec.mjs",
   timeout: 60_000,
   expect: { timeout: 20_000 },
   fullyParallel: false,
