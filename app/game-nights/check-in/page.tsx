@@ -11,6 +11,8 @@ import type {
 } from "@/lib/league/gameNightContracts";
 import { useGameNightWorkspace } from "@/lib/league/useGameNightWorkspace";
 
+type AttendanceFilter = "all" | "waiting" | "checked_in" | "dues";
+
 function formatDate(value: number) {
   return new Intl.DateTimeFormat(undefined, {
     weekday: "long",
@@ -33,6 +35,7 @@ export default function GameNightCheckInPage() {
   const { data: session, isPending } = authClient.useSession();
   const workspace = useGameNightWorkspace(Boolean(session?.user));
   const [query, setQuery] = useState("");
+  const [attendanceFilter, setAttendanceFilter] = useState<AttendanceFilter>("all");
   const [workingPlayerId, setWorkingPlayerId] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
 
@@ -80,17 +83,48 @@ export default function GameNightCheckInPage() {
     }
   }
 
+  const night = workspace.night;
+  const checkedInCount =
+    night?.attendance.filter((player) => player.status === "checked_in").length ??
+    0;
+  const waitingCount = Math.max(0, (night?.attendance.length ?? 0) - checkedInCount);
+  const duesPendingCount =
+    night?.attendance.filter(
+      (player) => player.status === "checked_in" && player.duesStatus === "unpaid",
+    ).length ?? 0;
+  const readOnly = night
+    ? ["active", "completed", "cancelled"].includes(night.status)
+    : true;
+
   const filteredAttendance = useMemo(() => {
-    if (!workspace.night) return [];
+    if (!night) return [];
     const normalized = query.trim().toLocaleLowerCase();
-    const attendance = [...workspace.night.attendance].sort((a, b) =>
-      a.displayName.localeCompare(b.displayName),
-    );
-    if (!normalized) return attendance;
-    return attendance.filter((player) =>
-      player.displayName.toLocaleLowerCase().includes(normalized),
-    );
-  }, [query, workspace.night]);
+    const attendance = [...night.attendance]
+      .filter((player) => {
+        if (attendanceFilter === "waiting") {
+          return player.status !== "checked_in";
+        }
+        if (attendanceFilter === "checked_in") {
+          return player.status === "checked_in";
+        }
+        if (attendanceFilter === "dues") {
+          return player.status === "checked_in" && player.duesStatus === "unpaid";
+        }
+        return true;
+      })
+      .filter(
+        (player) =>
+          !normalized ||
+          player.displayName.toLocaleLowerCase().includes(normalized),
+      )
+      .sort((a, b) => {
+        if (attendanceFilter === "all" && a.status !== b.status) {
+          return a.status === "checked_in" ? 1 : -1;
+        }
+        return a.displayName.localeCompare(b.displayName);
+      });
+    return attendance;
+  }, [attendanceFilter, night, query]);
 
   if (isPending) {
     return (
@@ -111,20 +145,6 @@ export default function GameNightCheckInPage() {
     );
   }
 
-  const night = workspace.night;
-  const checkedInCount =
-    night?.attendance.filter((player) => player.status === "checked_in").length ??
-    0;
-  const duesPaidCount =
-    night?.attendance.filter((player) => player.duesStatus === "paid").length ?? 0;
-  const duesPendingCount =
-    night?.attendance.filter(
-      (player) => player.status === "checked_in" && player.duesStatus === "unpaid",
-    ).length ?? 0;
-  const readOnly = night
-    ? ["active", "completed", "cancelled"].includes(night.status)
-    : true;
-
   return (
     <main className="min-h-screen bg-[var(--color-app-bg)] p-4 text-[var(--color-text-main)] sm:p-6">
       <div className="mx-auto max-w-5xl space-y-5">
@@ -135,8 +155,8 @@ export default function GameNightCheckInPage() {
             </div>
             <h1 className="mt-1 text-3xl font-black">Player Check-in</h1>
             <p className="mt-1 max-w-2xl text-sm text-[var(--color-text-muted)]">
-              Attendance and dues apply only to this Game Night. League and season
-              roster membership are not changed here.
+              Mark arrivals as they walk in and surface only the players who still
+              need attention. This does not change the league roster.
             </p>
           </div>
           <Link
@@ -166,11 +186,13 @@ export default function GameNightCheckInPage() {
           onLeagueChange={(leagueId) => {
             workspace.selectLeague(leagueId);
             setQuery("");
+            setAttendanceFilter("all");
             setStatusMessage("");
           }}
           onNightChange={(nightId) => {
             workspace.selectNight(nightId);
             setQuery("");
+            setAttendanceFilter("all");
             setStatusMessage("");
           }}
         />
@@ -178,7 +200,7 @@ export default function GameNightCheckInPage() {
         {night ? (
           <>
             <section className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <div className="text-xs font-black uppercase tracking-wide text-[var(--color-primary)]">
                     {niceStatus(night.status)}
@@ -188,37 +210,38 @@ export default function GameNightCheckInPage() {
                     {workspace.league?.name} · {night.seasonName} · {formatDate(night.scheduledAt)}
                   </p>
                 </div>
-                <div className="grid grid-cols-3 gap-2 text-center text-sm">
+                <div className="grid grid-cols-2 gap-2 text-center text-sm sm:grid-cols-4">
                   <div className="rounded-xl bg-[var(--color-panel-soft)] px-3 py-2">
                     <div className="text-lg font-black">{night.attendance.length}</div>
                     <div className="text-xs text-[var(--color-text-muted)]">Roster</div>
                   </div>
-                  <div className="rounded-xl bg-[var(--color-panel-soft)] px-3 py-2">
-                    <div className="text-lg font-black">{checkedInCount}</div>
-                    <div className="text-xs text-[var(--color-text-muted)]">Checked in</div>
+                  <div className="rounded-xl bg-emerald-500/10 px-3 py-2">
+                    <div className="text-lg font-black text-emerald-200">{checkedInCount}</div>
+                    <div className="text-xs text-[var(--color-text-muted)]">Here</div>
                   </div>
                   <div className="rounded-xl bg-[var(--color-panel-soft)] px-3 py-2">
-                    <div className="text-lg font-black">{duesPaidCount}</div>
-                    <div className="text-xs text-[var(--color-text-muted)]">Dues paid</div>
+                    <div className="text-lg font-black">{waitingCount}</div>
+                    <div className="text-xs text-[var(--color-text-muted)]">Still out</div>
+                  </div>
+                  <div className={`rounded-xl px-3 py-2 ${duesPendingCount ? "bg-amber-500/10" : "bg-[var(--color-panel-soft)]"}`}>
+                    <div className={`text-lg font-black ${duesPendingCount ? "text-amber-200" : ""}`}>
+                      {duesPendingCount}
+                    </div>
+                    <div className="text-xs text-[var(--color-text-muted)]">Dues pending</div>
                   </div>
                 </div>
               </div>
 
-              {duesPendingCount > 0 && (
-                <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
-                  {duesPendingCount} checked-in player{duesPendingCount === 1 ? " has" : "s have"} dues outstanding.
-                </div>
-              )}
               {readOnly && (
                 <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
-                  Attendance is locked while this Game Night is active or closed.
+                  Attendance is locked because this Game Night is already active or closed.
                 </div>
               )}
             </section>
 
-            <section className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <label className="block flex-1">
+            <section className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-4 sm:p-5">
+              <div className="flex flex-col gap-4">
+                <label className="block">
                   <span className="mb-1 block text-sm font-bold">Find player</span>
                   <input
                     value={query}
@@ -227,8 +250,30 @@ export default function GameNightCheckInPage() {
                     className="w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-3"
                   />
                 </label>
-                <div className="text-sm font-black">
-                  {checkedInCount} / {night.attendance.length} checked in
+
+                <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Attendance filters">
+                  {(
+                    [
+                      ["all", "All", night.attendance.length],
+                      ["waiting", "Still out", waitingCount],
+                      ["checked_in", "Here", checkedInCount],
+                      ["dues", "Dues pending", duesPendingCount],
+                    ] as const
+                  ).map(([value, label, count]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-pressed={attendanceFilter === value}
+                      onClick={() => setAttendanceFilter(value)}
+                      className={`shrink-0 rounded-full border px-3 py-2 text-sm font-black ${
+                        attendanceFilter === value
+                          ? "border-[var(--color-primary)] bg-[var(--color-primary)]/15 text-[var(--color-primary)]"
+                          : "border-[var(--color-panel-border)] bg-[var(--color-panel-soft)]"
+                      }`}
+                    >
+                      {label} · {count}
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -236,21 +281,41 @@ export default function GameNightCheckInPage() {
                 {filteredAttendance.map((player) => {
                   const isCheckedIn = player.status === "checked_in";
                   const isWorking = workingPlayerId === player.leaguePlayerId;
+                  const duesOutstanding = isCheckedIn && player.duesStatus === "unpaid";
                   return (
                     <div
                       key={player.leaguePlayerId}
-                      className="flex flex-col gap-3 rounded-xl border border-[var(--color-panel-border)] p-3 sm:flex-row sm:items-center sm:justify-between"
+                      className={`flex flex-col gap-3 rounded-xl border p-3 sm:flex-row sm:items-center sm:justify-between ${
+                        isCheckedIn
+                          ? "border-emerald-500/25 bg-emerald-500/5"
+                          : "border-[var(--color-panel-border)]"
+                      }`}
                     >
-                      <div>
-                        <div className="font-black">{player.displayName}</div>
-                        <div className="mt-1 text-xs text-[var(--color-text-muted)]">
-                          {isCheckedIn ? "Present" : "Not checked in"}
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="font-black">{player.displayName}</div>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[11px] font-black uppercase tracking-wide ${
+                              isCheckedIn
+                                ? "bg-emerald-500/15 text-emerald-200"
+                                : "bg-[var(--color-panel-soft)] text-[var(--color-text-muted)]"
+                            }`}
+                          >
+                            {isCheckedIn ? "Here" : "Not here"}
+                          </span>
+                          {duesOutstanding && (
+                            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-black uppercase tracking-wide text-amber-200">
+                              Dues
+                            </span>
+                          )}
                         </div>
                       </div>
-                      <div className="flex flex-wrap items-center gap-2">
+
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                         <button
                           type="button"
                           disabled={readOnly || isWorking}
+                          aria-label={`${isCheckedIn ? "Check out" : "Check in"} ${player.displayName}`}
                           onClick={() =>
                             void updateAttendance(
                               player.leaguePlayerId,
@@ -259,16 +324,21 @@ export default function GameNightCheckInPage() {
                               player.duesStatus,
                             )
                           }
-                          className={`rounded-lg px-3 py-2 text-sm font-black disabled:opacity-50 ${
+                          className={`min-h-11 rounded-xl px-4 py-2 text-sm font-black disabled:opacity-50 ${
                             isCheckedIn
-                              ? "bg-emerald-500/20 text-emerald-100"
-                              : "bg-[var(--color-panel-soft)]"
+                              ? "border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)]"
+                              : "bg-[var(--color-primary)] text-white"
                           }`}
                         >
-                          {isCheckedIn ? "Checked In ✓" : "Check In"}
+                          {isWorking
+                            ? "Updating…"
+                            : isCheckedIn
+                              ? "Check Out"
+                              : "Check In"}
                         </button>
                         <select
                           value={player.duesStatus}
+                          aria-label={`Dues for ${player.displayName}`}
                           disabled={readOnly || isWorking}
                           onChange={(event) =>
                             void updateAttendance(
@@ -278,7 +348,7 @@ export default function GameNightCheckInPage() {
                               event.target.value as GameNightDuesStatus,
                             )
                           }
-                          className="rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] px-3 py-2 text-sm disabled:opacity-50"
+                          className="min-h-11 rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] px-3 py-2 text-sm disabled:opacity-50"
                         >
                           <option value="unpaid">Dues: Unpaid</option>
                           <option value="paid">Dues: Paid</option>
@@ -290,13 +360,13 @@ export default function GameNightCheckInPage() {
                 })}
 
                 {!night.attendance.length && (
-                  <p className="text-sm text-[var(--color-text-muted)]">
+                  <p className="rounded-xl border border-dashed border-[var(--color-panel-border)] p-4 text-sm text-[var(--color-text-muted)]">
                     This season has no active roster players yet.
                   </p>
                 )}
                 {night.attendance.length > 0 && !filteredAttendance.length && (
-                  <p className="text-sm text-[var(--color-text-muted)]">
-                    No players match that search.
+                  <p className="rounded-xl border border-dashed border-[var(--color-panel-border)] p-4 text-sm text-[var(--color-text-muted)]">
+                    No players match this search and filter.
                   </p>
                 )}
               </div>
@@ -305,16 +375,31 @@ export default function GameNightCheckInPage() {
             <section className="flex flex-col gap-3 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className="text-xs font-black uppercase tracking-wide text-[var(--color-text-muted)]">
-                  Next step
+                  {readOnly ? "Return to operations" : checkedInCount >= 2 ? "Next step" : "Keep checking in"}
                 </div>
-                <div className="mt-1 font-black">Prepare teams from checked-in players</div>
+                <div className="mt-1 font-black">
+                  {readOnly
+                    ? "Run this Game Night from the Control Room"
+                    : checkedInCount >= 2
+                      ? `Prepare teams from ${checkedInCount} checked-in players`
+                      : "At least two checked-in players are needed before teams can be prepared"}
+                </div>
               </div>
-              <Link
-                href="/game-nights/teams"
-                className="rounded-xl bg-[var(--color-primary)] px-5 py-3 text-center font-black text-white"
-              >
-                Open Teams →
-              </Link>
+              {readOnly ? (
+                <Link
+                  href="/game-nights/control"
+                  className="rounded-xl bg-[var(--color-primary)] px-5 py-3 text-center font-black text-white"
+                >
+                  Open Control Room →
+                </Link>
+              ) : checkedInCount >= 2 ? (
+                <Link
+                  href="/game-nights/teams"
+                  className="rounded-xl bg-[var(--color-primary)] px-5 py-3 text-center font-black text-white"
+                >
+                  Open Teams →
+                </Link>
+              ) : null}
             </section>
           </>
         ) : !workspace.loading ? (
