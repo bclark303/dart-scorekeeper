@@ -96,6 +96,8 @@ export type GameNightTeamSummary = {
 
 export type GameNightBoardSummary = {
   id: string;
+  /** Permanent venue board; null only while upgrading legacy rows. */
+  physicalBoardId: string | null;
   boardNumber: number;
   name: string;
 };
@@ -128,6 +130,8 @@ export type GameNightSummary = {
   leagueId: string;
   seasonId: string;
   seasonName: string;
+  venueId: string | null;
+  venueName: string | null;
   name: string;
   scheduledAt: number;
   status: GameNightStatus;
