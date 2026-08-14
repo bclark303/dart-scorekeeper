@@ -1,0 +1,114 @@
+name: End-to-end league validation
+
+on:
+  push:
+    branches:
+      - internal/e2e-validation
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Test the local CI app or the protected Vercel preview
+        required: true
+        default: local
+        type: choice
+        options:
+          - local
+          - preview
+
+permissions:
+  contents: read
+
+jobs:
+  league-night-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
+      E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+      DB_PROVIDER: libsql
+      DATABASE_URL: file:./data/e2e.db
+      DATABASE_AUTH_TOKEN: ""
+      BETTER_AUTH_SECRET: e2e-only-dart-scorekeeper-auth-secret-123456789
+      BETTER_AUTH_URL: http://127.0.0.1:3000
+      NEXT_TELEMETRY_DISABLED: "1"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Verify test-account secrets
+        shell: bash
+        run: |
+          test -n "$E2E_TEST_EMAIL" || { echo "E2E_TEST_EMAIL is not configured."; exit 1; }
+          test -n "$E2E_TEST_PASSWORD" || { echo "E2E_TEST_PASSWORD is not configured."; exit 1; }
+
+      - name: Choose E2E target
+        shell: bash
+        run: |
+          TARGET="${{ github.event.inputs.target }}"
+          if [ "$TARGET" = "preview" ]; then
+            test -n "$VERCEL_AUTOMATION_BYPASS_SECRET" || {
+              echo "Preview E2E requires the Vercel Protection Bypass for Automation secret in GitHub as VERCEL_AUTOMATION_BYPASS_SECRET."
+              exit 1
+            }
+            echo "E2E_BASE_URL=https://dart-scorekeeper-git-agent-game-nig-2f9a23-ben-clark-s-projects.vercel.app" >> "$GITHUB_ENV"
+            echo "E2E_ALLOW_SIGNUP=false" >> "$GITHUB_ENV"
+            echo "START_LOCAL_APP=false" >> "$GITHUB_ENV"
+          else
+            echo "E2E_BASE_URL=http://127.0.0.1:3000" >> "$GITHUB_ENV"
+            echo "E2E_ALLOW_SIGNUP=true" >> "$GITHUB_ENV"
+            echo "START_LOCAL_APP=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install application dependencies
+        run: npm ci
+
+      - name: Install Playwright runner without changing package metadata
+        run: npm install --no-save --package-lock=false @playwright/test@1.55.0
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Prepare local application
+        if: env.START_LOCAL_APP == 'true'
+        shell: bash
+        run: |
+          mkdir -p data
+          npm run db:migrate
+          npm run build
+          nohup npm run start -- -H 127.0.0.1 -p 3000 > /tmp/dart-scorekeeper-e2e.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3000/ >/dev/null; then
+              echo "Local application is ready."
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/dart-scorekeeper-e2e.log || true
+          echo "Local application did not become ready."
+          exit 1
+
+      - name: Run league-night E2E journey
+        run: npx playwright test --config=playwright.config.mjs
+
+      - name: Show local application log on failure
+        if: failure() && env.START_LOCAL_APP == 'true'
+        run: cat /tmp/dart-scorekeeper-e2e.log || true
+
+      - name: Upload Playwright diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-e2e-diagnostics
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 7
