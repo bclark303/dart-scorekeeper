@@ -1,0 +1,42 @@
+name: Alpha 12 libSQL migration
+
+"on":
+  push:
+    branches:
+      - internal/alpha12-venue-board-device-decoupling
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      BETTER_AUTH_URL: http://127.0.0.1:3000
+      DATABASE_URL: http://127.0.0.1:8080
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: internal/alpha12-venue-board-device-decoupling
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Start libSQL HTTP server
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --name alpha12-sqld -p 8080:8080 ghcr.io/libsql/sqld:main
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8080/health >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs alpha12-sqld
+          exit 1
+      - name: Apply alpha.12 migrations through libSQL HTTP
+        run: npm run db:migrate
+      - name: Run venue hardware contract through libSQL HTTP
+        run: npm run venue-hardware:test
+      - name: Show server logs on failure
+        if: failure()
+        run: docker logs alpha12-sqld || true
