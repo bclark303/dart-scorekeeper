@@ -36,8 +36,13 @@ export function GameNightWorkspacePicker({
 }) {
   return (
     <section className="grid gap-3 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-4 md:grid-cols-2">
-      <label htmlFor="game-night-workspace-league" className="text-sm font-bold">
-        League
+      <div>
+        <label
+          htmlFor="game-night-workspace-league"
+          className="text-sm font-bold"
+        >
+          League
+        </label>
         <select
           id="game-night-workspace-league"
           value={leagueId}
@@ -51,10 +56,15 @@ export function GameNightWorkspacePicker({
             </option>
           ))}
         </select>
-      </label>
+      </div>
 
-      <label htmlFor="game-night-workspace-night" className="text-sm font-bold">
-        Game Night
+      <div>
+        <label
+          htmlFor="game-night-workspace-night"
+          className="text-sm font-bold"
+        >
+          Game Night
+        </label>
         <select
           id="game-night-workspace-night"
           value={nightId}
@@ -69,7 +79,7 @@ export function GameNightWorkspacePicker({
             </option>
           ))}
         </select>
-      </label>
+      </div>
     </section>
   );
 }
