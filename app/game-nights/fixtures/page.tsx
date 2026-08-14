@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type SetStateAction } from "react";
 
 import { GameNightFixturePanel } from "@/components/GameNightFixturePanel";
 import { GameNightWorkspacePicker } from "@/components/GameNightWorkspacePicker";
@@ -27,29 +27,38 @@ function formatScheduledAt(value: number) {
 export default function GameNightFixturesPage() {
   const { data: session, isPending } = authClient.useSession();
   const workspace = useGameNightWorkspace(Boolean(session?.user));
-  const [settingsDraft, setSettingsDraft] = useState<GameNightSettingsSummary>(
-    DEFAULT_GAME_NIGHT_SETTINGS,
-  );
+  const [settingsDraftState, setSettingsDraftState] = useState<{
+    nightId: string;
+    settings: GameNightSettingsSummary;
+  } | null>(null);
   const [working, setWorking] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
 
-  useEffect(() => {
-    setSettingsDraft(
-      workspace.night
+  const settingsDraft =
+    settingsDraftState?.nightId === workspace.night?.id
+      ? settingsDraftState.settings
+      : workspace.night
         ? resolveGameNightSettings(workspace.night.settings)
-        : DEFAULT_GAME_NIGHT_SETTINGS,
-    );
-    setStatusMessage("");
-  }, [workspace.night]);
+        : DEFAULT_GAME_NIGHT_SETTINGS;
+
+  function updateSettingsDraft(action: SetStateAction<GameNightSettingsSummary>) {
+    if (!workspace.night) return;
+    const nextSettings =
+      typeof action === "function" ? action(settingsDraft) : action;
+    setSettingsDraftState({
+      nightId: workspace.night.id,
+      settings: nextSettings,
+    });
+  }
+
+  const nightStatus = workspace.night?.status;
+  const refreshNight = workspace.refreshNight;
 
   useEffect(() => {
-    if (workspace.night?.status !== "active") return;
-    const timer = window.setInterval(
-      () => void workspace.refreshNight(),
-      5000,
-    );
+    if (nightStatus !== "active") return;
+    const timer = window.setInterval(() => void refreshNight(), 5000);
     return () => window.clearInterval(timer);
-  }, [workspace.night?.status, workspace.refreshNight]);
+  }, [nightStatus, refreshNight]);
 
   async function patchNight(body: object, message?: string) {
     setWorking(true);
@@ -69,7 +78,10 @@ export default function GameNightFixturesPage() {
         throw new Error(result.error ?? "Game Night update failed.");
       }
       workspace.applyNight(result.gameNight);
-      setSettingsDraft(resolveGameNightSettings(result.gameNight.settings));
+      setSettingsDraftState({
+        nightId: result.gameNight.id,
+        settings: resolveGameNightSettings(result.gameNight.settings),
+      });
       if (message) setStatusMessage(message);
     } catch (error) {
       workspace.setErrorMessage(
@@ -141,8 +153,16 @@ export default function GameNightFixturesPage() {
           leagueId={workspace.leagueId}
           nights={workspace.nights}
           nightId={workspace.nightId}
-          onLeagueChange={workspace.selectLeague}
-          onNightChange={workspace.selectNight}
+          onLeagueChange={(leagueId) => {
+            workspace.selectLeague(leagueId);
+            setSettingsDraftState(null);
+            setStatusMessage("");
+          }}
+          onNightChange={(nightId) => {
+            workspace.selectNight(nightId);
+            setSettingsDraftState(null);
+            setStatusMessage("");
+          }}
         />
 
         {night ? (
@@ -240,7 +260,7 @@ export default function GameNightFixturesPage() {
             <GameNightFixturePanel
               gameNight={night}
               settings={settingsDraft}
-              setSettings={setSettingsDraft}
+              setSettings={updateSettingsDraft}
               disabled={working}
               onAction={patchNight}
             />
