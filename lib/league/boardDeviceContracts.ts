@@ -1,17 +1,53 @@
 import type { LeagueMatchSummary } from "./matchContracts";
 
+export type VenueStatus = "active" | "archived";
+export type PhysicalBoardStatus = "active" | "out_of_service";
 export type BoardDeviceStatus = "active" | "disabled";
+
+export type VenueSummary = {
+  id: string;
+  name: string;
+  status: VenueStatus;
+  createdAt: number;
+  updatedAt: number;
+};
+
+export type PhysicalBoardSummary = {
+  id: string;
+  venueId: string;
+  boardNumber: number;
+  name: string;
+  status: PhysicalBoardStatus;
+  createdAt: number;
+  updatedAt: number;
+};
 
 export type BoardDeviceSummary = {
   id: string;
-  leagueId: string;
-  leagueName: string;
+  venueId: string;
+  venueName: string;
   name: string;
-  boardNumber: number;
+  /** The permanent board currently served by this device, or null for a spare. */
+  physicalBoardId: string | null;
+  /** Convenience snapshot derived from physicalBoardId; not device identity. */
+  boardNumber: number | null;
+  boardName: string | null;
   status: BoardDeviceStatus;
   lastSeenAt: number | null;
   createdAt: number;
   updatedAt: number;
+};
+
+export type VenueHardwareResponse = {
+  venues?: VenueSummary[];
+  venue?: VenueSummary;
+  boards?: PhysicalBoardSummary[];
+  devices?: BoardDeviceSummary[];
+  device?: BoardDeviceSummary;
+  board?: PhysicalBoardSummary;
+  /** Returned only once after register/rotate. Never persisted or returned by list. */
+  deviceKey?: string;
+  error?: string;
 };
 
 export type BoardDeviceAssignmentSummary = {
@@ -20,6 +56,7 @@ export type BoardDeviceAssignmentSummary = {
   gameNightStatus: string;
   scheduledAt: number;
   boardId: string;
+  physicalBoardId: string;
   boardName: string;
   boardNumber: number;
   roundNumber?: number;
@@ -29,13 +66,8 @@ export type BoardDeviceAssignmentSummary = {
   teamBName: string | null;
 };
 
-export type BoardDeviceAdminResponse = {
-  devices?: BoardDeviceSummary[];
-  device?: BoardDeviceSummary;
-  /** Returned only once after register/rotate. Never persisted or returned by list. */
-  deviceKey?: string;
-  error?: string;
-};
+/** Backward-compatible response alias used by existing route/client code. */
+export type BoardDeviceAdminResponse = VenueHardwareResponse;
 
 export type BoardDeviceConnectionResponse = {
   device?: BoardDeviceSummary;
@@ -45,14 +77,20 @@ export type BoardDeviceConnectionResponse = {
 };
 
 export type RegisterBoardDeviceRequest = {
+  /** leagueId authorizes access; it does not become device ownership. */
   leagueId: string;
+  venueId?: string;
   name: string;
-  boardNumber: number;
+  physicalBoardId?: string | null;
+  /** Legacy convenience accepted while old clients migrate. */
+  boardNumber?: number;
 };
 
 export type UpdateBoardDeviceRequest = {
   deviceId: string;
   name?: string;
+  physicalBoardId?: string | null;
+  /** Legacy convenience accepted while old clients migrate. */
   boardNumber?: number;
   status?: BoardDeviceStatus;
 };
