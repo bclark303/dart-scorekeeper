@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { authClient } from "@/lib/auth/client";
 import type { LeagueListResponse, LeagueSummary } from "@/lib/league/contracts";
@@ -19,6 +19,10 @@ function normalizeName(value: string) {
   return value.trim().replace(/\s+/g, " ");
 }
 
+function seasonMutationKey(leaguePlayerId: string, seasonId: string) {
+  return `${leaguePlayerId}:${seasonId}`;
+}
+
 export default function LeagueRosterPage() {
   const { data: session, isPending: isSessionPending } = authClient.useSession();
   const [leagues, setLeagues] = useState<LeagueSummary[]>([]);
@@ -29,6 +33,15 @@ export default function LeagueRosterPage() {
   const [workingKey, setWorkingKey] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [optimisticSeasons, setOptimisticSeasons] = useState<Record<string, boolean>>({});
+  const optimisticSeasonsRef = useRef<Record<string, boolean>>({});
+  const processingSeasonKeysRef = useRef(new Set<string>());
+  const [savingSeasonKeys, setSavingSeasonKeys] = useState<Set<string>>(() => new Set());
+  const activeLeagueIdRef = useRef("");
+
+  useEffect(() => {
+    activeLeagueIdRef.current = selectedLeagueId;
+  }, [selectedLeagueId]);
 
   const selectedLeague = useMemo(
     () => leagues.find((league) => league.id === selectedLeagueId) ?? null,
@@ -119,6 +132,141 @@ export default function LeagueRosterPage() {
     return player.memberships.find((membership) => membership.leagueId === selectedLeagueId) ?? null;
   }
 
+  function updateOptimisticSeasons(
+    updater: (current: Record<string, boolean>) => Record<string, boolean>,
+  ) {
+    const next = updater(optimisticSeasonsRef.current);
+    optimisticSeasonsRef.current = next;
+    setOptimisticSeasons(next);
+  }
+
+  function removeOptimisticSeason(key: string) {
+    updateOptimisticSeasons((current) => {
+      if (!(key in current)) return current;
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+  }
+
+  function clearOptimisticSeasons() {
+    optimisticSeasonsRef.current = {};
+    setOptimisticSeasons({});
+  }
+
+  function markSeasonSaving(key: string, saving: boolean) {
+    setSavingSeasonKeys((current) => {
+      const next = new Set(current);
+      if (saving) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+  }
+
+  function applyConfirmedSeasonMembership(
+    leaguePlayerId: string,
+    seasonId: string,
+    enrolled: boolean,
+  ) {
+    setDirectory((current) =>
+      current.map((player) => ({
+        ...player,
+        memberships: player.memberships.map((membership) => {
+          if (membership.leaguePlayerId !== leaguePlayerId) return membership;
+          const seasonIds = enrolled
+            ? membership.seasonIds.includes(seasonId)
+              ? membership.seasonIds
+              : [...membership.seasonIds, seasonId]
+            : membership.seasonIds.filter((id) => id !== seasonId);
+          return { ...membership, seasonIds };
+        }),
+      })),
+    );
+  }
+
+  async function flushSeasonToggle(
+    leagueId: string,
+    playerName: string,
+    leaguePlayerId: string,
+    seasonId: string,
+    seasonName: string,
+  ) {
+    const key = seasonMutationKey(leaguePlayerId, seasonId);
+    if (processingSeasonKeysRef.current.has(key)) return;
+
+    processingSeasonKeysRef.current.add(key);
+    markSeasonSaving(key, true);
+    setErrorMessage("");
+
+    try {
+      while (true) {
+        const desired = optimisticSeasonsRef.current[key];
+        if (desired === undefined) break;
+
+        const response = await fetch("/api/leagues/roster", {
+          method: desired ? "POST" : "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ leagueId, seasonId, leaguePlayerId }),
+        });
+        const result = (await response.json()) as SeasonRosterMutationResponse;
+        if (!response.ok || !result.player) {
+          throw new Error(result.error ?? "The season roster could not be changed.");
+        }
+
+        applyConfirmedSeasonMembership(leaguePlayerId, seasonId, desired);
+
+        const latest = optimisticSeasonsRef.current[key];
+        if (latest === undefined) break;
+        if (latest === desired) {
+          removeOptimisticSeason(key);
+          if (activeLeagueIdRef.current === leagueId) {
+            setStatusMessage(
+              `${playerName} ${desired ? "added to" : "removed from"} ${seasonName}.`,
+            );
+          }
+          break;
+        }
+      }
+    } catch (error) {
+      removeOptimisticSeason(key);
+      if (activeLeagueIdRef.current === leagueId) {
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "The season roster could not be changed.",
+        );
+      }
+      void loadDirectory().catch(() => undefined);
+    } finally {
+      processingSeasonKeysRef.current.delete(key);
+      markSeasonSaving(key, false);
+    }
+  }
+
+  function queueSeasonToggle(
+    player: PlayerDirectoryPlayer,
+    membership: PlayerDirectoryLeagueMembership,
+    seasonId: string,
+    enroll: boolean,
+  ) {
+    if (!selectedLeague || !canAdmin) return;
+    const key = seasonMutationKey(membership.leaguePlayerId, seasonId);
+    const seasonName =
+      selectedLeague.seasons.find((season) => season.id === seasonId)?.name ??
+      "season";
+
+    updateOptimisticSeasons((current) => ({ ...current, [key]: enroll }));
+    setErrorMessage("");
+    setStatusMessage("");
+    void flushSeasonToggle(
+      selectedLeague.id,
+      player.displayName,
+      membership.leaguePlayerId,
+      seasonId,
+      seasonName,
+    );
+  }
+
   async function addExistingPlayer(player: PlayerDirectoryPlayer) {
     if (!selectedLeague || !canAdmin) return;
     const key = `league:${player.playerId}:${selectedLeague.id}`;
@@ -171,46 +319,6 @@ export default function LeagueRosterPage() {
       setStatusMessage(`${result.player.displayName} created and added to ${selectedLeague.name}.`);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "The player could not be created.");
-    } finally {
-      setWorkingKey(null);
-    }
-  }
-
-  async function toggleSeason(
-    player: PlayerDirectoryPlayer,
-    membership: PlayerDirectoryLeagueMembership,
-    seasonId: string,
-    enroll: boolean,
-  ) {
-    if (!selectedLeague || !canAdmin) return;
-    const key = `season:${membership.leaguePlayerId}:${seasonId}`;
-    setWorkingKey(key);
-    setStatusMessage("");
-    setErrorMessage("");
-
-    try {
-      const response = await fetch("/api/leagues/roster", {
-        method: enroll ? "POST" : "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          leagueId: selectedLeague.id,
-          seasonId,
-          leaguePlayerId: membership.leaguePlayerId,
-        }),
-      });
-      const result = (await response.json()) as SeasonRosterMutationResponse;
-      if (!response.ok || !result.player) {
-        throw new Error(result.error ?? "The season roster could not be changed.");
-      }
-      await loadDirectory();
-      const season = selectedLeague.seasons.find((item) => item.id === seasonId);
-      setStatusMessage(
-        `${player.displayName} ${enroll ? "added to" : "removed from"} ${season?.name ?? "season"}.`,
-      );
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "The season roster could not be changed.",
-      );
     } finally {
       setWorkingKey(null);
     }
@@ -271,6 +379,8 @@ export default function LeagueRosterPage() {
                     value={selectedLeagueId}
                     onChange={(event) => {
                       const nextId = event.target.value;
+                      activeLeagueIdRef.current = nextId;
+                      clearOptimisticSeasons();
                       setSelectedLeagueId(nextId);
                       window.localStorage.setItem(ACTIVE_LEAGUE_KEY, nextId);
                       setStatusMessage("");
@@ -406,14 +516,28 @@ export default function LeagueRosterPage() {
                           ) : (
                             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                               {selectedLeague.seasons.map((season) => {
-                                const enrolled = membership.seasonIds.includes(season.id);
-                                const seasonKey = `season:${membership.leaguePlayerId}:${season.id}`;
+                                const seasonKey = seasonMutationKey(
+                                  membership.leaguePlayerId,
+                                  season.id,
+                                );
+                                const enrolled =
+                                  optimisticSeasons[seasonKey] ??
+                                  membership.seasonIds.includes(season.id);
+                                const isSaving = savingSeasonKeys.has(seasonKey);
                                 return (
                                   <button
                                     key={season.id}
                                     type="button"
-                                    disabled={!canAdmin || workingKey === seasonKey}
-                                    onClick={() => void toggleSeason(player, membership, season.id, !enrolled)}
+                                    aria-busy={isSaving}
+                                    disabled={!canAdmin}
+                                    onClick={() =>
+                                      queueSeasonToggle(
+                                        player,
+                                        membership,
+                                        season.id,
+                                        !enrolled,
+                                      )
+                                    }
                                     className={`rounded-xl border p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${
                                       enrolled
                                         ? "border-emerald-500/50 bg-emerald-500/15"
@@ -422,8 +546,8 @@ export default function LeagueRosterPage() {
                                   >
                                     <div className="font-bold">{season.name}</div>
                                     <div className="mt-1 text-xs opacity-75">
-                                      {workingKey === seasonKey
-                                        ? "Saving…"
+                                      {isSaving
+                                        ? `Saving… · ${enrolled ? "on roster" : "not on roster"}`
                                         : enrolled
                                           ? "On roster · click to remove"
                                           : "Not on roster · click to add"}

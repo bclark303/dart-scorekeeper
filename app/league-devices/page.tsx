@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { authClient } from "@/lib/auth/client";
 import type { LeagueListResponse, LeagueSummary } from "@/lib/league/contracts";
@@ -39,9 +39,16 @@ export default function LeagueDevicesPage() {
   const [newName, setNewName] = useState("Board 1 Scorer");
   const [newBoardNumber, setNewBoardNumber] = useState(1);
   const [pairing, setPairing] = useState<Pairing | null>(null);
-  const [working, setWorking] = useState(false);
+  const [registering, setRegistering] = useState(false);
+  const [pairingDeviceId, setPairingDeviceId] = useState<string | null>(null);
+  const [savingDeviceIds, setSavingDeviceIds] = useState<Set<string>>(() => new Set());
   const [errorMessage, setErrorMessage] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
+  const activeLeagueIdRef = useRef("");
+
+  useEffect(() => {
+    activeLeagueIdRef.current = leagueId;
+  }, [leagueId]);
 
   const pairingExpiryLabel = useMemo(() => {
     if (!pairing) return "";
@@ -134,10 +141,41 @@ export default function LeagueDevicesPage() {
     );
   }
 
+  function markDeviceSaving(deviceId: string, saving: boolean) {
+    setSavingDeviceIds((current) => {
+      const next = new Set(current);
+      if (saving) next.add(deviceId);
+      else next.delete(deviceId);
+      return next;
+    });
+  }
+
+  function replaceDevice(updated: BoardDeviceSummary) {
+    setDevices((current) =>
+      current
+        .map((device) => (device.id === updated.id ? updated : device))
+        .sort((a, b) => a.boardNumber - b.boardNumber),
+    );
+  }
+
+  async function requestDeviceUpdate(body: object) {
+    const response = await fetch("/api/leagues/board-devices", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const result = (await response.json()) as BoardDeviceAdminResponse;
+    if (!response.ok || !result.device) {
+      throw new Error(result.error ?? "Board device update failed.");
+    }
+    return result.device;
+  }
+
   async function registerDevice(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!leagueId) return;
-    setWorking(true);
+    const targetLeagueId = leagueId;
+    setRegistering(true);
     setErrorMessage("");
     setStatusMessage("");
     setPairing(null);
@@ -146,7 +184,7 @@ export default function LeagueDevicesPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          leagueId,
+          leagueId: targetLeagueId,
           name: newName,
           boardNumber: newBoardNumber,
         }),
@@ -157,8 +195,20 @@ export default function LeagueDevicesPage() {
           result.error ?? "Board device could not be registered.",
         );
       }
-      await loadDevices(leagueId);
-      await createPairing(result.device);
+      if (activeLeagueIdRef.current === targetLeagueId) {
+        setDevices((current) =>
+          [...current.filter((device) => device.id !== result.device?.id), result.device!]
+            .sort((a, b) => a.boardNumber - b.boardNumber),
+        );
+        setDrafts((current) => ({
+          ...current,
+          [result.device!.id]: {
+            name: result.device!.name,
+            boardNumber: result.device!.boardNumber,
+          },
+        }));
+        await createPairing(result.device);
+      }
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -166,37 +216,82 @@ export default function LeagueDevicesPage() {
           : "Board device could not be registered.",
       );
     } finally {
-      setWorking(false);
+      setRegistering(false);
     }
   }
 
-  async function patchDevice(body: object) {
-    setWorking(true);
+  async function saveDevice(device: BoardDeviceSummary, draft: DeviceDraft) {
+    const targetLeagueId = leagueId;
+    markDeviceSaving(device.id, true);
     setErrorMessage("");
     setStatusMessage("");
     try {
-      const response = await fetch("/api/leagues/board-devices", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+      const updated = await requestDeviceUpdate({
+        action: "update",
+        deviceId: device.id,
+        name: draft.name,
+        boardNumber: draft.boardNumber,
       });
-      const result = (await response.json()) as BoardDeviceAdminResponse;
-      if (!response.ok || !result.device) {
-        throw new Error(result.error ?? "Board device update failed.");
+      if (activeLeagueIdRef.current === targetLeagueId) {
+        replaceDevice(updated);
+        setDrafts((current) => ({
+          ...current,
+          [updated.id]: { name: updated.name, boardNumber: updated.boardNumber },
+        }));
+        setStatusMessage(`${updated.name} updated.`);
       }
-      setStatusMessage(`${result.device.name} updated.`);
-      await loadDevices(leagueId);
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "Board device update failed.",
-      );
+      if (activeLeagueIdRef.current === targetLeagueId) {
+        setErrorMessage(
+          error instanceof Error ? error.message : "Board device update failed.",
+        );
+      }
     } finally {
-      setWorking(false);
+      markDeviceSaving(device.id, false);
+    }
+  }
+
+  async function toggleDeviceStatus(device: BoardDeviceSummary) {
+    const targetLeagueId = leagueId;
+    const previousStatus = device.status;
+    const nextStatus = device.status === "active" ? "disabled" : "active";
+    markDeviceSaving(device.id, true);
+    setErrorMessage("");
+    setStatusMessage("");
+    setDevices((current) =>
+      current.map((item) =>
+        item.id === device.id ? { ...item, status: nextStatus } : item,
+      ),
+    );
+
+    try {
+      const updated = await requestDeviceUpdate({
+        action: "update",
+        deviceId: device.id,
+        status: nextStatus,
+      });
+      if (activeLeagueIdRef.current === targetLeagueId) {
+        replaceDevice(updated);
+        setStatusMessage(`${updated.name} ${nextStatus === "active" ? "enabled" : "disabled"}.`);
+      }
+    } catch (error) {
+      if (activeLeagueIdRef.current === targetLeagueId) {
+        setDevices((current) =>
+          current.map((item) =>
+            item.id === device.id ? { ...item, status: previousStatus } : item,
+          ),
+        );
+        setErrorMessage(
+          error instanceof Error ? error.message : "Board device update failed.",
+        );
+      }
+    } finally {
+      markDeviceSaving(device.id, false);
     }
   }
 
   async function pairExistingDevice(device: BoardDeviceSummary) {
-    setWorking(true);
+    setPairingDeviceId(device.id);
     setErrorMessage("");
     setStatusMessage("");
     try {
@@ -206,7 +301,7 @@ export default function LeagueDevicesPage() {
         error instanceof Error ? error.message : "Could not create pairing code.",
       );
     } finally {
-      setWorking(false);
+      setPairingDeviceId(null);
     }
   }
 
@@ -313,8 +408,11 @@ export default function LeagueDevicesPage() {
         <label className="text-sm font-bold">League</label>
         <select
           value={leagueId}
+          disabled={registering}
           onChange={(event) => {
-            setLeagueId(event.target.value);
+            const nextLeagueId = event.target.value;
+            activeLeagueIdRef.current = nextLeagueId;
+            setLeagueId(nextLeagueId);
             setPairing(null);
           }}
           className="mt-2 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] px-3 py-3 sm:max-w-md"
@@ -357,10 +455,10 @@ export default function LeagueDevicesPage() {
               />
             </label>
             <button
-              disabled={working}
+              disabled={registering}
               className="self-end rounded-xl bg-[var(--color-primary)] px-4 py-3 font-bold text-white disabled:opacity-50"
             >
-              Add & Pair Device
+              {registering ? "Adding…" : "Add & Pair Device"}
             </button>
           </form>
         </section>
@@ -374,6 +472,9 @@ export default function LeagueDevicesPage() {
               name: device.name,
               boardNumber: device.boardNumber,
             };
+            const isSaving = savingDeviceIds.has(device.id);
+            const isPairing = pairingDeviceId === device.id;
+            const rowBusy = isSaving || isPairing;
             return (
               <div
                 key={device.id}
@@ -392,6 +493,11 @@ export default function LeagueDevicesPage() {
                       >
                         {device.status}
                       </span>
+                      {rowBusy && (
+                        <span className="rounded-full bg-blue-500/10 px-2 py-1 text-[10px] font-bold uppercase text-blue-200">
+                          {isPairing ? "Pairing…" : "Saving…"}
+                        </span>
+                      )}
                     </div>
                     <div className="mt-1 text-xs text-[var(--color-text-muted)]">
                       Board {device.boardNumber} · {seenLabel(device.lastSeenAt)}
@@ -400,7 +506,7 @@ export default function LeagueDevicesPage() {
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
-                      disabled={working || device.status !== "active"}
+                      disabled={pairingDeviceId !== null || isSaving || device.status !== "active"}
                       onClick={() => void pairExistingDevice(device)}
                       className="rounded-lg border border-[var(--color-panel-border)] px-3 py-2 text-sm font-bold disabled:opacity-50"
                     >
@@ -408,15 +514,8 @@ export default function LeagueDevicesPage() {
                     </button>
                     <button
                       type="button"
-                      disabled={working}
-                      onClick={() =>
-                        void patchDevice({
-                          action: "update",
-                          deviceId: device.id,
-                          status:
-                            device.status === "active" ? "disabled" : "active",
-                        })
-                      }
+                      disabled={rowBusy}
+                      onClick={() => void toggleDeviceStatus(device)}
                       className="rounded-lg border border-[var(--color-panel-border)] px-3 py-2 text-sm font-bold disabled:opacity-50"
                     >
                       {device.status === "active" ? "Disable" : "Enable"}
@@ -427,6 +526,7 @@ export default function LeagueDevicesPage() {
                 <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_130px_auto]">
                   <input
                     value={draft.name}
+                    disabled={rowBusy}
                     onChange={(event) =>
                       setDrafts((current) => ({
                         ...current,
@@ -440,6 +540,7 @@ export default function LeagueDevicesPage() {
                     min={1}
                     max={32}
                     value={draft.boardNumber}
+                    disabled={rowBusy}
                     onChange={(event) =>
                       setDrafts((current) => ({
                         ...current,
@@ -453,18 +554,11 @@ export default function LeagueDevicesPage() {
                   />
                   <button
                     type="button"
-                    disabled={working}
-                    onClick={() =>
-                      void patchDevice({
-                        action: "update",
-                        deviceId: device.id,
-                        name: draft.name,
-                        boardNumber: draft.boardNumber,
-                      })
-                    }
+                    disabled={rowBusy}
+                    onClick={() => void saveDevice(device, draft)}
                     className="rounded-lg bg-[var(--color-panel-soft)] px-3 py-2 text-sm font-bold disabled:opacity-50"
                   >
-                    Save
+                    {isSaving ? "Saving…" : "Save"}
                   </button>
                 </div>
               </div>

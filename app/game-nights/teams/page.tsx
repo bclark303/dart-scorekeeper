@@ -1,30 +1,93 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { GameNightWorkspacePicker } from "@/components/GameNightWorkspacePicker";
 import { authClient } from "@/lib/auth/client";
 import type { GameNightSummary } from "@/lib/league/gameNightContracts";
 import { useGameNightWorkspace } from "@/lib/league/useGameNightWorkspace";
 
+type OptimisticTeamAssignment = {
+  teamId: string | null;
+};
+
+function teamAssignmentMutationKey(gameNightId: string, leaguePlayerId: string) {
+  return `${gameNightId}:${leaguePlayerId}`;
+}
+
 export default function GameNightTeamsPage() {
   const { data: session, isPending } = authClient.useSession();
   const workspace = useGameNightWorkspace(Boolean(session?.user));
   const [working, setWorking] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
+  const [optimisticAssignments, setOptimisticAssignments] = useState<
+    Record<string, OptimisticTeamAssignment>
+  >({});
+  const optimisticAssignmentsRef = useRef<
+    Record<string, OptimisticTeamAssignment>
+  >({});
+  const processingAssignmentKeysRef = useRef(new Set<string>());
+  const [savingAssignmentKeys, setSavingAssignmentKeys] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const activeNightIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    activeNightIdRef.current = workspace.night?.id ?? null;
+  }, [workspace.night?.id]);
+
+  function updateOptimisticAssignments(
+    updater: (
+      current: Record<string, OptimisticTeamAssignment>,
+    ) => Record<string, OptimisticTeamAssignment>,
+  ) {
+    const next = updater(optimisticAssignmentsRef.current);
+    optimisticAssignmentsRef.current = next;
+    setOptimisticAssignments(next);
+  }
+
+  function removeOptimisticAssignment(key: string) {
+    updateOptimisticAssignments((current) => {
+      if (!current[key]) return current;
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+  }
+
+  function markAssignmentSaving(key: string, saving: boolean) {
+    setSavingAssignmentKeys((current) => {
+      const next = new Set(current);
+      if (saving) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+  }
 
   const teamByPlayer = useMemo(() => {
     const result = new Map<string, string>();
-    for (const team of workspace.night?.teams ?? []) {
+    const activeNight = workspace.night;
+    for (const team of activeNight?.teams ?? []) {
       for (const member of team.members) {
         if (member.leaguePlayerId) {
           result.set(member.leaguePlayerId, team.id);
         }
       }
     }
+
+    if (activeNight) {
+      const prefix = `${activeNight.id}:`;
+      for (const [key, assignment] of Object.entries(optimisticAssignments)) {
+        if (!key.startsWith(prefix)) continue;
+        const leaguePlayerId = key.slice(prefix.length);
+        if (assignment.teamId) result.set(leaguePlayerId, assignment.teamId);
+        else result.delete(leaguePlayerId);
+      }
+    }
+
     return result;
-  }, [workspace.night]);
+  }, [optimisticAssignments, workspace.night]);
 
   async function patchNight(body: object, message?: string) {
     setWorking(true);
@@ -52,6 +115,95 @@ export default function GameNightTeamsPage() {
     } finally {
       setWorking(false);
     }
+  }
+
+  async function flushTeamAssignment(
+    gameNightId: string,
+    leaguePlayerId: string,
+    displayName: string,
+  ) {
+    const key = teamAssignmentMutationKey(gameNightId, leaguePlayerId);
+    if (processingAssignmentKeysRef.current.has(key)) return;
+
+    processingAssignmentKeysRef.current.add(key);
+    markAssignmentSaving(key, true);
+    workspace.setErrorMessage("");
+    let failureMessage: string | null = null;
+
+    try {
+      while (true) {
+        const desired = optimisticAssignmentsRef.current[key];
+        if (!desired) break;
+
+        const response = await fetch("/api/leagues/game-nights", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "assignTeam",
+            gameNightId,
+            leaguePlayerId,
+            teamId: desired.teamId,
+          }),
+        });
+        const result = (await response.json()) as {
+          gameNight?: GameNightSummary;
+          error?: string;
+        };
+        if (!response.ok || !result.gameNight) {
+          throw new Error(result.error ?? "Team assignment failed.");
+        }
+
+        if (activeNightIdRef.current === gameNightId) {
+          workspace.applyNight(result.gameNight);
+        }
+
+        const latest = optimisticAssignmentsRef.current[key];
+        if (!latest) break;
+        if (latest.teamId === desired.teamId) {
+          removeOptimisticAssignment(key);
+          if (activeNightIdRef.current === gameNightId) {
+            setStatusMessage(`${displayName} team assignment updated.`);
+          }
+          break;
+        }
+      }
+    } catch (error) {
+      failureMessage =
+        error instanceof Error ? error.message : "Team assignment failed.";
+      removeOptimisticAssignment(key);
+    } finally {
+      processingAssignmentKeysRef.current.delete(key);
+      markAssignmentSaving(key, false);
+
+      const stillSavingThisNight = [...processingAssignmentKeysRef.current].some(
+        (mutationKey) => mutationKey.startsWith(`${gameNightId}:`),
+      );
+      if (
+        activeNightIdRef.current === gameNightId &&
+        (failureMessage || !stillSavingThisNight)
+      ) {
+        await workspace.refreshNight();
+        if (failureMessage) workspace.setErrorMessage(failureMessage);
+      }
+    }
+  }
+
+  function queueTeamAssignment(
+    leaguePlayerId: string,
+    displayName: string,
+    teamId: string | null,
+  ) {
+    if (!workspace.night) return;
+    const gameNightId = workspace.night.id;
+    const key = teamAssignmentMutationKey(gameNightId, leaguePlayerId);
+
+    updateOptimisticAssignments((current) => ({
+      ...current,
+      [key]: { teamId },
+    }));
+    workspace.setErrorMessage("");
+    setStatusMessage("");
+    void flushTeamAssignment(gameNightId, leaguePlayerId, displayName);
   }
 
   if (isPending) {
@@ -128,7 +280,7 @@ export default function GameNightTeamsPage() {
                   </p>
                 </div>
                 <button
-                  disabled={working || structuralLocked || checkedIn.length < 2}
+                  disabled={working || savingAssignmentKeys.size > 0 || structuralLocked || checkedIn.length < 2}
                   type="button"
                   onClick={() =>
                     void patchNight(
@@ -223,37 +375,48 @@ export default function GameNightTeamsPage() {
                     Move checked-in real players between teams. Dummy balancing remains server-authoritative.
                   </p>
                   <div className="mt-4 grid gap-2 md:grid-cols-2">
-                    {checkedIn.map((player) => (
-                      <label
-                        key={player.leaguePlayerId}
-                        className="flex items-center justify-between gap-3 rounded-xl border border-[var(--color-panel-border)] p-3 text-sm"
-                      >
-                        <span className="font-black">{player.displayName}</span>
-                        <select
-                          value={teamByPlayer.get(player.leaguePlayerId) ?? ""}
-                          disabled={working || structuralLocked}
-                          onChange={(event) =>
-                            void patchNight(
-                              {
-                                action: "assignTeam",
-                                gameNightId: night.id,
-                                leaguePlayerId: player.leaguePlayerId,
-                                teamId: event.target.value || null,
-                              },
-                              `${player.displayName} team assignment updated.`,
-                            )
-                          }
-                          className="rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-2"
+                    {checkedIn.map((player) => {
+                      const mutationKey = teamAssignmentMutationKey(
+                        night.id,
+                        player.leaguePlayerId,
+                      );
+                      const isSaving = savingAssignmentKeys.has(mutationKey);
+                      return (
+                        <label
+                          key={player.leaguePlayerId}
+                          aria-busy={isSaving}
+                          className="flex items-center justify-between gap-3 rounded-xl border border-[var(--color-panel-border)] p-3 text-sm"
                         >
-                          <option value="">Unassigned</option>
-                          {night.teams.map((team) => (
-                            <option key={team.id} value={team.id}>
-                              {team.name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    ))}
+                          <span className="flex flex-wrap items-center gap-2 font-black">
+                            {player.displayName}
+                            {isSaving && (
+                              <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-blue-200">
+                                Saving…
+                              </span>
+                            )}
+                          </span>
+                          <select
+                            value={teamByPlayer.get(player.leaguePlayerId) ?? ""}
+                            disabled={working || structuralLocked}
+                            onChange={(event) =>
+                              queueTeamAssignment(
+                                player.leaguePlayerId,
+                                player.displayName,
+                                event.target.value || null,
+                              )
+                            }
+                            className="rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-2"
+                          >
+                            <option value="">Unassigned</option>
+                            {night.teams.map((team) => (
+                              <option key={team.id} value={team.id}>
+                                {team.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      );
+                    })}
                   </div>
                 </section>
               )}
