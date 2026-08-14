@@ -30,6 +30,7 @@ jobs:
           python3 scripts/alpha12-device-fixes.py
           python3 scripts/alpha12-test-fixes.py
           python3 scripts/alpha12-lint-fixes.py
+          python3 scripts/alpha12-sharing-fixes.py
       - name: Install dependencies
         run: npm ci
       - name: Generate schema snapshot and install data-preserving migration
@@ -54,7 +55,7 @@ jobs:
       - name: Check device runtime is no longer league-owned
         run: |
           ! grep -R "leagueBoardDevices\|device\.leagueId\|device\.leagueName" lib app scripts \
-            --exclude=alpha12-refactor.py --exclude=alpha12-query-fixes.py --exclude=alpha12-allocation-fixes.py --exclude=alpha12-device-fixes.py --exclude=alpha12-test-fixes.py --exclude=alpha12-lint-fixes.py --exclude=alpha12-venue-migration.sql
+            --exclude=alpha12-refactor.py --exclude=alpha12-query-fixes.py --exclude=alpha12-allocation-fixes.py --exclude=alpha12-device-fixes.py --exclude=alpha12-test-fixes.py --exclude=alpha12-lint-fixes.py --exclude=alpha12-sharing-fixes.py --exclude=alpha12-venue-migration.sql
       - name: Prepare and migrate local database
         run: |
           mkdir -p data
