@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { GameNightWorkspacePicker } from "@/components/GameNightWorkspacePicker";
 import { authClient } from "@/lib/auth/client";
@@ -58,7 +58,10 @@ export default function GameNightCheckInPage() {
     () => new Set(),
   );
   const activeNightIdRef = useRef<string | null>(null);
-  activeNightIdRef.current = workspace.night?.id ?? null;
+
+  useEffect(() => {
+    activeNightIdRef.current = workspace.night?.id ?? null;
+  }, [workspace.night?.id]);
 
   function updateOptimisticAttendance(
     updater: (
@@ -173,11 +176,7 @@ export default function GameNightCheckInPage() {
 
     const gameNightId = workspace.night.id;
     const key = attendanceMutationKey(gameNightId, player.leaguePlayerId);
-    const checkedInAt = checkedIn
-      ? player.status === "checked_in"
-        ? player.checkedInAt ?? Date.now()
-        : Date.now()
-      : null;
+    const checkedInAt = checkedIn ? player.checkedInAt : null;
 
     updateOptimisticAttendance((current) => ({
       ...current,
