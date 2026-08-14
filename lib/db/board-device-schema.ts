@@ -1,22 +1,29 @@
 import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
-import { leagues } from "./schema";
+import { physicalBoards, venues } from "./venue-schema";
 
 /**
- * A persistent scorer device registered to one league and physical board slot.
+ * A persistent scoring device installed at a venue.
  *
- * The plaintext device key is never stored. Only a SHA-256 hash is persisted;
- * administrators see the usable key once when registering or rotating it.
+ * Devices do not belong to leagues and do not represent a dartboard. A device
+ * may be assigned to one physical board at a time, or left unassigned as a
+ * spare. Reassigning the device never changes a fixture or match identity.
+ *
+ * The legacy SQL table name is retained for this migration so existing paired
+ * credentials can be moved in place without Drizzle interpreting this as an
+ * unrelated table rename. The domain model contains no league ownership.
  */
-export const leagueBoardDevices = sqliteTable(
+export const boardDevices = sqliteTable(
   "league_board_devices",
   {
     id: text("id").primaryKey(),
-    leagueId: text("league_id")
+    venueId: text("venue_id")
       .notNull()
-      .references(() => leagues.id, { onDelete: "cascade" }),
+      .references(() => venues.id, { onDelete: "cascade" }),
+    physicalBoardId: text("physical_board_id").references(() => physicalBoards.id, {
+      onDelete: "set null",
+    }),
     name: text("name").notNull(),
-    boardNumber: integer("board_number").notNull(),
     status: text("status").notNull(),
     credentialHash: text("credential_hash").notNull(),
     createdByUserId: text("created_by_user_id").notNull(),
@@ -25,13 +32,10 @@ export const leagueBoardDevices = sqliteTable(
     updatedAt: integer("updated_at").notNull(),
   },
   (table) => [
-    uniqueIndex("league_board_devices_league_board_unique").on(
-      table.leagueId,
-      table.boardNumber,
-    ),
-    index("league_board_devices_league_idx").on(table.leagueId),
-    index("league_board_devices_status_idx").on(table.status),
+    uniqueIndex("board_devices_physical_board_unique").on(table.physicalBoardId),
+    index("board_devices_venue_idx").on(table.venueId),
+    index("board_devices_status_idx").on(table.status),
   ],
 );
 
-export type LeagueBoardDeviceRow = typeof leagueBoardDevices.$inferSelect;
+export type BoardDeviceRow = typeof boardDevices.$inferSelect;
