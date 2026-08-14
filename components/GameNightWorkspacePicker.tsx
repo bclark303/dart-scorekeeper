@@ -36,9 +36,10 @@ export function GameNightWorkspacePicker({
 }) {
   return (
     <section className="grid gap-3 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-4 md:grid-cols-2">
-      <label className="text-sm font-bold">
+      <label htmlFor="game-night-workspace-league" className="text-sm font-bold">
         League
         <select
+          id="game-night-workspace-league"
           value={leagueId}
           onChange={(event) => onLeagueChange(event.target.value)}
           className="mt-2 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-3 font-bold"
@@ -52,9 +53,10 @@ export function GameNightWorkspacePicker({
         </select>
       </label>
 
-      <label className="text-sm font-bold">
+      <label htmlFor="game-night-workspace-night" className="text-sm font-bold">
         Game Night
         <select
+          id="game-night-workspace-night"
           value={nightId}
           onChange={(event) => onNightChange(event.target.value)}
           disabled={!leagueId || nights.length === 0}
