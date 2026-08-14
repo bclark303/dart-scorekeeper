@@ -39,7 +39,7 @@ export default function BoardDevicePage() {
     window.localStorage.setItem(STORAGE_KEY, value);
     setDeviceKey(value);
     setConnection(null);
-    // Re-pairing/rotating credentials for the same registered board must not
+    // Re-pairing/rotating credentials for the same registered scorer must not
     // detach it from its durable offline match queue. A different device key
     // can safely clear only the in-memory recovery pointer; the old queue stays
     // persisted under the old device ID.
@@ -219,10 +219,10 @@ export default function BoardDevicePage() {
           <div className="text-sm font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
             Dart Scorekeeper
           </div>
-          <h1 className="mt-2 text-3xl font-bold">Pair this board device</h1>
+          <h1 className="mt-2 text-3xl font-bold">Pair this scoring device</h1>
           <p className="mt-2 text-[var(--color-text-muted)]">
-            On an administrator screen, open League → Board Devices and choose
-            Pair Device. Enter the six-digit code shown there. Codes expire
+            On an administrator screen, open Venue Hardware and choose Pair / Re-pair
+            for this device. Enter the six-digit code shown there. Codes expire
             after ten minutes and can only be used once.
           </p>
 
@@ -303,107 +303,76 @@ export default function BoardDevicePage() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="text-sm font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
-              Board Device
+              Scoring Device
             </div>
             <h1 className="mt-1 text-3xl font-bold">
               {connection?.device?.name ?? "Connecting…"}
             </h1>
             {connection?.device && (
               <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-                {connection.device.leagueName} · Board{" "}
-                {connection.device.boardNumber}
+                {connection.device.venueName} · {connection.device.boardName ?? "Unassigned spare"}
               </p>
             )}
           </div>
           <div className="flex items-start gap-2">
             <a href="/help?from=device" className="rounded-xl border border-[var(--color-panel-border)] px-4 py-2 text-sm font-bold">? Help</a>
             <details className="relative">
-              <summary className="cursor-pointer list-none rounded-xl border border-[var(--color-panel-border)] px-4 py-2 text-sm font-bold">⚙ Settings</summary>
-              <div className="absolute right-0 z-20 mt-2 w-64 space-y-2 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-3 shadow-xl">
-                <button type="button" disabled={loading} onClick={() => void loadConnection()} className="w-full rounded-xl border border-[var(--color-panel-border)] px-4 py-2 text-left text-sm font-bold disabled:opacity-50">Refresh connection</button>
-                <button type="button" onClick={() => void forgetRegistration()} className="w-full rounded-xl border border-rose-500/40 px-4 py-2 text-left text-sm font-bold text-rose-200">Forget / re-pair device</button>
+              <summary className="cursor-pointer list-none rounded-xl border border-[var(--color-panel-border)] px-4 py-2 text-sm font-bold">
+                Device
+              </summary>
+              <div className="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-3 shadow-xl">
+                <button
+                  type="button"
+                  onClick={() => void forgetRegistration()}
+                  className="w-full rounded-lg border border-red-500/40 px-3 py-2 text-left text-sm font-bold text-red-200"
+                >
+                  Forget Registration
+                </button>
               </div>
             </details>
           </div>
         </div>
 
         {errorMessage && (
-          <div className="mt-5 rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-100">
+          <div className="mt-4 rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-100">
             {errorMessage}
           </div>
         )}
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
+        <div className="mt-6 grid gap-3 md:grid-cols-2">
           <button
             type="button"
             onClick={selectLeagueMode}
             className={`rounded-2xl border p-5 text-left ${
               mode === "league"
-                ? "border-[var(--color-primary)] bg-[var(--color-panel-soft)]"
-                : "border-[var(--color-panel-border)]"
+                ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10"
+                : "border-[var(--color-panel-border)] bg-[var(--color-panel-soft)]"
             }`}
           >
-            <div className="text-sm font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
-              League Play
+            <div className="font-black">League / scheduled play</div>
+            <div className="mt-1 text-sm text-[var(--color-text-muted)]">
+              {connection?.device?.physicalBoardId
+                ? connection?.assignment
+                  ? `${connection.assignment.gameNightName} · ${connection.assignment.boardName}`
+                  : `Waiting for a Game Night on ${connection.device.boardName ?? "this board"}`
+                : "This device is currently a spare. Assign it to a physical board from Venue Hardware."}
             </div>
-            <div className="mt-1 text-2xl font-bold">League Play</div>
-            <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-              Wait for this board&apos;s centrally assigned league match.
-              Active league assignments automatically take control of the
-              scorer.
-            </p>
           </button>
-
           <button
             type="button"
             onClick={openCasualScorer}
-            className="rounded-2xl border border-[var(--color-panel-border)] p-5 text-left hover:bg-[var(--color-panel-soft)]"
+            className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-5 text-left"
           >
-            <div className="text-sm font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
-              Casual Play
+            <div className="font-black">Casual play</div>
+            <div className="mt-1 text-sm text-[var(--color-text-muted)]">
+              Start a local game without changing this device's venue/board assignment.
             </div>
-            <div className="mt-1 text-2xl font-bold">Casual Play</div>
-            <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-              Open the normal local-first scorer for non-league play. No
-              central assignment or account is required.
-            </p>
           </button>
         </div>
 
-        {!errorMessage && connection?.assignment ? (
-          <div className="mt-6 rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-5">
-            <div className="text-sm uppercase tracking-wide text-[var(--color-text-muted)]">
-              League assignment
-            </div>
-            <h2 className="mt-1 text-2xl font-bold">
-              {connection.assignment.gameNightName}
-            </h2>
-            <p className="mt-2 text-[var(--color-text-muted)]">
-              {connection.assignment.teamAName &&
-              connection.assignment.teamBName
-                ? `${connection.assignment.teamAName} vs ${connection.assignment.teamBName}`
-                : "This board exists for the Game Night but has not been populated with a match yet."}
-            </p>
-            <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-              Game night: {connection.assignment.gameNightStatus} · Match:{" "}
-              {connection.assignment.matchStatus ?? "not populated"}
-            </p>
-            {mode === "league" && connection.assignment.matchSessionId && (
-              <p className="mt-4 text-sm font-bold text-[var(--color-primary)]">
-                League scorer ready.
-              </p>
-            )}
-          </div>
-        ) : !errorMessage ? (
-          <div className="mt-6 rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-5">
-            <h2 className="text-xl font-bold">No league match assigned</h2>
-            <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-              The device remains registered and checks the central server every
-              five seconds. It is available for casual scoring until a league
-              match becomes active.
-            </p>
-          </div>
-        ) : null}
+        <div className="mt-5 text-xs text-[var(--color-text-muted)]">
+          {loading ? "Checking for assignments…" : "Assignments refresh automatically."}
+        </div>
       </section>
     </main>
   );
