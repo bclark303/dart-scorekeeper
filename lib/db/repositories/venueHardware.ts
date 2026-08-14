@@ -8,9 +8,11 @@ import type {
 } from "@/lib/league/boardDeviceContracts";
 import { getDatabase } from "../client";
 import { gameNightBoards, gameNights } from "../game-night-schema";
-import { leagueMemberships, leagues, seasons } from "../schema";
+import { appMetadata, leagueMemberships, leagues, seasons } from "../schema";
 import { leagueVenues, physicalBoards, venues } from "../venue-schema";
 import { LeaguePermissionError } from "./leagues";
+
+const MANUAL_BOARD_SETUP_PREFIX = "venue-board-setup-manual:";
 
 function asVenueStatus(value: string): VenueStatus {
   return value === "archived" ? "archived" : "active";
@@ -55,6 +57,29 @@ async function activeLeagueRole(leagueId: string, userId: string) {
     )
     .limit(1);
   return membership?.role ?? null;
+}
+
+async function markVenueBoardSetupManual(venueId: string, now = Date.now()) {
+  await getDatabase()
+    .insert(appMetadata)
+    .values({
+      key: `${MANUAL_BOARD_SETUP_PREFIX}${venueId}`,
+      value: "1",
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: appMetadata.key,
+      set: { value: "1", updatedAt: now },
+    });
+}
+
+async function venueBoardSetupIsManual(venueId: string) {
+  const [row] = await getDatabase()
+    .select({ key: appMetadata.key })
+    .from(appMetadata)
+    .where(eq(appMetadata.key, `${MANUAL_BOARD_SETUP_PREFIX}${venueId}`))
+    .limit(1);
+  return Boolean(row);
 }
 
 export async function requireLeagueAdminForVenueAccess(leagueId: string, userId: string) {
@@ -207,6 +232,7 @@ export async function createPhysicalBoardForUser(input: {
     updatedAt: now,
   };
   await getDatabase().insert(physicalBoards).values(row);
+  await markVenueBoardSetupManual(input.venueId, now);
   return summarizeBoard(row);
 }
 
@@ -228,10 +254,12 @@ export async function updatePhysicalBoardForUser(input: {
   const status = input.status ?? asBoardStatus(existing.status);
   if (!name || name.length > 80) throw new Error("Board name must be 1-80 characters.");
   if (status !== "active" && status !== "out_of_service") throw new Error("Invalid board status.");
+  const now = input.now ?? Date.now();
   await getDatabase()
     .update(physicalBoards)
-    .set({ name, status, updatedAt: input.now ?? Date.now() })
+    .set({ name, status, updatedAt: now })
     .where(eq(physicalBoards.id, input.boardId));
+  await markVenueBoardSetupManual(existing.venueId, now);
   const [updated] = await getDatabase()
     .select()
     .from(physicalBoards)
@@ -241,21 +269,42 @@ export async function updatePhysicalBoardForUser(input: {
   return summarizeBoard(updated);
 }
 
-/** Bootstrap an empty venue only. Established venues never invent extra boards. */
+/**
+ * Preserve the old "board count" convenience until an administrator explicitly
+ * manages venue hardware. Auto-provisioned venues may grow to satisfy a Game
+ * Night's declared board count; manually managed venues never invent hardware.
+ */
 export async function bootstrapEmptyVenueBoards(venueId: string, count: number, now = Date.now()) {
   const existing = await listPhysicalBoardsForVenue(venueId);
-  if (existing.length || count <= 0) return existing;
-  await getDatabase().insert(physicalBoards).values(
-    Array.from({ length: count }, (_, index) => ({
+  if (count <= 0 || existing.length >= count) return existing;
+  if (await venueBoardSetupIsManual(venueId)) return existing;
+
+  const usedNumbers = new Set(existing.map((board) => board.boardNumber));
+  const values: Array<{
+    id: string;
+    venueId: string;
+    boardNumber: number;
+    name: string;
+    status: string;
+    createdAt: number;
+    updatedAt: number;
+  }> = [];
+  let boardNumber = 1;
+  while (existing.length + values.length < count) {
+    while (usedNumbers.has(boardNumber)) boardNumber += 1;
+    values.push({
       id: crypto.randomUUID(),
       venueId,
-      boardNumber: index + 1,
-      name: `Board ${index + 1}`,
+      boardNumber,
+      name: `Board ${boardNumber}`,
       status: "active",
       createdAt: now,
       updatedAt: now,
-    })),
-  );
+    });
+    usedNumbers.add(boardNumber);
+    boardNumber += 1;
+  }
+  if (values.length) await getDatabase().insert(physicalBoards).values(values);
   return listPhysicalBoardsForVenue(venueId);
 }
 
