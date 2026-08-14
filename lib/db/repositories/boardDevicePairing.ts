@@ -1,11 +1,11 @@
 import { createHash, randomBytes, randomInt } from "node:crypto";
 
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
-import { leagueBoardDevices } from "../board-device-schema";
+import { boardDevices } from "../board-device-schema";
 import { getDatabase } from "../client";
-import { appMetadata, leagueMemberships } from "../schema";
-import { LeaguePermissionError } from "./leagues";
+import { appMetadata } from "../schema";
+import { requireVenueAdminForUser } from "./venueHardware";
 
 const PAIRING_TTL_MS = 10 * 60 * 1000;
 const PAIRING_PREFIX = "board-device-pair:";
@@ -56,31 +56,16 @@ export async function createBoardDevicePairingForUser(input: {
   const database = getDatabase();
   const [device] = await database
     .select({
-      id: leagueBoardDevices.id,
-      leagueId: leagueBoardDevices.leagueId,
-      status: leagueBoardDevices.status,
+      id: boardDevices.id,
+      venueId: boardDevices.venueId,
+      status: boardDevices.status,
     })
-    .from(leagueBoardDevices)
-    .where(eq(leagueBoardDevices.id, input.deviceId))
+    .from(boardDevices)
+    .where(eq(boardDevices.id, input.deviceId))
     .limit(1);
 
   if (!device) throw new Error("Board device was not found.");
-
-  const [membership] = await database
-    .select({ role: leagueMemberships.role })
-    .from(leagueMemberships)
-    .where(
-      and(
-        eq(leagueMemberships.leagueId, device.leagueId),
-        eq(leagueMemberships.userId, input.userId),
-        eq(leagueMemberships.status, "active"),
-      ),
-    )
-    .limit(1);
-
-  if (!membership || (membership.role !== "owner" && membership.role !== "admin")) {
-    throw new LeaguePermissionError("League administrator permission is required.");
-  }
+  await requireVenueAdminForUser(device.venueId, input.userId);
   if (device.status !== "active") {
     throw new Error("Enable the board device before pairing it.");
   }
@@ -149,9 +134,9 @@ export async function claimBoardDevicePairing(input: {
   }
 
   const [device] = await database
-    .select({ id: leagueBoardDevices.id, status: leagueBoardDevices.status })
-    .from(leagueBoardDevices)
-    .where(eq(leagueBoardDevices.id, payload.deviceId))
+    .select({ id: boardDevices.id, status: boardDevices.status })
+    .from(boardDevices)
+    .where(eq(boardDevices.id, payload.deviceId))
     .limit(1);
 
   if (!device || device.status !== "active") {
@@ -161,9 +146,9 @@ export async function claimBoardDevicePairing(input: {
   const { deviceKey, credentialHash } = issueDeviceKey(device.id);
   await database.transaction(async (transaction) => {
     await transaction
-      .update(leagueBoardDevices)
+      .update(boardDevices)
       .set({ credentialHash, updatedAt: now })
-      .where(eq(leagueBoardDevices.id, device.id));
+      .where(eq(boardDevices.id, device.id));
     await transaction.delete(appMetadata).where(eq(appMetadata.key, pairKey));
     await transaction
       .delete(appMetadata)
