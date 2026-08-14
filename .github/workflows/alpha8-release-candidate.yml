@@ -1,0 +1,93 @@
+name: Alpha 8 release candidate
+
+on:
+  push:
+    branches:
+      - internal/alpha8-setup-checkin-polish
+
+permissions:
+  contents: write
+
+jobs:
+  prepare-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DB_PROVIDER: libsql
+      DATABASE_URL: file:./data/ci.db
+      DATABASE_AUTH_TOKEN: ""
+      BETTER_AUTH_SECRET: ci-only-dart-scorekeeper-auth-secret-123456789
+      BETTER_AUTH_URL: http://localhost:3000
+      NEXT_TELEMETRY_DISABLED: "1"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Synchronize alpha.8 version metadata
+        run: |
+          npm version 0.5.0-alpha.8 --no-git-tag-version
+          sed -i 's/export const APP_VERSION = ".*";/export const APP_VERSION = "0.5.0-alpha.8";/' lib/appInfo.ts
+          node -e "const p=require('./package.json'); const l=require('./package-lock.json'); if(p.version!=='0.5.0-alpha.8'||l.version!=='0.5.0-alpha.8'||l.packages[''].version!=='0.5.0-alpha.8') process.exit(1)"
+          grep -F 'APP_VERSION = "0.5.0-alpha.8"' lib/appInfo.ts
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Prepare local database directory
+        run: mkdir -p data
+
+      - name: Verify Drizzle migrations are committed
+        run: |
+          npm run db:generate
+          git diff --exit-code -- drizzle/
+          test -z "$(git status --porcelain -- drizzle/)"
+
+      - name: Apply migrations
+        run: npm run db:migrate
+
+      - name: Run repository and game contracts
+        run: |
+          npm run db:test
+          npm run local:test
+          npm run auth:test
+          npm run setup:test
+          npm run x01:test
+          npm run league:test
+          npm run league:roster:test
+          npm run game-night:test
+          npm run game-night:templates:test
+          npm run game-night:stats:test
+          npm run game-night:multi-board:test
+          npm run game-night:fixtures:test
+          npm run game-night:layout:test
+          npm run dummy-scoring:test
+          npm run dummy-team-balance:test
+          npm run league-match:test
+          npm run board-device:test
+          npm run board-device:offline:test
+          npm run board-device:pairing:test
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build Next.js
+        run: npm run build
+
+      - name: Build Docker portability target
+        run: docker build -t dart-scorekeeper-alpha8-release-candidate .
+
+      - name: Commit validated alpha.8 version metadata
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json lib/appInfo.ts
+          git diff --cached --exit-code && exit 0
+          git commit -m "Prepare v0.5.0-alpha.8 candidate"
+          git push origin HEAD:internal/alpha8-setup-checkin-polish
