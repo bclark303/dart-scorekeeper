@@ -154,7 +154,7 @@ async function resetBoards(gameNightId: string, boardCount: number, now: number)
   if (!night?.venueId) throw new Error("Choose a venue before assigning boards.");
 
   let venueBoards = await listPhysicalBoardsForVenue(night.venueId);
-  if (!venueBoards.length) {
+  if (venueBoards.length < boardCount) {
     venueBoards = await bootstrapEmptyVenueBoards(night.venueId, boardCount, now);
   }
   const activeBoards = venueBoards.filter((board) => board.status === "active");
