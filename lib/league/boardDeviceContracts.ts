@@ -39,7 +39,10 @@ export type BoardDeviceSummary = {
 };
 
 export type VenueHardwareResponse = {
+  /** Venues already linked to the selected league. */
   venues?: VenueSummary[];
+  /** Venues the current administrator may link to this league. */
+  availableVenues?: VenueSummary[];
   venue?: VenueSummary;
   boards?: PhysicalBoardSummary[];
   devices?: BoardDeviceSummary[];
