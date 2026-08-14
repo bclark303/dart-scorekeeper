@@ -46,5 +46,8 @@ new = '''  // Pre-play board selection may overlap another active or scheduled n
 '''
 if old not in text:
     raise SystemExit("pre-play board allocation pattern was not found")
-path.write_text(text.replace(old, new, 1))
+text = text.replace(old, new, 1)
+text = text.replace('import { physicalBoards, venues } from "../venue-schema";\n', 'import { venues } from "../venue-schema";\n', 1)
+text = text.replace('  activePhysicalBoardIdsUsedByOtherGameNights,\n', '', 1)
+path.write_text(text)
 print("alpha.12 pre-play board overlap behavior fixed")
