@@ -1,17 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { GameNightWorkspacePicker } from "@/components/GameNightWorkspacePicker";
 import { authClient } from "@/lib/auth/client";
 import type {
+  GameNightAttendanceSummary,
   GameNightDuesStatus,
   GameNightSummary,
 } from "@/lib/league/gameNightContracts";
 import { useGameNightWorkspace } from "@/lib/league/useGameNightWorkspace";
 
 type AttendanceFilter = "all" | "waiting" | "checked_in" | "dues";
+type OptimisticAttendanceState = {
+  checkedIn: boolean;
+  duesStatus: GameNightDuesStatus;
+  checkedInAt: number | null;
+};
+
+function attendanceMutationKey(gameNightId: string, leaguePlayerId: string) {
+  return `${gameNightId}:${leaguePlayerId}`;
+}
 
 function formatDate(value: number) {
   return new Intl.DateTimeFormat(undefined, {
@@ -36,54 +46,171 @@ export default function GameNightCheckInPage() {
   const workspace = useGameNightWorkspace(Boolean(session?.user));
   const [query, setQuery] = useState("");
   const [attendanceFilter, setAttendanceFilter] = useState<AttendanceFilter>("all");
-  const [workingPlayerId, setWorkingPlayerId] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
+  const [optimisticAttendance, setOptimisticAttendance] = useState<
+    Record<string, OptimisticAttendanceState>
+  >({});
+  const optimisticAttendanceRef = useRef<
+    Record<string, OptimisticAttendanceState>
+  >({});
+  const processingMutationKeysRef = useRef(new Set<string>());
+  const [savingMutationKeys, setSavingMutationKeys] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const activeNightIdRef = useRef<string | null>(null);
+  activeNightIdRef.current = workspace.night?.id ?? null;
 
-  async function updateAttendance(
-    leaguePlayerId: string,
-    displayName: string,
-    checkedIn: boolean,
-    duesStatus: GameNightDuesStatus,
+  function updateOptimisticAttendance(
+    updater: (
+      current: Record<string, OptimisticAttendanceState>,
+    ) => Record<string, OptimisticAttendanceState>,
   ) {
-    if (!workspace.night) return;
+    const next = updater(optimisticAttendanceRef.current);
+    optimisticAttendanceRef.current = next;
+    setOptimisticAttendance(next);
+  }
 
-    setWorkingPlayerId(leaguePlayerId);
+  function removeOptimisticAttendance(key: string) {
+    updateOptimisticAttendance((current) => {
+      if (!current[key]) return current;
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+  }
+
+  function clearOptimisticAttendance() {
+    optimisticAttendanceRef.current = {};
+    setOptimisticAttendance({});
+  }
+
+  function markMutationSaving(key: string, saving: boolean) {
+    setSavingMutationKeys((current) => {
+      const next = new Set(current);
+      if (saving) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+  }
+
+  async function flushAttendanceUpdates(
+    gameNightId: string,
+    leaguePlayerId: string,
+  ) {
+    const key = attendanceMutationKey(gameNightId, leaguePlayerId);
+    if (processingMutationKeysRef.current.has(key)) return;
+
+    processingMutationKeysRef.current.add(key);
+    markMutationSaving(key, true);
     workspace.setErrorMessage("");
-    setStatusMessage("");
-    try {
-      const response = await fetch("/api/leagues/game-nights", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "attendance",
-          gameNightId: workspace.night.id,
-          leaguePlayerId,
-          checkedIn,
-          duesStatus,
-        }),
-      });
-      const result = (await response.json()) as {
-        gameNight?: GameNightSummary;
-        error?: string;
-      };
-      if (!response.ok || !result.gameNight) {
-        throw new Error(result.error ?? "Attendance update failed.");
-      }
 
-      workspace.applyNight(result.gameNight);
-      setStatusMessage(
-        `${displayName} ${checkedIn ? "checked in" : "checked out"}.`,
-      );
+    try {
+      while (true) {
+        const desired = optimisticAttendanceRef.current[key];
+        if (!desired) break;
+
+        const response = await fetch("/api/leagues/game-nights", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "attendance",
+            gameNightId,
+            leaguePlayerId,
+            checkedIn: desired.checkedIn,
+            duesStatus: desired.duesStatus,
+          }),
+        });
+        const result = (await response.json()) as {
+          gameNight?: GameNightSummary;
+          error?: string;
+        };
+        if (!response.ok || !result.gameNight) {
+          throw new Error(result.error ?? "Attendance update failed.");
+        }
+
+        // Server responses still contain the authoritative Game Night. Apply them
+        // only if the operator has not switched nights while the save was running.
+        // Any newer optimistic values remain layered over this response below.
+        if (activeNightIdRef.current === gameNightId) {
+          workspace.applyNight(result.gameNight);
+        }
+
+        const latest = optimisticAttendanceRef.current[key];
+        if (!latest) break;
+        const serverCaughtUp =
+          latest.checkedIn === desired.checkedIn &&
+          latest.duesStatus === desired.duesStatus;
+        if (serverCaughtUp) {
+          removeOptimisticAttendance(key);
+          break;
+        }
+
+        // The operator changed this same player again before the first request
+        // finished. Loop once more with the newest desired state so requests for
+        // one player stay ordered without blocking check-ins for other players.
+      }
     } catch (error) {
-      workspace.setErrorMessage(
-        error instanceof Error ? error.message : "Attendance update failed.",
-      );
+      removeOptimisticAttendance(key);
+      if (activeNightIdRef.current === gameNightId) {
+        workspace.setErrorMessage(
+          error instanceof Error ? error.message : "Attendance update failed.",
+        );
+        void workspace.refreshNight();
+      }
     } finally {
-      setWorkingPlayerId(null);
+      processingMutationKeysRef.current.delete(key);
+      markMutationSaving(key, false);
     }
   }
 
-  const night = workspace.night;
+  function queueAttendanceUpdate(
+    player: GameNightAttendanceSummary,
+    checkedIn: boolean,
+    duesStatus: GameNightDuesStatus,
+    message: string,
+  ) {
+    if (!workspace.night) return;
+
+    const gameNightId = workspace.night.id;
+    const key = attendanceMutationKey(gameNightId, player.leaguePlayerId);
+    const checkedInAt = checkedIn
+      ? player.status === "checked_in"
+        ? player.checkedInAt ?? Date.now()
+        : Date.now()
+      : null;
+
+    updateOptimisticAttendance((current) => ({
+      ...current,
+      [key]: { checkedIn, duesStatus, checkedInAt },
+    }));
+    workspace.setErrorMessage("");
+    setStatusMessage(message);
+    void flushAttendanceUpdates(gameNightId, player.leaguePlayerId);
+  }
+
+  const night = useMemo(() => {
+    const baseNight = workspace.night;
+    if (!baseNight) return null;
+
+    let changed = false;
+    const attendance = baseNight.attendance.map((player) => {
+      const optimistic =
+        optimisticAttendance[
+          attendanceMutationKey(baseNight.id, player.leaguePlayerId)
+        ];
+      if (!optimistic) return player;
+      changed = true;
+      return {
+        ...player,
+        status: optimistic.checkedIn ? ("checked_in" as const) : ("absent" as const),
+        duesStatus: optimistic.duesStatus,
+        checkedInAt: optimistic.checkedInAt,
+      };
+    });
+
+    return changed ? { ...baseNight, attendance } : baseNight;
+  }, [optimisticAttendance, workspace.night]);
+
   const checkedInCount =
     night?.attendance.filter((player) => player.status === "checked_in").length ??
     0;
@@ -184,12 +311,16 @@ export default function GameNightCheckInPage() {
           nights={workspace.nights}
           nightId={workspace.nightId}
           onLeagueChange={(leagueId) => {
+            activeNightIdRef.current = null;
+            clearOptimisticAttendance();
             workspace.selectLeague(leagueId);
             setQuery("");
             setAttendanceFilter("all");
             setStatusMessage("");
           }}
           onNightChange={(nightId) => {
+            activeNightIdRef.current = nightId;
+            clearOptimisticAttendance();
             workspace.selectNight(nightId);
             setQuery("");
             setAttendanceFilter("all");
@@ -280,11 +411,16 @@ export default function GameNightCheckInPage() {
               <div className="mt-4 space-y-2">
                 {filteredAttendance.map((player) => {
                   const isCheckedIn = player.status === "checked_in";
-                  const isWorking = workingPlayerId === player.leaguePlayerId;
+                  const mutationKey = attendanceMutationKey(
+                    night.id,
+                    player.leaguePlayerId,
+                  );
+                  const isSaving = savingMutationKeys.has(mutationKey);
                   const duesOutstanding = isCheckedIn && player.duesStatus === "unpaid";
                   return (
                     <div
                       key={player.leaguePlayerId}
+                      aria-busy={isSaving}
                       className={`flex flex-col gap-3 rounded-xl border p-3 sm:flex-row sm:items-center sm:justify-between ${
                         isCheckedIn
                           ? "border-emerald-500/25 bg-emerald-500/5"
@@ -308,20 +444,25 @@ export default function GameNightCheckInPage() {
                               Dues
                             </span>
                           )}
+                          {isSaving && (
+                            <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-[11px] font-black uppercase tracking-wide text-blue-200">
+                              Saving…
+                            </span>
+                          )}
                         </div>
                       </div>
 
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                         <button
                           type="button"
-                          disabled={readOnly || isWorking}
+                          disabled={readOnly}
                           aria-label={`${isCheckedIn ? "Check out" : "Check in"} ${player.displayName}`}
                           onClick={() =>
-                            void updateAttendance(
-                              player.leaguePlayerId,
-                              player.displayName,
+                            queueAttendanceUpdate(
+                              player,
                               !isCheckedIn,
                               player.duesStatus,
+                              `${player.displayName} ${isCheckedIn ? "checked out" : "checked in"}.`,
                             )
                           }
                           className={`min-h-11 rounded-xl px-4 py-2 text-sm font-black disabled:opacity-50 ${
@@ -330,24 +471,21 @@ export default function GameNightCheckInPage() {
                               : "bg-[var(--color-primary)] text-white"
                           }`}
                         >
-                          {isWorking
-                            ? "Updating…"
-                            : isCheckedIn
-                              ? "Check Out"
-                              : "Check In"}
+                          {isCheckedIn ? "Check Out" : "Check In"}
                         </button>
                         <select
                           value={player.duesStatus}
                           aria-label={`Dues for ${player.displayName}`}
-                          disabled={readOnly || isWorking}
-                          onChange={(event) =>
-                            void updateAttendance(
-                              player.leaguePlayerId,
-                              player.displayName,
+                          disabled={readOnly}
+                          onChange={(event) => {
+                            const duesStatus = event.target.value as GameNightDuesStatus;
+                            queueAttendanceUpdate(
+                              player,
                               isCheckedIn,
-                              event.target.value as GameNightDuesStatus,
-                            )
-                          }
+                              duesStatus,
+                              `${player.displayName} dues marked ${duesStatus}.`,
+                            );
+                          }}
                           className="min-h-11 rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] px-3 py-2 text-sm disabled:opacity-50"
                         >
                           <option value="unpaid">Dues: Unpaid</option>
