@@ -35,53 +35,51 @@ jobs:
           path = Path('app/game-nights/check-in/page.tsx')
           text = path.read_text()
 
-          old_start = '''    workspace.setErrorMessage("");
-
-    try {'''
-          new_start = '''    workspace.setErrorMessage("");
-    let failureMessage: string | null = null;
-
-    try {'''
+          old_start = '    workspace.setErrorMessage("");\n\n    try {'
+          new_start = '    workspace.setErrorMessage("");\n    let failureMessage: string | null = null;\n\n    try {'
           if old_start not in text:
               raise SystemExit('Could not find optimistic mutation start block')
           text = text.replace(old_start, new_start, 1)
 
-          old_end = '''    } catch (error) {
-      removeOptimisticAttendance(key);
-      if (activeNightIdRef.current === gameNightId) {
-        workspace.setErrorMessage(
-          error instanceof Error ? error.message : "Attendance update failed.",
-        );
-        void workspace.refreshNight();
-      }
-    } finally {
-      processingMutationKeysRef.current.delete(key);
-      markMutationSaving(key, false);
-    }'''
-          new_end = '''    } catch (error) {
-      failureMessage =
-        error instanceof Error ? error.message : "Attendance update failed.";
-      removeOptimisticAttendance(key);
-    } finally {
-      processingMutationKeysRef.current.delete(key);
-      markMutationSaving(key, false);
-
-      // Concurrent attendance requests can return full Game Night snapshots in a
-      // different order than they were started. Once a burst for this night has
-      // drained, reconcile once with the authoritative server state. The optimistic
-      // UI remains instant while this background refresh prevents a stale response
-      // from temporarily winning after several rapid check-ins/dues changes.
-      const stillSavingThisNight = [...processingMutationKeysRef.current].some(
-        (mutationKey) => mutationKey.startsWith(`${gameNightId}:`),
-      );
-      if (
-        activeNightIdRef.current === gameNightId &&
-        (failureMessage || !stillSavingThisNight)
-      ) {
-        await workspace.refreshNight();
-        if (failureMessage) workspace.setErrorMessage(failureMessage);
-      }
-    }'''
+          old_end = (
+              '    } catch (error) {\n'
+              '      removeOptimisticAttendance(key);\n'
+              '      if (activeNightIdRef.current === gameNightId) {\n'
+              '        workspace.setErrorMessage(\n'
+              '          error instanceof Error ? error.message : "Attendance update failed.",\n'
+              '        );\n'
+              '        void workspace.refreshNight();\n'
+              '      }\n'
+              '    } finally {\n'
+              '      processingMutationKeysRef.current.delete(key);\n'
+              '      markMutationSaving(key, false);\n'
+              '    }'
+          )
+          new_end = (
+              '    } catch (error) {\n'
+              '      failureMessage =\n'
+              '        error instanceof Error ? error.message : "Attendance update failed.";\n'
+              '      removeOptimisticAttendance(key);\n'
+              '    } finally {\n'
+              '      processingMutationKeysRef.current.delete(key);\n'
+              '      markMutationSaving(key, false);\n\n'
+              '      // Concurrent attendance requests can return full Game Night snapshots in a\n'
+              '      // different order than they were started. Once a burst for this night has\n'
+              '      // drained, reconcile once with the authoritative server state. The optimistic\n'
+              '      // UI remains instant while this background refresh prevents a stale response\n'
+              '      // from temporarily winning after several rapid check-ins/dues changes.\n'
+              '      const stillSavingThisNight = [...processingMutationKeysRef.current].some(\n'
+              '        (mutationKey) => mutationKey.startsWith(`${gameNightId}:`),\n'
+              '      );\n'
+              '      if (\n'
+              '        activeNightIdRef.current === gameNightId &&\n'
+              '        (failureMessage || !stillSavingThisNight)\n'
+              '      ) {\n'
+              '        await workspace.refreshNight();\n'
+              '        if (failureMessage) workspace.setErrorMessage(failureMessage);\n'
+              '      }\n'
+              '    }'
+          )
           if old_end not in text:
               raise SystemExit('Could not find optimistic mutation completion block')
           text = text.replace(old_end, new_end, 1)
