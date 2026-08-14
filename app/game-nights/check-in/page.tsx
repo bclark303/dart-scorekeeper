@@ -106,6 +106,7 @@ export default function GameNightCheckInPage() {
     processingMutationKeysRef.current.add(key);
     markMutationSaving(key, true);
     workspace.setErrorMessage("");
+    let failureMessage: string | null = null;
 
     try {
       while (true) {
@@ -153,16 +154,28 @@ export default function GameNightCheckInPage() {
         // one player stay ordered without blocking check-ins for other players.
       }
     } catch (error) {
+      failureMessage =
+        error instanceof Error ? error.message : "Attendance update failed.";
       removeOptimisticAttendance(key);
-      if (activeNightIdRef.current === gameNightId) {
-        workspace.setErrorMessage(
-          error instanceof Error ? error.message : "Attendance update failed.",
-        );
-        void workspace.refreshNight();
-      }
     } finally {
       processingMutationKeysRef.current.delete(key);
       markMutationSaving(key, false);
+
+      // Concurrent attendance requests can return full Game Night snapshots in a
+      // different order than they were started. Once a burst for this night has
+      // drained, reconcile once with the authoritative server state. The optimistic
+      // UI remains instant while this background refresh prevents a stale response
+      // from temporarily winning after several rapid check-ins/dues changes.
+      const stillSavingThisNight = [...processingMutationKeysRef.current].some(
+        (mutationKey) => mutationKey.startsWith(`${gameNightId}:`),
+      );
+      if (
+        activeNightIdRef.current === gameNightId &&
+        (failureMessage || !stillSavingThisNight)
+      ) {
+        await workspace.refreshNight();
+        if (failureMessage) workspace.setErrorMessage(failureMessage);
+      }
     }
   }
 
