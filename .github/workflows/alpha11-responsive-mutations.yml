@@ -1,0 +1,233 @@
+name: Alpha 11 responsiveness candidate
+
+"on":
+  push:
+    branches:
+      - internal/alpha11-responsive-mutations
+
+permissions:
+  contents: write
+
+jobs:
+  prepare-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      DB_PROVIDER: libsql
+      DATABASE_URL: file:./data/ci.db
+      DATABASE_AUTH_TOKEN: ""
+      BETTER_AUTH_SECRET: ci-only-dart-scorekeeper-auth-secret-123456789
+      BETTER_AUTH_URL: http://localhost:3000
+      NEXT_TELEMETRY_DISABLED: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Apply responsive mutation UX
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text: str, old: str, new: str, label: str) -> str:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{label}: expected exactly one match, found {count}")
+              return text.replace(old, new, 1)
+
+          # ------------------------------------------------------------------
+          # Game Night Teams: optimistic per-player manual assignment.
+          # ------------------------------------------------------------------
+          path = Path('app/game-nights/teams/page.tsx')
+          text = path.read_text()
+          text = replace_once(
+              text,
+              'import { useMemo, useState } from "react";',
+              'import { useEffect, useMemo, useRef, useState } from "react";',
+              'teams react import',
+          )
+          text = replace_once(
+              text,
+              'import { useGameNightWorkspace } from "@/lib/league/useGameNightWorkspace";\n\nexport default function GameNightTeamsPage() {',
+              '''import { useGameNightWorkspace } from "@/lib/league/useGameNightWorkspace";\n\ntype OptimisticTeamAssignment = {\n  teamId: string | null;\n};\n\nfunction teamAssignmentMutationKey(gameNightId: string, leaguePlayerId: string) {\n  return `${gameNightId}:${leaguePlayerId}`;\n}\n\nexport default function GameNightTeamsPage() {''',
+              'teams helper insertion',
+          )
+          old = '''  const [working, setWorking] = useState(false);\n  const [statusMessage, setStatusMessage] = useState("");\n\n  const teamByPlayer = useMemo(() => {\n    const result = new Map<string, string>();\n    for (const team of workspace.night?.teams ?? []) {\n      for (const member of team.members) {\n        if (member.leaguePlayerId) {\n          result.set(member.leaguePlayerId, team.id);\n        }\n      }\n    }\n    return result;\n  }, [workspace.night]);'''
+          new = '''  const [working, setWorking] = useState(false);\n  const [statusMessage, setStatusMessage] = useState("");\n  const [optimisticAssignments, setOptimisticAssignments] = useState<\n    Record<string, OptimisticTeamAssignment>\n  >({});\n  const optimisticAssignmentsRef = useRef<\n    Record<string, OptimisticTeamAssignment>\n  >({});\n  const processingAssignmentKeysRef = useRef(new Set<string>());\n  const [savingAssignmentKeys, setSavingAssignmentKeys] = useState<Set<string>>(\n    () => new Set(),\n  );\n  const activeNightIdRef = useRef<string | null>(null);\n\n  useEffect(() => {\n    activeNightIdRef.current = workspace.night?.id ?? null;\n  }, [workspace.night?.id]);\n\n  function updateOptimisticAssignments(\n    updater: (\n      current: Record<string, OptimisticTeamAssignment>,\n    ) => Record<string, OptimisticTeamAssignment>,\n  ) {\n    const next = updater(optimisticAssignmentsRef.current);\n    optimisticAssignmentsRef.current = next;\n    setOptimisticAssignments(next);\n  }\n\n  function removeOptimisticAssignment(key: string) {\n    updateOptimisticAssignments((current) => {\n      if (!current[key]) return current;\n      const next = { ...current };\n      delete next[key];\n      return next;\n    });\n  }\n\n  function markAssignmentSaving(key: string, saving: boolean) {\n    setSavingAssignmentKeys((current) => {\n      const next = new Set(current);\n      if (saving) next.add(key);\n      else next.delete(key);\n      return next;\n    });\n  }\n\n  const teamByPlayer = useMemo(() => {\n    const result = new Map<string, string>();\n    const activeNight = workspace.night;\n    for (const team of activeNight?.teams ?? []) {\n      for (const member of team.members) {\n        if (member.leaguePlayerId) {\n          result.set(member.leaguePlayerId, team.id);\n        }\n      }\n    }\n\n    if (activeNight) {\n      const prefix = `${activeNight.id}:`;\n      for (const [key, assignment] of Object.entries(optimisticAssignments)) {\n        if (!key.startsWith(prefix)) continue;\n        const leaguePlayerId = key.slice(prefix.length);\n        if (assignment.teamId) result.set(leaguePlayerId, assignment.teamId);\n        else result.delete(leaguePlayerId);\n      }\n    }\n\n    return result;\n  }, [optimisticAssignments, workspace.night]);'''
+          text = replace_once(text, old, new, 'teams state block')
+          marker = '''  if (isPending) {'''
+          addition = '''  async function flushTeamAssignment(\n    gameNightId: string,\n    leaguePlayerId: string,\n    displayName: string,\n  ) {\n    const key = teamAssignmentMutationKey(gameNightId, leaguePlayerId);\n    if (processingAssignmentKeysRef.current.has(key)) return;\n\n    processingAssignmentKeysRef.current.add(key);\n    markAssignmentSaving(key, true);\n    workspace.setErrorMessage("");\n    let failureMessage: string | null = null;\n\n    try {\n      while (true) {\n        const desired = optimisticAssignmentsRef.current[key];\n        if (!desired) break;\n\n        const response = await fetch("/api/leagues/game-nights", {\n          method: "PATCH",\n          headers: { "Content-Type": "application/json" },\n          body: JSON.stringify({\n            action: "assignTeam",\n            gameNightId,\n            leaguePlayerId,\n            teamId: desired.teamId,\n          }),\n        });\n        const result = (await response.json()) as {\n          gameNight?: GameNightSummary;\n          error?: string;\n        };\n        if (!response.ok || !result.gameNight) {\n          throw new Error(result.error ?? "Team assignment failed.");\n        }\n\n        if (activeNightIdRef.current === gameNightId) {\n          workspace.applyNight(result.gameNight);\n        }\n\n        const latest = optimisticAssignmentsRef.current[key];\n        if (!latest) break;\n        if (latest.teamId === desired.teamId) {\n          removeOptimisticAssignment(key);\n          if (activeNightIdRef.current === gameNightId) {\n            setStatusMessage(`${displayName} team assignment updated.`);\n          }\n          break;\n        }\n      }\n    } catch (error) {\n      failureMessage =\n        error instanceof Error ? error.message : "Team assignment failed.";\n      removeOptimisticAssignment(key);\n    } finally {\n      processingAssignmentKeysRef.current.delete(key);\n      markAssignmentSaving(key, false);\n\n      const stillSavingThisNight = [...processingAssignmentKeysRef.current].some(\n        (mutationKey) => mutationKey.startsWith(`${gameNightId}:`),\n      );\n      if (\n        activeNightIdRef.current === gameNightId &&\n        (failureMessage || !stillSavingThisNight)\n      ) {\n        await workspace.refreshNight();\n        if (failureMessage) workspace.setErrorMessage(failureMessage);\n      }\n    }\n  }\n\n  function queueTeamAssignment(\n    leaguePlayerId: string,\n    displayName: string,\n    teamId: string | null,\n  ) {\n    if (!workspace.night) return;\n    const gameNightId = workspace.night.id;\n    const key = teamAssignmentMutationKey(gameNightId, leaguePlayerId);\n\n    updateOptimisticAssignments((current) => ({\n      ...current,\n      [key]: { teamId },\n    }));\n    workspace.setErrorMessage("");\n    setStatusMessage("");\n    void flushTeamAssignment(gameNightId, leaguePlayerId, displayName);\n  }\n\n'''
+          text = replace_once(text, marker, addition + marker, 'teams mutation functions')
+          text = replace_once(
+              text,
+              'disabled={working || structuralLocked || checkedIn.length < 2}',
+              'disabled={working || savingAssignmentKeys.size > 0 || structuralLocked || checkedIn.length < 2}',
+              'teams rebuild pending guard',
+          )
+          old = '''                    {checkedIn.map((player) => (\n                      <label\n                        key={player.leaguePlayerId}\n                        className="flex items-center justify-between gap-3 rounded-xl border border-[var(--color-panel-border)] p-3 text-sm"\n                      >\n                        <span className="font-black">{player.displayName}</span>\n                        <select\n                          value={teamByPlayer.get(player.leaguePlayerId) ?? ""}\n                          disabled={working || structuralLocked}\n                          onChange={(event) =>\n                            void patchNight(\n                              {\n                                action: "assignTeam",\n                                gameNightId: night.id,\n                                leaguePlayerId: player.leaguePlayerId,\n                                teamId: event.target.value || null,\n                              },\n                              `${player.displayName} team assignment updated.`,\n                            )\n                          }\n                          className="rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-2"\n                        >\n                          <option value="">Unassigned</option>\n                          {night.teams.map((team) => (\n                            <option key={team.id} value={team.id}>\n                              {team.name}\n                            </option>\n                          ))}\n                        </select>\n                      </label>\n                    ))}'''
+          new = '''                    {checkedIn.map((player) => {\n                      const mutationKey = teamAssignmentMutationKey(\n                        night.id,\n                        player.leaguePlayerId,\n                      );\n                      const isSaving = savingAssignmentKeys.has(mutationKey);\n                      return (\n                        <label\n                          key={player.leaguePlayerId}\n                          aria-busy={isSaving}\n                          className="flex items-center justify-between gap-3 rounded-xl border border-[var(--color-panel-border)] p-3 text-sm"\n                        >\n                          <span className="flex flex-wrap items-center gap-2 font-black">\n                            {player.displayName}\n                            {isSaving && (\n                              <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-blue-200">\n                                Saving…\n                              </span>\n                            )}\n                          </span>\n                          <select\n                            value={teamByPlayer.get(player.leaguePlayerId) ?? ""}\n                            disabled={working || structuralLocked}\n                            onChange={(event) =>\n                              queueTeamAssignment(\n                                player.leaguePlayerId,\n                                player.displayName,\n                                event.target.value || null,\n                              )\n                            }\n                            className="rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-2"\n                          >\n                            <option value="">Unassigned</option>\n                            {night.teams.map((team) => (\n                              <option key={team.id} value={team.id}>\n                                {team.name}\n                              </option>\n                            ))}\n                          </select>\n                        </label>\n                      );\n                    })}'''
+          text = replace_once(text, old, new, 'teams manual assignment UI')
+          path.write_text(text)
+
+          # ------------------------------------------------------------------
+          # Player Directory: optimistic season roster membership toggles.
+          # ------------------------------------------------------------------
+          path = Path('app/league-roster/page.tsx')
+          text = path.read_text()
+          text = replace_once(
+              text,
+              'import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";',
+              'import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";',
+              'roster react import',
+          )
+          text = replace_once(
+              text,
+              '''function normalizeName(value: string) {\n  return value.trim().replace(/\\s+/g, " ");\n}\n\nexport default function LeagueRosterPage() {''',
+              '''function normalizeName(value: string) {\n  return value.trim().replace(/\\s+/g, " ");\n}\n\nfunction seasonMutationKey(leaguePlayerId: string, seasonId: string) {\n  return `${leaguePlayerId}:${seasonId}`;\n}\n\nexport default function LeagueRosterPage() {''',
+              'roster helper insertion',
+          )
+          text = replace_once(
+              text,
+              '''  const [workingKey, setWorkingKey] = useState<string | null>(null);\n  const [statusMessage, setStatusMessage] = useState("");\n  const [errorMessage, setErrorMessage] = useState("");''',
+              '''  const [workingKey, setWorkingKey] = useState<string | null>(null);\n  const [statusMessage, setStatusMessage] = useState("");\n  const [errorMessage, setErrorMessage] = useState("");\n  const [optimisticSeasons, setOptimisticSeasons] = useState<Record<string, boolean>>({});\n  const optimisticSeasonsRef = useRef<Record<string, boolean>>({});\n  const processingSeasonKeysRef = useRef(new Set<string>());\n  const [savingSeasonKeys, setSavingSeasonKeys] = useState<Set<string>>(() => new Set());\n  const activeLeagueIdRef = useRef("");\n\n  useEffect(() => {\n    activeLeagueIdRef.current = selectedLeagueId;\n  }, [selectedLeagueId]);''',
+              'roster state block',
+          )
+          marker = '''  async function addExistingPlayer(player: PlayerDirectoryPlayer) {'''
+          addition = '''  function updateOptimisticSeasons(\n    updater: (current: Record<string, boolean>) => Record<string, boolean>,\n  ) {\n    const next = updater(optimisticSeasonsRef.current);\n    optimisticSeasonsRef.current = next;\n    setOptimisticSeasons(next);\n  }\n\n  function removeOptimisticSeason(key: string) {\n    updateOptimisticSeasons((current) => {\n      if (!(key in current)) return current;\n      const next = { ...current };\n      delete next[key];\n      return next;\n    });\n  }\n\n  function clearOptimisticSeasons() {\n    optimisticSeasonsRef.current = {};\n    setOptimisticSeasons({});\n  }\n\n  function markSeasonSaving(key: string, saving: boolean) {\n    setSavingSeasonKeys((current) => {\n      const next = new Set(current);\n      if (saving) next.add(key);\n      else next.delete(key);\n      return next;\n    });\n  }\n\n  function applyConfirmedSeasonMembership(\n    leaguePlayerId: string,\n    seasonId: string,\n    enrolled: boolean,\n  ) {\n    setDirectory((current) =>\n      current.map((player) => ({\n        ...player,\n        memberships: player.memberships.map((membership) => {\n          if (membership.leaguePlayerId !== leaguePlayerId) return membership;\n          const seasonIds = enrolled\n            ? membership.seasonIds.includes(seasonId)\n              ? membership.seasonIds\n              : [...membership.seasonIds, seasonId]\n            : membership.seasonIds.filter((id) => id !== seasonId);\n          return { ...membership, seasonIds };\n        }),\n      })),\n    );\n  }\n\n  async function flushSeasonToggle(\n    leagueId: string,\n    playerName: string,\n    leaguePlayerId: string,\n    seasonId: string,\n    seasonName: string,\n  ) {\n    const key = seasonMutationKey(leaguePlayerId, seasonId);\n    if (processingSeasonKeysRef.current.has(key)) return;\n\n    processingSeasonKeysRef.current.add(key);\n    markSeasonSaving(key, true);\n    setErrorMessage("");\n\n    try {\n      while (true) {\n        const desired = optimisticSeasonsRef.current[key];\n        if (desired === undefined) break;\n\n        const response = await fetch("/api/leagues/roster", {\n          method: desired ? "POST" : "DELETE",\n          headers: { "Content-Type": "application/json" },\n          body: JSON.stringify({ leagueId, seasonId, leaguePlayerId }),\n        });\n        const result = (await response.json()) as SeasonRosterMutationResponse;\n        if (!response.ok || !result.player) {\n          throw new Error(result.error ?? "The season roster could not be changed.");\n        }\n\n        applyConfirmedSeasonMembership(leaguePlayerId, seasonId, desired);\n\n        const latest = optimisticSeasonsRef.current[key];\n        if (latest === undefined) break;\n        if (latest === desired) {\n          removeOptimisticSeason(key);\n          if (activeLeagueIdRef.current === leagueId) {\n            setStatusMessage(\n              `${playerName} ${desired ? "added to" : "removed from"} ${seasonName}.`,\n            );\n          }\n          break;\n        }\n      }\n    } catch (error) {\n      removeOptimisticSeason(key);\n      if (activeLeagueIdRef.current === leagueId) {\n        setErrorMessage(\n          error instanceof Error\n            ? error.message\n            : "The season roster could not be changed.",\n        );\n      }\n      void loadDirectory().catch(() => undefined);\n    } finally {\n      processingSeasonKeysRef.current.delete(key);\n      markSeasonSaving(key, false);\n    }\n  }\n\n  function queueSeasonToggle(\n    player: PlayerDirectoryPlayer,\n    membership: PlayerDirectoryLeagueMembership,\n    seasonId: string,\n    enroll: boolean,\n  ) {\n    if (!selectedLeague || !canAdmin) return;\n    const key = seasonMutationKey(membership.leaguePlayerId, seasonId);\n    const seasonName =\n      selectedLeague.seasons.find((season) => season.id === seasonId)?.name ??\n      "season";\n\n    updateOptimisticSeasons((current) => ({ ...current, [key]: enroll }));\n    setErrorMessage("");\n    setStatusMessage("");\n    void flushSeasonToggle(\n      selectedLeague.id,\n      player.displayName,\n      membership.leaguePlayerId,\n      seasonId,\n      seasonName,\n    );\n  }\n\n'''
+          text = replace_once(text, marker, addition + marker, 'roster optimistic helpers')
+          start = text.index('  async function toggleSeason(')
+          end = text.index('\n\n  return (', start)
+          text = text[:start] + text[end + 2:]
+          text = replace_once(
+              text,
+              '''                      setSelectedLeagueId(nextId);\n                      window.localStorage.setItem(ACTIVE_LEAGUE_KEY, nextId);''',
+              '''                      activeLeagueIdRef.current = nextId;\n                      clearOptimisticSeasons();\n                      setSelectedLeagueId(nextId);\n                      window.localStorage.setItem(ACTIVE_LEAGUE_KEY, nextId);''',
+              'roster league switch cleanup',
+          )
+          old = '''                                const enrolled = membership.seasonIds.includes(season.id);\n                                const seasonKey = `season:${membership.leaguePlayerId}:${season.id}`;\n                                return (\n                                  <button\n                                    key={season.id}\n                                    type="button"\n                                    disabled={!canAdmin || workingKey === seasonKey}\n                                    onClick={() => void toggleSeason(player, membership, season.id, !enrolled)}\n                                    className={`rounded-xl border p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${\n                                      enrolled\n                                        ? "border-emerald-500/50 bg-emerald-500/15"\n                                        : "border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] hover:bg-[var(--color-panel-border)]"\n                                    }`}\n                                  >\n                                    <div className="font-bold">{season.name}</div>\n                                    <div className="mt-1 text-xs opacity-75">\n                                      {workingKey === seasonKey\n                                        ? "Saving…"\n                                        : enrolled\n                                          ? "On roster · click to remove"\n                                          : "Not on roster · click to add"}\n                                    </div>\n                                  </button>\n                                );'''
+          new = '''                                const seasonKey = seasonMutationKey(\n                                  membership.leaguePlayerId,\n                                  season.id,\n                                );\n                                const enrolled =\n                                  optimisticSeasons[seasonKey] ??\n                                  membership.seasonIds.includes(season.id);\n                                const isSaving = savingSeasonKeys.has(seasonKey);\n                                return (\n                                  <button\n                                    key={season.id}\n                                    type="button"\n                                    aria-busy={isSaving}\n                                    disabled={!canAdmin}\n                                    onClick={() =>\n                                      queueSeasonToggle(\n                                        player,\n                                        membership,\n                                        season.id,\n                                        !enrolled,\n                                      )\n                                    }\n                                    className={`rounded-xl border p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${\n                                      enrolled\n                                        ? "border-emerald-500/50 bg-emerald-500/15"\n                                        : "border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] hover:bg-[var(--color-panel-border)]"\n                                    }`}\n                                  >\n                                    <div className="font-bold">{season.name}</div>\n                                    <div className="mt-1 text-xs opacity-75">\n                                      {isSaving\n                                        ? `Saving… · ${enrolled ? "on roster" : "not on roster"}`\n                                        : enrolled\n                                          ? "On roster · click to remove"\n                                          : "Not on roster · click to add"}\n                                    </div>\n                                  </button>\n                                );'''
+          text = replace_once(text, old, new, 'roster season buttons')
+          path.write_text(text)
+
+          # ------------------------------------------------------------------
+          # Board Devices: per-device saves and optimistic enable/disable.
+          # ------------------------------------------------------------------
+          path = Path('app/league-devices/page.tsx')
+          text = path.read_text()
+          text = replace_once(
+              text,
+              'import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";',
+              'import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";',
+              'devices react import',
+          )
+          text = replace_once(
+              text,
+              '''  const [pairing, setPairing] = useState<Pairing | null>(null);\n  const [working, setWorking] = useState(false);\n  const [errorMessage, setErrorMessage] = useState("");\n  const [statusMessage, setStatusMessage] = useState("");''',
+              '''  const [pairing, setPairing] = useState<Pairing | null>(null);\n  const [registering, setRegistering] = useState(false);\n  const [pairingDeviceId, setPairingDeviceId] = useState<string | null>(null);\n  const [savingDeviceIds, setSavingDeviceIds] = useState<Set<string>>(() => new Set());\n  const [errorMessage, setErrorMessage] = useState("");\n  const [statusMessage, setStatusMessage] = useState("");\n  const activeLeagueIdRef = useRef("");\n\n  useEffect(() => {\n    activeLeagueIdRef.current = leagueId;\n  }, [leagueId]);''',
+              'devices state block',
+          )
+          old = '''  async function registerDevice(event: FormEvent<HTMLFormElement>) {\n    event.preventDefault();\n    if (!leagueId) return;\n    setWorking(true);\n    setErrorMessage("");\n    setStatusMessage("");\n    setPairing(null);\n    try {\n      const response = await fetch("/api/leagues/board-devices", {\n        method: "POST",\n        headers: { "Content-Type": "application/json" },\n        body: JSON.stringify({\n          leagueId,\n          name: newName,\n          boardNumber: newBoardNumber,\n        }),\n      });\n      const result = (await response.json()) as BoardDeviceAdminResponse;\n      if (!response.ok || !result.device) {\n        throw new Error(\n          result.error ?? "Board device could not be registered.",\n        );\n      }\n      await loadDevices(leagueId);\n      await createPairing(result.device);\n    } catch (error) {\n      setErrorMessage(\n        error instanceof Error\n          ? error.message\n          : "Board device could not be registered.",\n      );\n    } finally {\n      setWorking(false);\n    }\n  }\n\n  async function patchDevice(body: object) {\n    setWorking(true);\n    setErrorMessage("");\n    setStatusMessage("");\n    try {\n      const response = await fetch("/api/leagues/board-devices", {\n        method: "PATCH",\n        headers: { "Content-Type": "application/json" },\n        body: JSON.stringify(body),\n      });\n      const result = (await response.json()) as BoardDeviceAdminResponse;\n      if (!response.ok || !result.device) {\n        throw new Error(result.error ?? "Board device update failed.");\n      }\n      setStatusMessage(`${result.device.name} updated.`);\n      await loadDevices(leagueId);\n    } catch (error) {\n      setErrorMessage(\n        error instanceof Error ? error.message : "Board device update failed.",\n      );\n    } finally {\n      setWorking(false);\n    }\n  }\n\n  async function pairExistingDevice(device: BoardDeviceSummary) {\n    setWorking(true);\n    setErrorMessage("");\n    setStatusMessage("");\n    try {\n      await createPairing(device);\n    } catch (error) {\n      setErrorMessage(\n        error instanceof Error ? error.message : "Could not create pairing code.",\n      );\n    } finally {\n      setWorking(false);\n    }\n  }'''
+          new = '''  function markDeviceSaving(deviceId: string, saving: boolean) {\n    setSavingDeviceIds((current) => {\n      const next = new Set(current);\n      if (saving) next.add(deviceId);\n      else next.delete(deviceId);\n      return next;\n    });\n  }\n\n  function replaceDevice(updated: BoardDeviceSummary) {\n    setDevices((current) =>\n      current\n        .map((device) => (device.id === updated.id ? updated : device))\n        .sort((a, b) => a.boardNumber - b.boardNumber),\n    );\n  }\n\n  async function requestDeviceUpdate(body: object) {\n    const response = await fetch("/api/leagues/board-devices", {\n      method: "PATCH",\n      headers: { "Content-Type": "application/json" },\n      body: JSON.stringify(body),\n    });\n    const result = (await response.json()) as BoardDeviceAdminResponse;\n    if (!response.ok || !result.device) {\n      throw new Error(result.error ?? "Board device update failed.");\n    }\n    return result.device;\n  }\n\n  async function registerDevice(event: FormEvent<HTMLFormElement>) {\n    event.preventDefault();\n    if (!leagueId) return;\n    const targetLeagueId = leagueId;\n    setRegistering(true);\n    setErrorMessage("");\n    setStatusMessage("");\n    setPairing(null);\n    try {\n      const response = await fetch("/api/leagues/board-devices", {\n        method: "POST",\n        headers: { "Content-Type": "application/json" },\n        body: JSON.stringify({\n          leagueId: targetLeagueId,\n          name: newName,\n          boardNumber: newBoardNumber,\n        }),\n      });\n      const result = (await response.json()) as BoardDeviceAdminResponse;\n      if (!response.ok || !result.device) {\n        throw new Error(\n          result.error ?? "Board device could not be registered.",\n        );\n      }\n      if (activeLeagueIdRef.current === targetLeagueId) {\n        setDevices((current) =>\n          [...current.filter((device) => device.id !== result.device?.id), result.device!]\n            .sort((a, b) => a.boardNumber - b.boardNumber),\n        );\n        setDrafts((current) => ({\n          ...current,\n          [result.device!.id]: {\n            name: result.device!.name,\n            boardNumber: result.device!.boardNumber,\n          },\n        }));\n        await createPairing(result.device);\n      }\n    } catch (error) {\n      setErrorMessage(\n        error instanceof Error\n          ? error.message\n          : "Board device could not be registered.",\n      );\n    } finally {\n      setRegistering(false);\n    }\n  }\n\n  async function saveDevice(device: BoardDeviceSummary, draft: DeviceDraft) {\n    const targetLeagueId = leagueId;\n    markDeviceSaving(device.id, true);\n    setErrorMessage("");\n    setStatusMessage("");\n    try {\n      const updated = await requestDeviceUpdate({\n        action: "update",\n        deviceId: device.id,\n        name: draft.name,\n        boardNumber: draft.boardNumber,\n      });\n      if (activeLeagueIdRef.current === targetLeagueId) {\n        replaceDevice(updated);\n        setDrafts((current) => ({\n          ...current,\n          [updated.id]: { name: updated.name, boardNumber: updated.boardNumber },\n        }));\n        setStatusMessage(`${updated.name} updated.`);\n      }\n    } catch (error) {\n      if (activeLeagueIdRef.current === targetLeagueId) {\n        setErrorMessage(\n          error instanceof Error ? error.message : "Board device update failed.",\n        );\n      }\n    } finally {\n      markDeviceSaving(device.id, false);\n    }\n  }\n\n  async function toggleDeviceStatus(device: BoardDeviceSummary) {\n    const targetLeagueId = leagueId;\n    const previousStatus = device.status;\n    const nextStatus = device.status === "active" ? "disabled" : "active";\n    markDeviceSaving(device.id, true);\n    setErrorMessage("");\n    setStatusMessage("");\n    setDevices((current) =>\n      current.map((item) =>\n        item.id === device.id ? { ...item, status: nextStatus } : item,\n      ),\n    );\n\n    try {\n      const updated = await requestDeviceUpdate({\n        action: "update",\n        deviceId: device.id,\n        status: nextStatus,\n      });\n      if (activeLeagueIdRef.current === targetLeagueId) {\n        replaceDevice(updated);\n        setStatusMessage(`${updated.name} ${nextStatus === "active" ? "enabled" : "disabled"}.`);\n      }\n    } catch (error) {\n      if (activeLeagueIdRef.current === targetLeagueId) {\n        setDevices((current) =>\n          current.map((item) =>\n            item.id === device.id ? { ...item, status: previousStatus } : item,\n          ),\n        );\n        setErrorMessage(\n          error instanceof Error ? error.message : "Board device update failed.",\n        );\n      }\n    } finally {\n      markDeviceSaving(device.id, false);\n    }\n  }\n\n  async function pairExistingDevice(device: BoardDeviceSummary) {\n    setPairingDeviceId(device.id);\n    setErrorMessage("");\n    setStatusMessage("");\n    try {\n      await createPairing(device);\n    } catch (error) {\n      setErrorMessage(\n        error instanceof Error ? error.message : "Could not create pairing code.",\n      );\n    } finally {\n      setPairingDeviceId(null);\n    }\n  }'''
+          text = replace_once(text, old, new, 'devices mutation functions')
+          text = replace_once(
+              text,
+              '''          onChange={(event) => {\n            setLeagueId(event.target.value);\n            setPairing(null);\n          }}''',
+              '''          disabled={registering}\n          onChange={(event) => {\n            const nextLeagueId = event.target.value;\n            activeLeagueIdRef.current = nextLeagueId;\n            setLeagueId(nextLeagueId);\n            setPairing(null);\n          }}''',
+              'devices league selector',
+          )
+          text = replace_once(
+              text,
+              '''            <button\n              disabled={working}\n              className="self-end rounded-xl bg-[var(--color-primary)] px-4 py-3 font-bold text-white disabled:opacity-50"\n            >\n              Add & Pair Device\n            </button>''',
+              '''            <button\n              disabled={registering}\n              className="self-end rounded-xl bg-[var(--color-primary)] px-4 py-3 font-bold text-white disabled:opacity-50"\n            >\n              {registering ? "Adding…" : "Add & Pair Device"}\n            </button>''',
+              'devices add button',
+          )
+          text = replace_once(
+              text,
+              '''            const draft = drafts[device.id] ?? {\n              name: device.name,\n              boardNumber: device.boardNumber,\n            };\n            return (''',
+              '''            const draft = drafts[device.id] ?? {\n              name: device.name,\n              boardNumber: device.boardNumber,\n            };\n            const isSaving = savingDeviceIds.has(device.id);\n            const isPairing = pairingDeviceId === device.id;\n            const rowBusy = isSaving || isPairing;\n            return (''',
+              'devices row state',
+          )
+          text = replace_once(
+              text,
+              '''                      <span\n                        className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase ${\n                          device.status === "active"\n                            ? "bg-emerald-500/20 text-emerald-100"\n                            : "bg-red-500/20 text-red-100"\n                        }`}\n                      >\n                        {device.status}\n                      </span>''',
+              '''                      <span\n                        className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase ${\n                          device.status === "active"\n                            ? "bg-emerald-500/20 text-emerald-100"\n                            : "bg-red-500/20 text-red-100"\n                        }`}\n                      >\n                        {device.status}\n                      </span>\n                      {rowBusy && (\n                        <span className="rounded-full bg-blue-500/10 px-2 py-1 text-[10px] font-bold uppercase text-blue-200">\n                          {isPairing ? "Pairing…" : "Saving…"}\n                        </span>\n                      )}''',
+              'devices pending badge',
+          )
+          text = replace_once(
+              text,
+              'disabled={working || device.status !== "active"}',
+              'disabled={pairingDeviceId !== null || isSaving || device.status !== "active"}',
+              'devices pair disable',
+          )
+          old = '''                    <button\n                      type="button"\n                      disabled={working}\n                      onClick={() =>\n                        void patchDevice({\n                          action: "update",\n                          deviceId: device.id,\n                          status:\n                            device.status === "active" ? "disabled" : "active",\n                        })\n                      }\n                      className="rounded-lg border border-[var(--color-panel-border)] px-3 py-2 text-sm font-bold disabled:opacity-50"\n                    >\n                      {device.status === "active" ? "Disable" : "Enable"}\n                    </button>'''
+          new = '''                    <button\n                      type="button"\n                      disabled={rowBusy}\n                      onClick={() => void toggleDeviceStatus(device)}\n                      className="rounded-lg border border-[var(--color-panel-border)] px-3 py-2 text-sm font-bold disabled:opacity-50"\n                    >\n                      {device.status === "active" ? "Disable" : "Enable"}\n                    </button>'''
+          text = replace_once(text, old, new, 'devices toggle button')
+          text = replace_once(
+              text,
+              '''                  <input\n                    value={draft.name}''',
+              '''                  <input\n                    value={draft.name}\n                    disabled={rowBusy}''',
+              'devices name disable',
+          )
+          text = replace_once(
+              text,
+              '''                    max={32}\n                    value={draft.boardNumber}''',
+              '''                    max={32}\n                    value={draft.boardNumber}\n                    disabled={rowBusy}''',
+              'devices board disable',
+          )
+          old = '''                  <button\n                    type="button"\n                    disabled={working}\n                    onClick={() =>\n                      void patchDevice({\n                        action: "update",\n                        deviceId: device.id,\n                        name: draft.name,\n                        boardNumber: draft.boardNumber,\n                      })\n                    }\n                    className="rounded-lg bg-[var(--color-panel-soft)] px-3 py-2 text-sm font-bold disabled:opacity-50"\n                  >\n                    Save\n                  </button>'''
+          new = '''                  <button\n                    type="button"\n                    disabled={rowBusy}\n                    onClick={() => void saveDevice(device, draft)}\n                    className="rounded-lg bg-[var(--color-panel-soft)] px-3 py-2 text-sm font-bold disabled:opacity-50"\n                  >\n                    {isSaving ? "Saving…" : "Save"}\n                  </button>'''
+          text = replace_once(text, old, new, 'devices save button')
+          path.write_text(text)
+          PY
+
+      - name: Synchronize alpha.11 version metadata
+        run: |
+          npm version 0.5.0-alpha.11 --no-git-tag-version
+          sed -i 's/export const APP_VERSION = ".*";/export const APP_VERSION = "0.5.0-alpha.11";/' lib/appInfo.ts
+          node -e "const p=require('./package.json'); const l=require('./package-lock.json'); if(p.version!=='0.5.0-alpha.11'||l.version!=='0.5.0-alpha.11'||l.packages[''].version!=='0.5.0-alpha.11') process.exit(1)"
+          grep -F 'APP_VERSION = "0.5.0-alpha.11"' lib/appInfo.ts
+
+      - run: npm ci
+      - run: mkdir -p data
+      - name: Verify Drizzle migrations are committed
+        run: |
+          npm run db:generate
+          git diff --exit-code -- drizzle/
+          test -z "$(git status --porcelain -- drizzle/)"
+      - run: npm run db:migrate
+      - name: Run repository and game contracts
+        run: |
+          npm run db:test
+          npm run local:test
+          npm run auth:test
+          npm run setup:test
+          npm run x01:test
+          npm run league:test
+          npm run league:roster:test
+          npm run game-night:test
+          npm run game-night:templates:test
+          npm run game-night:stats:test
+          npm run game-night:multi-board:test
+          npm run game-night:fixtures:test
+          npm run game-night:layout:test
+          npm run dummy-scoring:test
+          npm run dummy-team-balance:test
+          npm run league-match:test
+          npm run board-device:test
+          npm run board-device:offline:test
+          npm run board-device:pairing:test
+      - run: npm run lint
+      - run: npm run build
+      - run: docker build -t dart-scorekeeper-alpha11-responsive .
+
+      - name: Commit validated alpha.11 candidate
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/game-nights/teams/page.tsx app/league-roster/page.tsx app/league-devices/page.tsx package.json package-lock.json lib/appInfo.ts
+          git diff --cached --exit-code && exit 0
+          git commit -m "Prepare v0.5.0-alpha.11 candidate"
+          git push origin HEAD:internal/alpha11-responsive-mutations
