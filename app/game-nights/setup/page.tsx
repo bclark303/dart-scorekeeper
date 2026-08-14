@@ -26,6 +26,17 @@ function formatDate(value: number) {
   }).format(new Date(value));
 }
 
+function niceStatus(value: string) {
+  return value
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function finishLabel(value: GameNightSettingsSummary["finishRule"]) {
+  return value === "double" ? "Double Out" : "Straight Out";
+}
+
 export default function GameNightSetupPage() {
   const { data: session, isPending } = authClient.useSession();
   const workspace = useGameNightWorkspace(Boolean(session?.user));
@@ -36,15 +47,24 @@ export default function GameNightSetupPage() {
   const [working, setWorking] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
 
+  const storedSettings = workspace.night
+    ? resolveGameNightSettings(workspace.night.settings)
+    : DEFAULT_GAME_NIGHT_SETTINGS;
   const settingsDraft =
     settingsDraftState && settingsDraftState.nightId === workspace.night?.id
       ? settingsDraftState.settings
-      : workspace.night
-        ? resolveGameNightSettings(workspace.night.settings)
-        : DEFAULT_GAME_NIGHT_SETTINGS;
+      : storedSettings;
+  const rulesLocked = workspace.night
+    ? ["active", "completed", "cancelled"].includes(workspace.night.status)
+    : true;
+  const hasUnsavedChanges = Boolean(
+    workspace.night &&
+      !rulesLocked &&
+      JSON.stringify(settingsDraft) !== JSON.stringify(storedSettings),
+  );
 
   function updateSettingsDraft(action: SetStateAction<GameNightSettingsSummary>) {
-    if (!workspace.night) return;
+    if (!workspace.night || rulesLocked) return;
     const nextSettings =
       typeof action === "function" ? action(settingsDraft) : action;
     setSettingsDraftState({
@@ -54,7 +74,7 @@ export default function GameNightSetupPage() {
   }
 
   async function saveRules() {
-    if (!workspace.night) return;
+    if (!workspace.night || rulesLocked) return;
     setWorking(true);
     workspace.setErrorMessage("");
     setStatusMessage("");
@@ -123,8 +143,8 @@ export default function GameNightSetupPage() {
             </div>
             <h1 className="mt-1 text-3xl font-black">Setup & Rules</h1>
             <p className="mt-1 max-w-3xl text-sm text-[var(--color-text-muted)]">
-              Configure team generation, dummy policy, boards, rounds, match
-              format, and intermissions before the night goes live.
+              Review tonight&apos;s format at a glance, then change only the rules
+              that need attention before play starts.
             </p>
           </div>
           <Link
@@ -168,39 +188,100 @@ export default function GameNightSetupPage() {
             <section className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-2xl font-black">{workspace.night.name}</h2>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-[var(--color-primary)]/15 px-3 py-1 text-xs font-black uppercase tracking-wide text-[var(--color-primary)]">
+                      {niceStatus(workspace.night.status)}
+                    </span>
+                    {hasUnsavedChanges && (
+                      <span className="rounded-full bg-amber-500/15 px-3 py-1 text-xs font-black uppercase tracking-wide text-amber-200">
+                        Unsaved changes
+                      </span>
+                    )}
+                  </div>
+                  <h2 className="mt-3 text-2xl font-black">{workspace.night.name}</h2>
                   <p className="mt-1 text-sm text-[var(--color-text-muted)]">
                     {workspace.league?.name} · {workspace.night.seasonName} · {formatDate(workspace.night.scheduledAt)}
                   </p>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <GameNightScheduleButton gameNight={workspace.night} />
-                  <span className="rounded-full border border-[var(--color-panel-border)] px-3 py-1 text-xs font-black uppercase">
-                    {workspace.night.status}
-                  </span>
+                <GameNightScheduleButton gameNight={workspace.night} />
+              </div>
+
+              <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+                <div className="rounded-xl bg-[var(--color-panel-soft)] p-3">
+                  <div className="text-xs font-black uppercase tracking-wide text-[var(--color-text-muted)]">Game</div>
+                  <div className="mt-1 text-lg font-black">{settingsDraft.startingScore}</div>
+                </div>
+                <div className="rounded-xl bg-[var(--color-panel-soft)] p-3">
+                  <div className="text-xs font-black uppercase tracking-wide text-[var(--color-text-muted)]">Finish</div>
+                  <div className="mt-1 text-lg font-black">{finishLabel(settingsDraft.finishRule)}</div>
+                </div>
+                <div className="rounded-xl bg-[var(--color-panel-soft)] p-3">
+                  <div className="text-xs font-black uppercase tracking-wide text-[var(--color-text-muted)]">Match</div>
+                  <div className="mt-1 text-lg font-black">Best of {settingsDraft.legsPerMatch}</div>
+                </div>
+                <div className="rounded-xl bg-[var(--color-panel-soft)] p-3">
+                  <div className="text-xs font-black uppercase tracking-wide text-[var(--color-text-muted)]">Rounds</div>
+                  <div className="mt-1 text-lg font-black">{settingsDraft.roundCount}</div>
+                </div>
+                <div className="rounded-xl bg-[var(--color-panel-soft)] p-3">
+                  <div className="text-xs font-black uppercase tracking-wide text-[var(--color-text-muted)]">Teams</div>
+                  <div className="mt-1 text-lg font-black">
+                    {settingsDraft.teamCountMode === "automatic" ? "Auto" : settingsDraft.targetTeamCount}
+                  </div>
+                </div>
+                <div className="rounded-xl bg-[var(--color-panel-soft)] p-3">
+                  <div className="text-xs font-black uppercase tracking-wide text-[var(--color-text-muted)]">Boards</div>
+                  <div className="mt-1 text-lg font-black">
+                    {settingsDraft.boardCountMode === "automatic" ? "Auto" : settingsDraft.boardCount}
+                  </div>
                 </div>
               </div>
+
+              {rulesLocked ? (
+                <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
+                  Rules are locked because this Game Night is already active or closed.
+                  You can still review the saved format below.
+                </div>
+              ) : hasUnsavedChanges ? (
+                <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
+                  You have unsaved rule changes. Use <strong>Save Rules</strong> at
+                  the bottom of the editor before moving on.
+                </div>
+              ) : (
+                <div className="mt-4 text-sm text-[var(--color-text-muted)]">
+                  These are the currently saved rules for this Game Night.
+                </div>
+              )}
             </section>
 
-            <GameNightRulesPanel
-              settings={settingsDraft}
-              setSettings={updateSettingsDraft}
-              disabled={working}
-              onSave={() => void saveRules()}
-            />
+            <fieldset
+              disabled={rulesLocked || working}
+              className="min-w-0 border-0 p-0 disabled:opacity-75"
+            >
+              <GameNightRulesPanel
+                settings={settingsDraft}
+                setSettings={updateSettingsDraft}
+                disabled={rulesLocked || working}
+                onSave={() => void saveRules()}
+              />
+            </fieldset>
 
             <section className="flex flex-col gap-3 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className="text-xs font-black uppercase tracking-wide text-[var(--color-text-muted)]">
-                  Next step
+                  {rulesLocked ? "Return to operations" : "Next step"}
                 </div>
-                <div className="mt-1 font-black">Check players in for this night</div>
+                <div className="mt-1 font-black">
+                  {rulesLocked
+                    ? "Run this Game Night from the Control Room"
+                    : "Check players in for this night"}
+                </div>
               </div>
               <Link
-                href="/game-nights/check-in"
+                href={rulesLocked ? "/game-nights/control" : "/game-nights/check-in"}
                 className="rounded-xl bg-[var(--color-primary)] px-5 py-3 text-center font-black text-white"
               >
-                Open Check-in →
+                {rulesLocked ? "Open Control Room →" : "Open Check-in →"}
               </Link>
             </section>
           </>
