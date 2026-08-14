@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 const sections = [
   ["/game-nights", "Hub"],
-  ["/game-nights/control", "Control Room"],
+  ["/game-nights/control", "Game Night Control"],
   ["/game-nights/setup", "Setup & Rules"],
   ["/game-nights/check-in", "Check-in"],
   ["/game-nights/teams", "Teams"],
