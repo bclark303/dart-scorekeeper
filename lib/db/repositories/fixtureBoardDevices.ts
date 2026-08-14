@@ -30,20 +30,16 @@ import {
   undoLastLeagueMatchTurnAfterAuthorization,
 } from "./leagueMatches";
 
-export async function getBoardDeviceAssignment(
-  device: BoardDeviceSummary,
-): Promise<BoardDeviceAssignmentSummary | null> {
-  // Registered boards poll this read path every few seconds, which makes it a
-  // safe idempotent wake-up point for delayed automatic round activation.
-  await activateAutomaticRoundsForLeague(device.leagueId);
-
-  const rows = await getDatabase()
+async function assignmentRows(physicalBoardId: string) {
+  return getDatabase()
     .select({
+      leagueId: seasons.leagueId,
       gameNightId: gameNights.id,
       gameNightName: gameNights.name,
       gameNightStatus: gameNights.status,
       scheduledAt: gameNights.scheduledAt,
       boardId: gameNightBoards.id,
+      physicalBoardId: gameNightBoards.physicalBoardId,
       boardName: gameNightBoards.name,
       boardNumber: gameNightBoards.boardNumber,
       roundNumber: gameNightBoardPairings.roundNumber,
@@ -60,7 +56,7 @@ export async function getBoardDeviceAssignment(
       gameNightBoards,
       and(
         eq(gameNightBoards.gameNightId, gameNights.id),
-        eq(gameNightBoards.boardNumber, device.boardNumber),
+        eq(gameNightBoards.physicalBoardId, physicalBoardId),
       ),
     )
     .leftJoin(
@@ -75,16 +71,27 @@ export async function getBoardDeviceAssignment(
       leagueMatchSessions,
       eq(leagueMatchSessions.pairingId, gameNightBoardPairings.id),
     )
-    .where(
-      and(
-        eq(seasons.leagueId, device.leagueId),
-        inArray(gameNights.status, ["ready", "active"]),
-      ),
-    )
+    .where(inArray(gameNights.status, ["ready", "active"]))
     .orderBy(
       desc(gameNights.scheduledAt),
       desc(gameNightBoardPairings.roundNumber),
     );
+}
+
+export async function getBoardDeviceAssignment(
+  device: BoardDeviceSummary,
+): Promise<BoardDeviceAssignmentSummary | null> {
+  if (!device.physicalBoardId) return null;
+
+  // A device can serve any league using this physical board. Polling remains
+  // an idempotent wake-up point for delayed automatic rounds, but the league is
+  // now derived from board allocations rather than device ownership.
+  let rows = await assignmentRows(device.physicalBoardId);
+  const leagueIds = [...new Set(rows.map((row) => row.leagueId))];
+  for (const leagueId of leagueIds) {
+    await activateAutomaticRoundsForLeague(leagueId);
+  }
+  if (leagueIds.length) rows = await assignmentRows(device.physicalBoardId);
 
   if (!rows.length) return null;
   const activeRows = rows.filter((item) => item.gameNightStatus === "active");
@@ -126,6 +133,7 @@ export async function getBoardDeviceAssignment(
     gameNightStatus: row.gameNightStatus,
     scheduledAt: row.scheduledAt,
     boardId: row.boardId,
+    physicalBoardId: row.physicalBoardId ?? device.physicalBoardId,
     boardName: row.boardName,
     boardNumber: row.boardNumber,
     roundNumber: row.roundNumber ?? undefined,
@@ -141,12 +149,12 @@ async function requireAssignedMatch(deviceKey: string, matchId: string) {
   const assignment = await getBoardDeviceAssignment(device);
   if (!assignment?.matchSessionId) {
     throw new BoardDeviceAssignmentError(
-      "This board does not currently have a match assignment.",
+      "This physical board does not currently have a match assignment.",
     );
   }
   if (assignment.matchSessionId !== matchId) {
     throw new BoardDeviceAssignmentError(
-      "That match is not assigned to this board in the current round state.",
+      "That match is not assigned to this physical board in the current round state.",
     );
   }
   return { device, assignment };
