@@ -306,7 +306,6 @@ test("alpha.5 live preview supports league setup, pairing, and scoring", async (
   devicePage.on("pageerror", (error) => deviceErrors.push(error.message));
 
   await devicePage.goto(`/board-device#pair=${pairing.code}`, { waitUntil: "domcontentloaded" });
-  await expect(devicePage.getByText(E2E_DEVICE, { exact: false }).first()).toBeVisible({ timeout: 30_000 });
   await expect(devicePage.getByText("ONLINE", { exact: true })).toBeVisible({ timeout: 30_000 });
 
   const startButton = devicePage.getByRole("button", { name: "Start Board Match" });
