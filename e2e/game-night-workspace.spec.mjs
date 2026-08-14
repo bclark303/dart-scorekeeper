@@ -25,8 +25,8 @@ test("Game Night workspace is split into focused screens", async ({ page }) => {
   await expect(page.getByText("Signed in", { exact: true })).toBeVisible({ timeout: 30_000 });
 
   const routes = [
-    ["/game-nights", "Manage this Game Night"],
-    ["/game-nights/control", "Game Night Control"],
+    ["/game-nights", "Game Night Hub"],
+    ["/game-nights/control", "Control Room"],
     ["/game-nights/setup", "Setup & Rules"],
     ["/game-nights/check-in", "Player Check-in"],
     ["/game-nights/teams", "Teams"],
@@ -47,8 +47,13 @@ test("Game Night workspace is split into focused screens", async ({ page }) => {
   await expect(selectedNight).not.toHaveValue("");
   const selectedNightValue = await selectedNight.inputValue();
 
-  await page.getByRole("link", { name: /Open Teams/i }).first().click();
+  await page.getByRole("link", { name: /Open Control Room/i }).click();
+  await expect(page).toHaveURL(/\/game-nights\/control/);
+
+  const gameNightNav = page.getByRole("navigation", { name: "Game Night sections" });
+  await gameNightNav.getByRole("link", { name: "Teams", exact: true }).click();
   await expect(page).toHaveURL(/\/game-nights\/teams/);
+
   const teamsNightSelector = page.getByLabel("Game Night", { exact: true });
   await expect(teamsNightSelector).toHaveValue(selectedNightValue);
 
