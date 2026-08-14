@@ -1,0 +1,25 @@
+name: Alpha 12 hardware contract
+
+"on":
+  push:
+    branches:
+      - internal/alpha12-venue-board-device-decoupling
+
+jobs:
+  verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    env:
+      BETTER_AUTH_URL: http://127.0.0.1:3000
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: internal/alpha12-venue-board-device-decoupling
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: mkdir -p data
+      - run: npm run db:migrate
+      - run: npm run venue-hardware:test
