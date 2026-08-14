@@ -1,0 +1,138 @@
+name: Alpha 10 check-in reconciliation candidate
+
+on:
+  push:
+    branches:
+      - internal/alpha8-checkin-optimistic
+
+permissions:
+  contents: write
+
+jobs:
+  prepare-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DB_PROVIDER: libsql
+      DATABASE_URL: file:./data/ci.db
+      DATABASE_AUTH_TOKEN: ""
+      BETTER_AUTH_SECRET: ci-only-dart-scorekeeper-auth-secret-123456789
+      BETTER_AUTH_URL: http://localhost:3000
+      NEXT_TELEMETRY_DISABLED: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Add final attendance reconciliation
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('app/game-nights/check-in/page.tsx')
+          text = path.read_text()
+
+          old_start = '''    workspace.setErrorMessage("");
+
+    try {'''
+          new_start = '''    workspace.setErrorMessage("");
+    let failureMessage: string | null = null;
+
+    try {'''
+          if old_start not in text:
+              raise SystemExit('Could not find optimistic mutation start block')
+          text = text.replace(old_start, new_start, 1)
+
+          old_end = '''    } catch (error) {
+      removeOptimisticAttendance(key);
+      if (activeNightIdRef.current === gameNightId) {
+        workspace.setErrorMessage(
+          error instanceof Error ? error.message : "Attendance update failed.",
+        );
+        void workspace.refreshNight();
+      }
+    } finally {
+      processingMutationKeysRef.current.delete(key);
+      markMutationSaving(key, false);
+    }'''
+          new_end = '''    } catch (error) {
+      failureMessage =
+        error instanceof Error ? error.message : "Attendance update failed.";
+      removeOptimisticAttendance(key);
+    } finally {
+      processingMutationKeysRef.current.delete(key);
+      markMutationSaving(key, false);
+
+      // Concurrent attendance requests can return full Game Night snapshots in a
+      // different order than they were started. Once a burst for this night has
+      // drained, reconcile once with the authoritative server state. The optimistic
+      // UI remains instant while this background refresh prevents a stale response
+      // from temporarily winning after several rapid check-ins/dues changes.
+      const stillSavingThisNight = [...processingMutationKeysRef.current].some(
+        (mutationKey) => mutationKey.startsWith(`${gameNightId}:`),
+      );
+      if (
+        activeNightIdRef.current === gameNightId &&
+        (failureMessage || !stillSavingThisNight)
+      ) {
+        await workspace.refreshNight();
+        if (failureMessage) workspace.setErrorMessage(failureMessage);
+      }
+    }'''
+          if old_end not in text:
+              raise SystemExit('Could not find optimistic mutation completion block')
+          text = text.replace(old_end, new_end, 1)
+          path.write_text(text)
+          PY
+
+      - name: Synchronize alpha.10 version metadata
+        run: |
+          npm version 0.5.0-alpha.10 --no-git-tag-version
+          sed -i 's/export const APP_VERSION = ".*";/export const APP_VERSION = "0.5.0-alpha.10";/' lib/appInfo.ts
+          node -e "const p=require('./package.json'); const l=require('./package-lock.json'); if(p.version!=='0.5.0-alpha.10'||l.version!=='0.5.0-alpha.10'||l.packages[''].version!=='0.5.0-alpha.10') process.exit(1)"
+          grep -F 'APP_VERSION = "0.5.0-alpha.10"' lib/appInfo.ts
+
+      - run: npm ci
+      - run: mkdir -p data
+      - name: Verify Drizzle migrations are committed
+        run: |
+          npm run db:generate
+          git diff --exit-code -- drizzle/
+          test -z "$(git status --porcelain -- drizzle/)"
+      - run: npm run db:migrate
+      - name: Run repository and game contracts
+        run: |
+          npm run db:test
+          npm run local:test
+          npm run auth:test
+          npm run setup:test
+          npm run x01:test
+          npm run league:test
+          npm run league:roster:test
+          npm run game-night:test
+          npm run game-night:templates:test
+          npm run game-night:stats:test
+          npm run game-night:multi-board:test
+          npm run game-night:fixtures:test
+          npm run game-night:layout:test
+          npm run dummy-scoring:test
+          npm run dummy-team-balance:test
+          npm run league-match:test
+          npm run board-device:test
+          npm run board-device:offline:test
+          npm run board-device:pairing:test
+      - run: npm run lint
+      - run: npm run build
+      - run: docker build -t dart-scorekeeper-alpha10-checkin-reconcile .
+
+      - name: Commit validated alpha.10 candidate
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/game-nights/check-in/page.tsx package.json package-lock.json lib/appInfo.ts
+          git diff --cached --exit-code && exit 0
+          git commit -m "Prepare v0.5.0-alpha.10 candidate"
+          git push origin HEAD:internal/alpha8-checkin-optimistic
