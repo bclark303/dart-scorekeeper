@@ -67,7 +67,8 @@ FROM (
   UNION
   SELECT DISTINCT `board_number` AS board_number FROM `game_night_boards`
 )
-WHERE EXISTS (SELECT 1 FROM `venues` WHERE `id` = 'venue_default');
+WHERE board_number IS NOT NULL
+  AND EXISTS (SELECT 1 FROM `venues` WHERE `id` = 'venue_default');
 --> statement-breakpoint
 ALTER TABLE `game_nights` ADD `venue_id` text REFERENCES `venues`(`id`) ON DELETE set null;
 --> statement-breakpoint
@@ -88,6 +89,8 @@ CREATE INDEX `game_night_boards_physical_board_idx` ON `game_night_boards` (`phy
 --> statement-breakpoint
 CREATE TABLE `__new_league_board_devices` (
   `id` text PRIMARY KEY NOT NULL,
+  `league_id` text,
+  `board_number` integer,
   `venue_id` text NOT NULL,
   `physical_board_id` text,
   `name` text NOT NULL,
@@ -97,17 +100,21 @@ CREATE TABLE `__new_league_board_devices` (
   `last_seen_at` integer,
   `created_at` integer NOT NULL,
   `updated_at` integer NOT NULL,
+  FOREIGN KEY (`league_id`) REFERENCES `leagues`(`id`) ON UPDATE no action ON DELETE set null,
   FOREIGN KEY (`venue_id`) REFERENCES `venues`(`id`) ON UPDATE no action ON DELETE cascade,
   FOREIGN KEY (`physical_board_id`) REFERENCES `physical_boards`(`id`) ON UPDATE no action ON DELETE set null
 );
 --> statement-breakpoint
 INSERT INTO `__new_league_board_devices`
-  (`id`,`venue_id`,`physical_board_id`,`name`,`status`,`credential_hash`,`created_by_user_id`,`last_seen_at`,`created_at`,`updated_at`)
+  (`id`,`league_id`,`board_number`,`venue_id`,`physical_board_id`,`name`,`status`,`credential_hash`,`created_by_user_id`,`last_seen_at`,`created_at`,`updated_at`)
 SELECT
   `id`,
+  `league_id`,
+  `board_number`,
   'venue_default',
   CASE
-    WHEN ROW_NUMBER() OVER (PARTITION BY `board_number` ORDER BY `created_at`, `id`) = 1
+    WHEN `board_number` IS NOT NULL
+      AND ROW_NUMBER() OVER (PARTITION BY `board_number` ORDER BY `created_at`, `id`) = 1
     THEN 'venue_default-board-' || `board_number`
     ELSE NULL
   END,
