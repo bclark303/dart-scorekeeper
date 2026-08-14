@@ -219,29 +219,75 @@ async function ensureGameNight(page, league, season) {
   return night;
 }
 
-async function ensureDevice(page, league) {
-  let listed = await requireOk(
-    await requestJson(page, `/api/leagues/board-devices?leagueId=${encodeURIComponent(league.id)}`),
-    "list board devices",
+/**
+ * Alpha.12 separates scoring-device identity from board identity. The durable
+ * E2E scorer may legitimately migrate as a spare, so explicitly attach it to
+ * the physical board used by the active E2E Game Night before pairing it.
+ */
+async function ensureDevice(page, league, night) {
+  expect(night.venueId, "E2E Game Night should have a venue").toBeTruthy();
+  const physicalBoardId = night.boards[0]?.physicalBoardId;
+  expect(physicalBoardId, "E2E Game Night should use a physical board").toBeTruthy();
+
+  let hardware = await requireOk(
+    await requestJson(
+      page,
+      `/api/leagues/board-devices?leagueId=${encodeURIComponent(league.id)}&venueId=${encodeURIComponent(night.venueId)}`,
+    ),
+    "list venue hardware",
     [200],
   );
-  let device = listed.devices.find((item) => item.name === E2E_DEVICE) ?? null;
+  const physicalBoard = hardware.boards?.find((item) => item.id === physicalBoardId) ?? null;
+  expect(physicalBoard, "E2E physical board should be present in Venue Hardware").toBeTruthy();
+
+  let device = hardware.devices?.find((item) => item.name === E2E_DEVICE) ?? null;
   if (!device) {
     const created = await requireOk(
       await requestJson(page, "/api/leagues/board-devices", {
         method: "POST",
-        body: { leagueId: league.id, name: E2E_DEVICE, boardNumber: 1 },
+        body: {
+          action: "device",
+          leagueId: league.id,
+          venueId: night.venueId,
+          name: E2E_DEVICE,
+          physicalBoardId,
+        },
       }),
-      "register E2E board device",
+      "register E2E scoring device",
       [201],
     );
     device = created.device;
+  } else if (device.physicalBoardId !== physicalBoardId) {
+    const updated = await requireOk(
+      await requestJson(page, "/api/leagues/board-devices", {
+        method: "PATCH",
+        body: {
+          action: "update",
+          deviceId: device.id,
+          physicalBoardId,
+        },
+      }),
+      "assign E2E scoring device to physical board",
+      [200],
+    );
+    device = updated.device;
   }
-  expect(device.boardNumber).toBe(1);
+
+  hardware = await requireOk(
+    await requestJson(
+      page,
+      `/api/leagues/board-devices?leagueId=${encodeURIComponent(league.id)}&venueId=${encodeURIComponent(night.venueId)}`,
+    ),
+    "verify venue hardware assignment",
+    [200],
+  );
+  device = hardware.devices?.find((item) => item.id === device.id) ?? device;
+  expect(device.physicalBoardId).toBe(physicalBoardId);
+  expect(device.boardNumber).toBe(physicalBoard.boardNumber);
   return device;
 }
 
-test("alpha.5 live preview supports league setup, pairing, and scoring", async ({ page, browser }) => {
+test("alpha.12 live preview supports venue hardware, pairing, and scoring", async ({ page, browser }) => {
   const pageErrors = [];
   const serverErrors = [];
 
@@ -267,8 +313,8 @@ test("alpha.5 live preview supports league setup, pairing, and scoring", async (
   const { league, season } = await ensureLeague(page);
   await ensurePlayers(page, league, season);
   const night = await ensureGameNight(page, league, season);
-  const device = await ensureDevice(page, league);
-  console.log(`LIVE_E2E league=${league.id} season=${season.id} night=${night.id} device=${device.id}`);
+  const device = await ensureDevice(page, league, night);
+  console.log(`LIVE_E2E league=${league.id} season=${season.id} night=${night.id} device=${device.id} physicalBoard=${device.physicalBoardId}`);
 
   const routes = [
     ["/league-play", "League Play"],
@@ -276,7 +322,7 @@ test("alpha.5 live preview supports league setup, pairing, and scoring", async (
     ["/game-nights/check-in", "Player Check-in"],
     ["/game-nights/control", "Game Night Control"],
     ["/game-nights/fixtures", "Fixture & Round Control"],
-    ["/league-devices", "Board Devices"],
+    ["/league-devices", "Venue Hardware"],
   ];
   for (const [path, marker] of routes) {
     const response = await page.goto(path, { waitUntil: "domcontentloaded" });
