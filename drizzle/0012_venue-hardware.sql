@@ -44,9 +44,10 @@ CREATE INDEX `physical_boards_venue_idx` ON `physical_boards` (`venue_id`);
 CREATE INDEX `physical_boards_status_idx` ON `physical_boards` (`status`);
 --> statement-breakpoint
 INSERT INTO `venues` (`id`,`name`,`status`,`created_by_user_id`,`created_at`,`updated_at`)
-SELECT 'venue_default', 'Default Venue', 'active', MIN(`created_by_user_id`), MIN(`created_at`), MAX(`updated_at`)
+SELECT 'venue_default', 'Default Venue', 'active', `created_by_user_id`, `created_at`, `updated_at`
 FROM `leagues`
-HAVING COUNT(*) > 0;
+ORDER BY `created_at`, `id`
+LIMIT 1;
 --> statement-breakpoint
 INSERT INTO `league_venues` (`id`,`league_id`,`venue_id`,`created_at`)
 SELECT 'league-venue-' || `id`, `id`, 'venue_default', `created_at`
@@ -108,24 +109,30 @@ CREATE TABLE `__new_league_board_devices` (
 INSERT INTO `__new_league_board_devices`
   (`id`,`league_id`,`board_number`,`venue_id`,`physical_board_id`,`name`,`status`,`credential_hash`,`created_by_user_id`,`last_seen_at`,`created_at`,`updated_at`)
 SELECT
-  `id`,
-  `league_id`,
-  `board_number`,
+  `device`.`id`,
+  `device`.`league_id`,
+  `device`.`board_number`,
   'venue_default',
   CASE
-    WHEN `board_number` IS NOT NULL
-      AND ROW_NUMBER() OVER (PARTITION BY `board_number` ORDER BY `created_at`, `id`) = 1
-    THEN 'venue_default-board-' || `board_number`
+    WHEN `device`.`board_number` IS NOT NULL
+      AND `device`.`id` = (
+        SELECT `first_device`.`id`
+        FROM `league_board_devices` AS `first_device`
+        WHERE `first_device`.`board_number` = `device`.`board_number`
+        ORDER BY `first_device`.`created_at`, `first_device`.`id`
+        LIMIT 1
+      )
+    THEN 'venue_default-board-' || `device`.`board_number`
     ELSE NULL
   END,
-  `name`,
-  `status`,
-  `credential_hash`,
-  `created_by_user_id`,
-  `last_seen_at`,
-  `created_at`,
-  `updated_at`
-FROM `league_board_devices`;
+  `device`.`name`,
+  `device`.`status`,
+  `device`.`credential_hash`,
+  `device`.`created_by_user_id`,
+  `device`.`last_seen_at`,
+  `device`.`created_at`,
+  `device`.`updated_at`
+FROM `league_board_devices` AS `device`;
 --> statement-breakpoint
 DROP TABLE `league_board_devices`;
 --> statement-breakpoint
