@@ -17,6 +17,7 @@ export default defineConfig({
   use: {
     baseURL,
     actionTimeout: 15_000,
+    launchOptions: { slowMo: 200 },
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
