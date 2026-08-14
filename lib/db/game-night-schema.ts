@@ -2,8 +2,9 @@ import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqli
 
 import { leaguePlayers } from "./league-schema";
 import { seasons } from "./schema";
+import { physicalBoards, venues } from "./venue-schema";
 
-/** A scheduled league event inside one season. */
+/** A scheduled league event inside one season and one venue. */
 export const gameNights = sqliteTable(
   "game_nights",
   {
@@ -11,6 +12,7 @@ export const gameNights = sqliteTable(
     seasonId: text("season_id")
       .notNull()
       .references(() => seasons.id, { onDelete: "cascade" }),
+    venueId: text("venue_id").references(() => venues.id, { onDelete: "set null" }),
     name: text("name").notNull(),
     scheduledAt: integer("scheduled_at").notNull(),
     status: text("status").notNull(),
@@ -20,6 +22,7 @@ export const gameNights = sqliteTable(
   },
   (table) => [
     index("game_nights_season_id_idx").on(table.seasonId),
+    index("game_nights_venue_id_idx").on(table.venueId),
     index("game_nights_scheduled_at_idx").on(table.scheduledAt),
     index("game_nights_status_idx").on(table.status),
   ],
@@ -131,7 +134,7 @@ export const gameNightTeamMembers = sqliteTable(
   ],
 );
 
-/** Physical board made available to one game night. */
+/** A Game Night board slot allocated to one permanent physical board. */
 export const gameNightBoards = sqliteTable(
   "game_night_boards",
   {
@@ -139,6 +142,9 @@ export const gameNightBoards = sqliteTable(
     gameNightId: text("game_night_id")
       .notNull()
       .references(() => gameNights.id, { onDelete: "cascade" }),
+    physicalBoardId: text("physical_board_id").references(() => physicalBoards.id, {
+      onDelete: "set null",
+    }),
     boardNumber: integer("board_number").notNull(),
     name: text("name").notNull(),
     createdAt: integer("created_at").notNull(),
@@ -148,7 +154,12 @@ export const gameNightBoards = sqliteTable(
       table.gameNightId,
       table.boardNumber,
     ),
+    uniqueIndex("game_night_boards_night_physical_unique").on(
+      table.gameNightId,
+      table.physicalBoardId,
+    ),
     index("game_night_boards_game_night_id_idx").on(table.gameNightId),
+    index("game_night_boards_physical_board_idx").on(table.physicalBoardId),
   ],
 );
 
