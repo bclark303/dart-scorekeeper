@@ -210,7 +210,7 @@ test("league creation, player reuse, check-in, device pairing, game control and 
 
   await page.goto("/game-nights/check-in");
   await selectFirstLeagueDropdown(page, leagueA);
-  await page.getByLabel("Game Night").selectOption({ label: new RegExp(nightName) });
+  await page.getByLabel("Game Night").selectOption(night.id);
   await checkInPlayer(page, playerJohn, "paid");
   await checkInPlayer(page, playerMary, "paid");
   await expect(page.getByText("2 / 2 checked in", { exact: true })).toBeVisible();
