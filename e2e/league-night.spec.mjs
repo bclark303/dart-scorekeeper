@@ -186,7 +186,7 @@ test("league creation, player reuse, check-in, device pairing, game control and 
   await page.getByLabel("Search all players").fill(playerJohn);
   const johnCard = page.locator("article").filter({ hasText: playerJohn }).first();
   await expect(johnCard.getByText(leagueA, { exact: true })).toBeVisible();
-  await expect(johnCard.getByText(leagueB, { exact: true })).toBeVisible();
+  await expect(johnCard.getByText(leagueB, { exact: true }).first()).toBeVisible();
 
   await page.goto("/game-nights");
   await page.getByLabel("League").selectOption({ label: leagueA });
