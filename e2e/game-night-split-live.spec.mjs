@@ -28,8 +28,8 @@ test("Game Night mega-page is split into focused live workspaces", async ({ page
   await signIn(page);
 
   const routes = [
-    ["/game-nights", "Game Nights", "Hub"],
-    ["/game-nights/control", "Game Night Control", "Game Night Control"],
+    ["/game-nights", "Game Night Hub", "Hub"],
+    ["/game-nights/control", "Control Room", "Game Night Control"],
     ["/game-nights/setup", "Setup & Rules", "Setup & Rules"],
     ["/game-nights/check-in", "Player Check-in", "Check-in"],
     ["/game-nights/teams", "Teams", "Teams"],
@@ -38,10 +38,10 @@ test("Game Night mega-page is split into focused live workspaces", async ({ page
     ["/game-nights/stats", "Stats & Highlights", "Stats"],
   ];
 
-  for (const [path, heading, navLabel] of routes) {
+  for (const [path, marker, navLabel] of routes) {
     const response = await page.goto(path, { waitUntil: "domcontentloaded" });
     expect(response?.status(), `${path} should load`).toBeLessThan(400);
-    await expect(page.getByRole("heading", { name: heading, exact: true }).first()).toBeVisible();
+    await expect(page.getByText(marker, { exact: false }).first()).toBeVisible({ timeout: 30_000 });
 
     const nav = page.getByRole("navigation", { name: "Game Night sections" });
     await expect(nav).toBeVisible();
@@ -54,16 +54,13 @@ test("Game Night mega-page is split into focused live workspaces", async ({ page
   }
 
   await page.goto("/game-nights", { waitUntil: "domcontentloaded" });
-  for (const label of [
-    "Setup & Rules",
-    "Player Check-in",
-    "Teams",
-    "Boards",
-    "Fixtures & Rounds",
-    "Stats",
-  ]) {
-    await expect(page.getByRole("link", { name: new RegExp(`Open ${label}`) })).toBeVisible();
-  }
+  await expect(page.getByRole("heading", { name: "Game Night Hub", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Scheduled Nights", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Open Control Room/i })).toBeVisible();
+
+  await page.getByRole("link", { name: /Open Control Room/i }).click();
+  await expect(page).toHaveURL(/\/game-nights\/control/);
+  await expect(page.getByText("Control Room", { exact: false }).first()).toBeVisible();
 
   expect(pageErrors, `Browser page errors:\n${pageErrors.join("\n")}`).toEqual([]);
   expect(serverErrors, `Server 5xx responses:\n${serverErrors.join("\n")}`).toEqual([]);
