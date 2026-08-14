@@ -38,7 +38,7 @@ test("alpha.5 live preview supports the authenticated league workflow", async ({
 
   const accountResponse = await page.goto("/account", { waitUntil: "domcontentloaded" });
   expect(accountResponse?.status()).toBeLessThan(400);
-  await expect(page.getByRole("heading", { name: "Account" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Account", exact: true })).toBeVisible();
 
   const form = page.locator("form").first();
   await form.getByLabel("Email").fill(email);
