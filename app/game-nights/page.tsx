@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 
 import { GameNightScheduleButton } from "@/components/GameNightScheduleButton";
 import { GameNightWorkspacePicker } from "@/components/GameNightWorkspacePicker";
@@ -36,17 +36,10 @@ export default function GameNightsPage() {
   const [working, setWorking] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
 
-  useEffect(() => {
-    if (!workspace.league) {
-      setNewNightSeasonId("");
-      return;
-    }
-    setNewNightSeasonId((current) =>
-      current && workspace.league?.seasons.some((season) => season.id === current)
-        ? current
-        : workspace.league?.seasons[0]?.id ?? "",
-    );
-  }, [workspace.league]);
+  const selectedSeasonId =
+    workspace.league?.seasons.some((season) => season.id === newNightSeasonId)
+      ? newNightSeasonId
+      : workspace.league?.seasons[0]?.id ?? "";
 
   const checkedInCount =
     workspace.night?.attendance.filter((player) => player.status === "checked_in")
@@ -67,7 +60,7 @@ export default function GameNightsPage() {
 
   async function createGameNight(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!workspace.leagueId || !newNightSeasonId || !newNightDate) return;
+    if (!workspace.leagueId || !selectedSeasonId || !newNightDate) return;
 
     setWorking(true);
     workspace.setErrorMessage("");
@@ -78,7 +71,7 @@ export default function GameNightsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           leagueId: workspace.leagueId,
-          seasonId: newNightSeasonId,
+          seasonId: selectedSeasonId,
           name: newNightName,
           scheduledAt: new Date(newNightDate).getTime(),
           settings: DEFAULT_GAME_NIGHT_SETTINGS,
@@ -236,6 +229,7 @@ export default function GameNightsPage() {
           nightId={workspace.nightId}
           onLeagueChange={(leagueId) => {
             workspace.selectLeague(leagueId);
+            setNewNightSeasonId("");
             setStatusMessage("");
           }}
           onNightChange={(nightId) => {
@@ -262,7 +256,7 @@ export default function GameNightsPage() {
                 placeholder="League Night"
               />
               <select
-                value={newNightSeasonId}
+                value={selectedSeasonId}
                 onChange={(event) => setNewNightSeasonId(event.target.value)}
                 required
                 className="rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] px-3 py-3"
