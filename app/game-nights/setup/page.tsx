@@ -37,7 +37,7 @@ export default function GameNightSetupPage() {
   const [statusMessage, setStatusMessage] = useState("");
 
   const settingsDraft =
-    settingsDraftState?.nightId === workspace.night?.id
+    settingsDraftState && settingsDraftState.nightId === workspace.night?.id
       ? settingsDraftState.settings
       : workspace.night
         ? resolveGameNightSettings(workspace.night.settings)
