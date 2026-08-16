@@ -1,0 +1,43 @@
+name: Alpha 15 validation
+
+"on":
+  push:
+    branches:
+      - internal/alpha15-operator-ux
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Prepare database
+        run: npm run db:migrate
+
+      - name: Readiness contract
+        run: npm run game-night:readiness:test
+
+      - name: Game Night regression contracts
+        run: |
+          npm run game-night:test
+          npm run venue-hardware:test
+          npm run board-device:test
+          npm run game-night:fixtures:test
+          npm run game-night:board-ops:test
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Production build
+        run: npm run build
