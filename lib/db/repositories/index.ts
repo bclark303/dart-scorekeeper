@@ -106,6 +106,7 @@ export {
 } from "./venueHardware";
 export {
   createVenueForLeagueForUser,
+  deleteEmptyVenueForUser,
   updateVenueForUser,
   unlinkVenueFromLeagueForUser,
 } from "./venueAdministration";
