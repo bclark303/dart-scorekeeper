@@ -196,10 +196,14 @@ export async function ensureDefaultVenueForLeagueForUser(input: {
   now?: number;
 }): Promise<VenueSummary> {
   await requireLeagueAdminForVenueAccess(input.leagueId, input.userId);
-  const existing = (await listVenuesForLeagueForUser(input.leagueId, input.userId)).find(
-    (venue) => venue.status === "active",
-  ) ?? null;
-  if (existing) return existing;
+  const linkedVenues = await listVenuesForLeagueForUser(input.leagueId, input.userId);
+const existing = linkedVenues.find((venue) => venue.status === "active") ?? null;
+if (existing) return existing;
+if (linkedVenues.length) {
+  throw new Error(
+    "This league does not have an active venue. Restore or create a venue before scheduling a Game Night.",
+  );
+}
 
   const [league] = await getDatabase()
     .select({ name: leagues.name })

@@ -148,6 +148,40 @@ async function run() {
     nowOffset: 1_000,
   });
 
+  // Archiving the only venue is an intentional administrative state. A later
+// Game Night must not silently invent a replacement venue.
+const leagueC = await createLeagueWithTwoPlayers({
+  suffix,
+  label: "charlie",
+  ownerUserId,
+  nowOffset: 1_250,
+});
+const hardwareC = await getVenueHardwareForUser({
+  leagueId: leagueC.leagueId,
+  userId: ownerUserId,
+});
+assert.ok(hardwareC.venue, "League C should start with a default venue.");
+await updateVenueForUser({
+  venueId: hardwareC.venue.id,
+  userId: ownerUserId,
+  status: "archived",
+  now: BASE_NOW + 1_300,
+});
+await assert.rejects(
+  () => createGameNightForUser({
+    id: `archived-only-night-${suffix}`,
+    leagueId: leagueC.leagueId,
+    seasonId: leagueC.seasonId,
+    userId: ownerUserId,
+    name: "Archived Only Venue Night",
+    scheduledAt: BASE_NOW + 250_000,
+    settings: { ...DEFAULT_GAME_NIGHT_SETTINGS, boardCount: 1 },
+    now: BASE_NOW + 1_350,
+  }),
+  /does not have an active venue/i,
+  "Game Night creation must require an explicit restore/create when all linked venues are archived.",
+);
+
   const hardwareA = await getVenueHardwareForUser({
     leagueId: leagueA.leagueId,
     userId: ownerUserId,
