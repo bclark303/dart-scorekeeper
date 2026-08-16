@@ -59,7 +59,7 @@ export default function GameNightBoardsPage() {
     if (!response.ok || !result.venue || !result.boards || !result.devices) {
       throw new Error(result.error ?? "Could not load venue hardware.");
     }
-    setVenues(result.venues ?? []);
+    setVenues((result.venues ?? []).filter((venue) => venue.status === "active"));
     setPhysicalBoards(result.boards);
     setDevices(result.devices);
     setHardwareError("");

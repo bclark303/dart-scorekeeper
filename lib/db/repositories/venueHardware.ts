@@ -196,7 +196,9 @@ export async function ensureDefaultVenueForLeagueForUser(input: {
   now?: number;
 }): Promise<VenueSummary> {
   await requireLeagueAdminForVenueAccess(input.leagueId, input.userId);
-  const existing = await getDefaultVenueForLeagueForUser(input.leagueId, input.userId);
+  const existing = (await listVenuesForLeagueForUser(input.leagueId, input.userId)).find(
+    (venue) => venue.status === "active",
+  ) ?? null;
   if (existing) return existing;
 
   const [league] = await getDatabase()

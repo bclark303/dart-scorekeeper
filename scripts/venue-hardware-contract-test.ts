@@ -338,7 +338,7 @@ async function run() {
 
   // Finish/cancel the live work so the venue is safe to archive. Completed and
   // cancelled history remains attached and does not prevent archival.
-  await setGameNightStatusForUser(nightA, ownerUserId, "completed");
+  await setGameNightStatusForUser(nightA, ownerUserId, "cancelled");
   await setGameNightStatusForUser(nightB, ownerUserId, "cancelled");
   const archived = await updateVenueForUser({
     venueId: sharedVenueId,
