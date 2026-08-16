@@ -28,6 +28,7 @@ export {
   getBoardDeviceMatchForCredential,
   getDefaultGameNightTemplateForUser,
   getGameNightForUser,
+  getGameNightReadinessForUser,
   getGameNightTemplateForUser,
   getVenueHardwareForUser,
   getLeagueMatchForUser,
