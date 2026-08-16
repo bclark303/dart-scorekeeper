@@ -186,7 +186,10 @@ export async function getVenueHardwareForUser(input: {
   const venue = input.venueId
     ? linkedVenues.find((candidate) => candidate.id === input.venueId) ?? null
     : await getDefaultVenueForLeagueForUser(input.leagueId, input.userId);
-  if (!venue) throw new Error("This league does not have a venue configured.");
+  if (!venue) {
+    if (input.venueId) throw new Error("That venue is not available to this league.");
+    return { venues: linkedVenues, availableVenues, boards: [], devices: [] };
+  }
   await requireVenueLinkedToLeague(input.leagueId, venue.id);
   const [boards, rows] = await Promise.all([
     listPhysicalBoardsForVenueForUser({
