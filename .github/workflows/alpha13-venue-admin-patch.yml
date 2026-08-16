@@ -33,36 +33,31 @@ jobs:
           start = text.index(marker)
           end = text.index('/** Compatibility helper', start)
           block = text[start:end]
-          old = '  if (!venue) throw new Error("This league does not have a venue configured.");\n  await requireVenueLinkedToLeague(input.leagueId, venue.id);'
-          new = '''  if (!venue) {
-            if (input.venueId) throw new Error("That venue is not available to this league.");
-            return { venues: linkedVenues, availableVenues, boards: [], devices: [] };
-          }
-          await requireVenueLinkedToLeague(input.leagueId, venue.id);'''
-          if old not in block:
-            raise SystemExit('getVenueHardwareForUser venue guard target not found')
-          block = block.replace(old, new, 1)
-          path.write_text(text[:start] + block + text[end:])
+          if 'return { venues: linkedVenues, availableVenues, boards: [], devices: [] };' not in block:
+            old = '  if (!venue) throw new Error("This league does not have a venue configured.");\n  await requireVenueLinkedToLeague(input.leagueId, venue.id);'
+            new = '  if (!venue) {\n    if (input.venueId) throw new Error("That venue is not available to this league.");\n    return { venues: linkedVenues, availableVenues, boards: [], devices: [] };\n  }\n  await requireVenueLinkedToLeague(input.leagueId, venue.id);'
+            if old not in block:
+              raise SystemExit('getVenueHardwareForUser venue guard target not found')
+            block = block.replace(old, new, 1)
+            path.write_text(text[:start] + block + text[end:])
 
           path = Path('lib/db/repositories/venueHardware.ts')
           text = path.read_text()
-          old = '''  const existing = await getDefaultVenueForLeagueForUser(input.leagueId, input.userId);
-          if (existing) return existing;'''
-          new = '''  const existing = (await listVenuesForLeagueForUser(input.leagueId, input.userId)).find(
-            (venue) => venue.status === "active",
-          ) ?? null;
-          if (existing) return existing;'''
-          if old not in text:
-            raise SystemExit('ensureDefaultVenue active venue target not found')
-          path.write_text(text.replace(old, new, 1))
+          if '(venue) => venue.status === "active"' not in text[text.index('export async function ensureDefaultVenueForLeagueForUser'):]:
+            old = '  const existing = await getDefaultVenueForLeagueForUser(input.leagueId, input.userId);\n  if (existing) return existing;'
+            new = '  const existing = (await listVenuesForLeagueForUser(input.leagueId, input.userId)).find(\n    (venue) => venue.status === "active",\n  ) ?? null;\n  if (existing) return existing;'
+            if old not in text:
+              raise SystemExit('ensureDefaultVenue active venue target not found')
+            path.write_text(text.replace(old, new, 1))
 
           path = Path('app/game-nights/boards/page.tsx')
           text = path.read_text()
-          old = '    setVenues(result.venues ?? []);'
           new = '    setVenues((result.venues ?? []).filter((venue) => venue.status === "active"));'
-          if old not in text:
-            raise SystemExit('Game Night active venue filter target not found')
-          path.write_text(text.replace(old, new, 1))
+          if new not in text:
+            old = '    setVenues(result.venues ?? []);'
+            if old not in text:
+              raise SystemExit('Game Night active venue filter target not found')
+            path.write_text(text.replace(old, new, 1))
       - run: npm ci
       - name: Prepare database
         run: |
