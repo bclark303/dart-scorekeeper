@@ -60,6 +60,8 @@ export default function VenueHardwarePage() {
   const [devices, setDevices] = useState<BoardDeviceSummary[]>([]);
   const [deviceNames, setDeviceNames] = useState<Record<string, string>>({});
   const [boardNames, setBoardNames] = useState<Record<string, string>>({});
+  const [newVenueName, setNewVenueName] = useState("");
+  const [venueNameDraft, setVenueNameDraft] = useState("");
   const [newDeviceName, setNewDeviceName] = useState("Spare Scorer");
   const [newDeviceBoardId, setNewDeviceBoardId] = useState("");
   const [newBoardNumber, setNewBoardNumber] = useState(1);
@@ -67,6 +69,9 @@ export default function VenueHardwarePage() {
   const [linkVenueId, setLinkVenueId] = useState("");
   const [pairing, setPairing] = useState<Pairing | null>(null);
   const [loading, setLoading] = useState(false);
+  const [creatingVenue, setCreatingVenue] = useState(false);
+  const [savingVenue, setSavingVenue] = useState(false);
+  const [removingVenue, setRemovingVenue] = useState(false);
   const [registering, setRegistering] = useState(false);
   const [addingBoard, setAddingBoard] = useState(false);
   const [linkingVenue, setLinkingVenue] = useState(false);
@@ -89,9 +94,14 @@ export default function VenueHardwarePage() {
     () => linkedVenues.find((venue) => venue.id === venueId) ?? null,
     [linkedVenues, venueId],
   );
+  const venueArchived = selectedVenue?.status === "archived";
 
   const deviceByBoard = useMemo(
-    () => new Map(devices.filter((device) => device.physicalBoardId).map((device) => [device.physicalBoardId!, device])),
+    () => new Map(
+      devices
+        .filter((device) => device.physicalBoardId)
+        .map((device) => [device.physicalBoardId!, device]),
+    ),
     [devices],
   );
 
@@ -109,19 +119,25 @@ export default function VenueHardwarePage() {
     try {
       const params = new URLSearchParams({ leagueId: selectedLeagueId });
       if (requestedVenueId) params.set("venueId", requestedVenueId);
-      const response = await fetch(`/api/leagues/board-devices?${params.toString()}`, { cache: "no-store" });
+      const response = await fetch(`/api/leagues/board-devices?${params.toString()}`, {
+        cache: "no-store",
+      });
       const result = (await response.json()) as VenueHardwareResponse;
-      if (!response.ok || !result.venue || !result.boards || !result.devices) {
-        throw new Error(result.error ?? "Could not load venue hardware.");
-      }
-      setLinkedVenues(result.venues ?? []);
+      if (!response.ok) throw new Error(result.error ?? "Could not load venue hardware.");
+
+      const nextLinked = result.venues ?? [];
+      const nextVenue = result.venue ?? null;
+      const nextBoards = result.boards ?? [];
+      const nextDevices = result.devices ?? [];
+      setLinkedVenues(nextLinked);
       setAvailableVenues(result.availableVenues ?? []);
-      setVenueId(result.venue.id);
-      setBoards(result.boards);
-      setDevices(result.devices);
-      setDeviceNames(Object.fromEntries(result.devices.map((device) => [device.id, device.name])));
-      setBoardNames(Object.fromEntries(result.boards.map((board) => [board.id, board.name])));
-      setNewBoardNumber(Math.max(0, ...result.boards.map((board) => board.boardNumber)) + 1);
+      setVenueId(nextVenue?.id ?? "");
+      setVenueNameDraft(nextVenue?.name ?? "");
+      setBoards(nextBoards);
+      setDevices(nextDevices);
+      setDeviceNames(Object.fromEntries(nextDevices.map((device) => [device.id, device.name])));
+      setBoardNames(Object.fromEntries(nextBoards.map((board) => [board.id, board.name])));
+      setNewBoardNumber(Math.max(0, ...nextBoards.map((board) => board.boardNumber)) + 1);
       setLinkVenueId(result.availableVenues?.[0]?.id ?? "");
       setErrorMessage("");
     } finally {
@@ -132,7 +148,9 @@ export default function VenueHardwarePage() {
   useEffect(() => {
     if (!session?.user) return;
     const timer = window.setTimeout(() => {
-      void loadLeagues().catch((error) => setErrorMessage(error instanceof Error ? error.message : "Could not load leagues."));
+      void loadLeagues().catch((error) =>
+        setErrorMessage(error instanceof Error ? error.message : "Could not load leagues."),
+      );
     }, 0);
     return () => window.clearTimeout(timer);
   }, [loadLeagues, session?.user]);
@@ -140,10 +158,17 @@ export default function VenueHardwarePage() {
   useEffect(() => {
     if (!leagueId) return;
     const timer = window.setTimeout(() => {
-      void loadHardware(leagueId).catch((error) => setErrorMessage(error instanceof Error ? error.message : "Could not load venue hardware."));
+      void loadHardware(leagueId).catch((error) =>
+        setErrorMessage(error instanceof Error ? error.message : "Could not load venue hardware."),
+      );
     }, 0);
     return () => window.clearTimeout(timer);
   }, [leagueId, loadHardware]);
+
+  function clearNotices() {
+    setErrorMessage("");
+    setStatusMessage("");
+  }
 
   function markDeviceSaving(deviceId: string, saving: boolean) {
     setSavingDeviceIds((current) => {
@@ -163,6 +188,129 @@ export default function VenueHardwarePage() {
     });
   }
 
+  async function createVenue(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!leagueId) return;
+    setCreatingVenue(true);
+    clearNotices();
+    try {
+      const response = await fetch("/api/leagues/board-devices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "createVenue", leagueId, name: newVenueName }),
+      });
+      const result = (await response.json()) as VenueHardwareResponse;
+      if (!response.ok || !result.venue) throw new Error(result.error ?? "Venue could not be created.");
+      setNewVenueName("");
+      await loadHardware(leagueId, result.venue.id);
+      setStatusMessage(`${result.venue.name} created and made available to this league.`);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Venue could not be created.");
+    } finally {
+      setCreatingVenue(false);
+    }
+  }
+
+  async function updateVenue(body: { name?: string; status?: "active" | "archived" }) {
+    if (!selectedVenue) return;
+    setSavingVenue(true);
+    clearNotices();
+    try {
+      const response = await fetch("/api/leagues/board-devices", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "venue", venueId: selectedVenue.id, ...body }),
+      });
+      const result = (await response.json()) as VenueHardwareResponse;
+      if (!response.ok || !result.venue) throw new Error(result.error ?? "Venue could not be updated.");
+      await loadHardware(leagueId, result.venue.id);
+      setStatusMessage(`${result.venue.name} updated.`);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Venue could not be updated.");
+    } finally {
+      setSavingVenue(false);
+    }
+  }
+
+  async function toggleVenueArchive() {
+    if (!selectedVenue) return;
+    const archiving = selectedVenue.status === "active";
+    if (archiving && !window.confirm(
+      `Archive ${selectedVenue.name}? It will no longer be available for new Game Nights. Historical records and hardware will be preserved.`,
+    )) return;
+    await updateVenue({ status: archiving ? "archived" : "active" });
+  }
+
+  async function removeVenueFromLeague() {
+    if (!selectedVenue || !leagueId) return;
+    if (!window.confirm(
+      `Remove ${selectedVenue.name} from this league? Other leagues using the venue will not be affected.`,
+    )) return;
+    setRemovingVenue(true);
+    clearNotices();
+    try {
+      const response = await fetch("/api/leagues/board-devices", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "unlinkVenue", leagueId, venueId: selectedVenue.id }),
+      });
+      const result = (await response.json()) as { removed?: boolean; error?: string };
+      if (!response.ok || !result.removed) throw new Error(result.error ?? "Venue could not be removed from this league.");
+      await loadHardware(leagueId);
+      setStatusMessage(`${selectedVenue.name} removed from this league.`);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Venue could not be removed from this league.");
+    } finally {
+      setRemovingVenue(false);
+    }
+  }
+
+  async function deleteEmptyVenue() {
+    if (!selectedVenue) return;
+    if (!window.confirm(
+      `Permanently delete ${selectedVenue.name}? This only succeeds if the venue has no boards, devices, or Game Night history.`,
+    )) return;
+    setRemovingVenue(true);
+    clearNotices();
+    try {
+      const response = await fetch("/api/leagues/board-devices", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "deleteVenue", venueId: selectedVenue.id }),
+      });
+      const result = (await response.json()) as { removed?: boolean; error?: string };
+      if (!response.ok || !result.removed) throw new Error(result.error ?? "Venue could not be deleted.");
+      await loadHardware(leagueId);
+      setStatusMessage(`${selectedVenue.name} permanently deleted.`);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Venue could not be deleted.");
+    } finally {
+      setRemovingVenue(false);
+    }
+  }
+
+  async function linkVenue(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!leagueId || !linkVenueId) return;
+    setLinkingVenue(true);
+    clearNotices();
+    try {
+      const response = await fetch("/api/leagues/board-devices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "linkVenue", leagueId, venueId: linkVenueId }),
+      });
+      const result = (await response.json()) as VenueHardwareResponse;
+      if (!response.ok || !result.venue) throw new Error(result.error ?? "Venue could not be shared with this league.");
+      await loadHardware(leagueId, result.venue.id);
+      setStatusMessage(`${result.venue.name} is now available to this league.`);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Venue could not be shared with this league.");
+    } finally {
+      setLinkingVenue(false);
+    }
+  }
+
   async function requestDeviceUpdate(deviceId: string, body: object) {
     const response = await fetch("/api/leagues/board-devices", {
       method: "PATCH",
@@ -175,11 +323,11 @@ export default function VenueHardwarePage() {
   }
 
   async function assignDevice(device: BoardDeviceSummary, physicalBoardId: string | null) {
+    if (venueArchived) return;
     const board = boards.find((item) => item.id === physicalBoardId) ?? null;
     const snapshot = devices;
     markDeviceSaving(device.id, true);
-    setErrorMessage("");
-    setStatusMessage("");
+    clearNotices();
     setDevices((current) => replaceDevice(current, device.id, board));
     try {
       await requestDeviceUpdate(device.id, { physicalBoardId });
@@ -204,11 +352,14 @@ export default function VenueHardwarePage() {
   }
 
   async function toggleDevice(device: BoardDeviceSummary) {
+    if (venueArchived) return;
     const snapshot = devices;
     const nextStatus = device.status === "active" ? "disabled" : "active";
     markDeviceSaving(device.id, true);
-    setDevices((current) => current.map((item) => item.id === device.id ? { ...item, status: nextStatus } : item));
-    setErrorMessage("");
+    setDevices((current) => current.map((item) =>
+      item.id === device.id ? { ...item, status: nextStatus } : item,
+    ));
+    clearNotices();
     try {
       await requestDeviceUpdate(device.id, { status: nextStatus });
       setStatusMessage(`${device.name} ${nextStatus === "active" ? "enabled" : "disabled"}.`);
@@ -221,10 +372,13 @@ export default function VenueHardwarePage() {
   }
 
   async function saveDeviceName(device: BoardDeviceSummary) {
+    if (venueArchived) return;
     markDeviceSaving(device.id, true);
-    setErrorMessage("");
+    clearNotices();
     try {
-      const updated = await requestDeviceUpdate(device.id, { name: deviceNames[device.id] ?? device.name });
+      const updated = await requestDeviceUpdate(device.id, {
+        name: deviceNames[device.id] ?? device.name,
+      });
       setDevices((current) => current.map((item) => item.id === updated.id ? updated : item));
       setStatusMessage(`${updated.name} updated.`);
     } catch (error) {
@@ -235,13 +389,19 @@ export default function VenueHardwarePage() {
   }
 
   async function saveBoard(board: PhysicalBoardSummary, status = board.status) {
+    if (venueArchived) return;
     markBoardSaving(board.id, true);
-    setErrorMessage("");
+    clearNotices();
     try {
       const response = await fetch("/api/leagues/board-devices", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "board", boardId: board.id, name: boardNames[board.id] ?? board.name, status }),
+        body: JSON.stringify({
+          action: "board",
+          boardId: board.id,
+          name: boardNames[board.id] ?? board.name,
+          status,
+        }),
       });
       const result = (await response.json()) as VenueHardwareResponse;
       if (!response.ok || !result.board) throw new Error(result.error ?? "Physical board update failed.");
@@ -256,14 +416,20 @@ export default function VenueHardwarePage() {
 
   async function addBoard(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!leagueId || !venueId) return;
+    if (!leagueId || !venueId || venueArchived) return;
     setAddingBoard(true);
-    setErrorMessage("");
+    clearNotices();
     try {
       const response = await fetch("/api/leagues/board-devices", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "board", leagueId, venueId, boardNumber: newBoardNumber, name: newBoardName || undefined }),
+        body: JSON.stringify({
+          action: "board",
+          leagueId,
+          venueId,
+          boardNumber: newBoardNumber,
+          name: newBoardName || undefined,
+        }),
       });
       const result = (await response.json()) as VenueHardwareResponse;
       if (!response.ok || !result.board) throw new Error(result.error ?? "Physical board could not be added.");
@@ -277,17 +443,41 @@ export default function VenueHardwarePage() {
     }
   }
 
+  async function createPairing(device: BoardDeviceSummary) {
+    const response = await fetch("/api/leagues/board-devices/pairing", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ deviceId: device.id }),
+    });
+    const result = (await response.json()) as { code?: string; expiresAt?: number; error?: string };
+    if (!response.ok || !result.code || !result.expiresAt) throw new Error(result.error ?? "Could not create a pairing code.");
+    setPairing({
+      deviceId: device.id,
+      deviceName: device.name,
+      code: result.code,
+      expiresAt: result.expiresAt,
+      url: `${window.location.origin}/board-device#pair=${result.code}`,
+    });
+    setStatusMessage(`${device.name} is ready to pair.`);
+  }
+
   async function registerDevice(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!leagueId || !venueId) return;
+    if (!leagueId || !venueId || venueArchived) return;
     setRegistering(true);
-    setErrorMessage("");
+    clearNotices();
     setPairing(null);
     try {
       const response = await fetch("/api/leagues/board-devices", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "device", leagueId, venueId, name: newDeviceName, physicalBoardId: newDeviceBoardId || null }),
+        body: JSON.stringify({
+          action: "device",
+          leagueId,
+          venueId,
+          name: newDeviceName,
+          physicalBoardId: newDeviceBoardId || null,
+        }),
       });
       const result = (await response.json()) as VenueHardwareResponse;
       if (!response.ok || !result.device) throw new Error(result.error ?? "Scoring device could not be registered.");
@@ -302,21 +492,10 @@ export default function VenueHardwarePage() {
     }
   }
 
-  async function createPairing(device: BoardDeviceSummary) {
-    const response = await fetch("/api/leagues/board-devices/pairing", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ deviceId: device.id }),
-    });
-    const result = (await response.json()) as { code?: string; expiresAt?: number; error?: string };
-    if (!response.ok || !result.code || !result.expiresAt) throw new Error(result.error ?? "Could not create a pairing code.");
-    setPairing({ deviceId: device.id, deviceName: device.name, code: result.code, expiresAt: result.expiresAt, url: `${window.location.origin}/board-device#pair=${result.code}` });
-    setStatusMessage(`${device.name} is ready to pair.`);
-  }
-
   async function pairExisting(device: BoardDeviceSummary) {
+    if (venueArchived) return;
     setPairingDeviceId(device.id);
-    setErrorMessage("");
+    clearNotices();
     try {
       await createPairing(device);
     } catch (error) {
@@ -326,30 +505,17 @@ export default function VenueHardwarePage() {
     }
   }
 
-  async function linkVenue(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!leagueId || !linkVenueId) return;
-    setLinkingVenue(true);
-    setErrorMessage("");
-    try {
-      const response = await fetch("/api/leagues/board-devices", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "linkVenue", leagueId, venueId: linkVenueId }),
-      });
-      const result = (await response.json()) as VenueHardwareResponse;
-      if (!response.ok || !result.venue) throw new Error(result.error ?? "Venue could not be shared with this league.");
-      await loadHardware(leagueId, result.venue.id);
-      setStatusMessage(`${result.venue.name} is now available to this league.`);
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Venue could not be shared with this league.");
-    } finally {
-      setLinkingVenue(false);
-    }
+  if (sessionPending) {
+    return <main className="mx-auto max-w-6xl p-6 text-[var(--color-text-muted)]">Loading account…</main>;
   }
-
-  if (sessionPending) return <main className="mx-auto max-w-6xl p-6 text-[var(--color-text-muted)]">Loading account…</main>;
-  if (!session?.user) return <main className="mx-auto max-w-3xl p-6"><h1 className="text-3xl font-black">Venue Hardware</h1><p className="mt-2 text-[var(--color-text-muted)]">Sign in to manage venue boards and scoring devices.</p></main>;
+  if (!session?.user) {
+    return (
+      <main className="mx-auto max-w-3xl p-6">
+        <h1 className="text-3xl font-black">Venue Hardware</h1>
+        <p className="mt-2 text-[var(--color-text-muted)]">Sign in to manage venues, boards, and scoring devices.</p>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto max-w-6xl p-4 sm:p-6">
@@ -357,7 +523,10 @@ export default function VenueHardwarePage() {
         <div>
           <Link href="/league-play" className="text-sm font-bold text-[var(--color-primary)]">← League Play</Link>
           <h1 className="mt-2 text-3xl font-black">Venue Hardware</h1>
-          <p className="mt-1 max-w-3xl text-sm text-[var(--color-text-muted)]">Physical boards belong to a venue. Scoring devices can move between boards or remain as spares. Leagues only receive permission to use venues; devices never belong to a league.</p>
+          <p className="mt-1 max-w-3xl text-sm text-[var(--color-text-muted)]">
+            Manage real venues first, then the physical boards and scoring devices installed at each venue.
+            Leagues may share a venue without owning its hardware.
+          </p>
         </div>
         <Link href="/board-device" className="rounded-xl border border-[var(--color-panel-border)] px-4 py-2 text-sm font-bold">Open Device Client</Link>
       </header>
@@ -377,36 +546,216 @@ export default function VenueHardwarePage() {
         </section>
       )}
 
-      <section className="mb-6 grid gap-4 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5 md:grid-cols-2">
-        <label className="block"><span className="mb-1 block text-sm font-bold">Administration context</span><select value={leagueId} onChange={(event) => { setLeagueId(event.target.value); setVenueId(""); setPairing(null); }} className="w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-3">{leagues.map((league) => <option key={league.id} value={league.id}>{league.name}</option>)}</select><span className="mt-1 block text-xs text-[var(--color-text-muted)]">This chooses which league grants you access; it does not assign hardware to that league.</span></label>
-        <label className="block"><span className="mb-1 block text-sm font-bold">Venue</span><select value={venueId} disabled={loading || linkedVenues.length === 0} onChange={(event) => { setVenueId(event.target.value); setPairing(null); void loadHardware(leagueId, event.target.value).catch((error) => setErrorMessage(error instanceof Error ? error.message : "Could not load venue.")); }} className="w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-3 disabled:opacity-60">{linkedVenues.map((venue) => <option key={venue.id} value={venue.id}>{venue.name}</option>)}</select></label>
+      <section className="mb-6 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-2xl font-black">Venue Administration</h2>
+            <p className="mt-1 text-sm text-[var(--color-text-muted)]">Create, rename, share, archive, restore, or safely remove venues.</p>
+          </div>
+          {selectedVenue && (
+            <span className={`rounded-full px-3 py-1 text-xs font-black uppercase ${selectedVenue.status === "active" ? "bg-emerald-500/20" : "bg-amber-500/20"}`}>
+              {selectedVenue.status}
+            </span>
+          )}
+        </div>
+
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <label className="block">
+            <span className="mb-1 block text-sm font-bold">Administration context</span>
+            <select
+              value={leagueId}
+              onChange={(event) => {
+                setLeagueId(event.target.value);
+                setVenueId("");
+                setPairing(null);
+              }}
+              className="w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-3"
+            >
+              {leagues.map((league) => <option key={league.id} value={league.id}>{league.name}</option>)}
+            </select>
+            <span className="mt-1 block text-xs text-[var(--color-text-muted)]">The league grants your administrative access. Hardware remains venue-owned.</span>
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-sm font-bold">Venue</span>
+            <select
+              value={venueId}
+              disabled={loading || linkedVenues.length === 0}
+              onChange={(event) => {
+                setVenueId(event.target.value);
+                setPairing(null);
+                void loadHardware(leagueId, event.target.value).catch((error) =>
+                  setErrorMessage(error instanceof Error ? error.message : "Could not load venue."),
+                );
+              }}
+              className="w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-3 disabled:opacity-60"
+            >
+              {linkedVenues.map((venue) => (
+                <option key={venue.id} value={venue.id}>{venue.name}{venue.status === "archived" ? " — archived" : ""}</option>
+              ))}
+            </select>
+            {linkedVenues.length === 0 && <span className="mt-1 block text-xs text-[var(--color-text-muted)]">No venues are linked to this league yet.</span>}
+          </label>
+        </div>
+
+        <div className="mt-5 grid gap-4 lg:grid-cols-2">
+          <form onSubmit={createVenue} className="rounded-xl border border-dashed border-[var(--color-panel-border)] p-4">
+            <div className="font-black">Create a new venue</div>
+            <p className="mt-1 text-xs text-[var(--color-text-muted)]">The new venue is immediately available to the selected league.</p>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+              <input required maxLength={100} value={newVenueName} onChange={(event) => setNewVenueName(event.target.value)} placeholder="Venue name" className="flex-1 rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-3" />
+              <button disabled={creatingVenue || !leagueId} className="rounded-lg bg-[var(--color-primary)] px-4 py-3 font-black text-white disabled:opacity-60">{creatingVenue ? "Creating…" : "Create Venue"}</button>
+            </div>
+          </form>
+
+          <form onSubmit={linkVenue} className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-4">
+            <div className="font-black">Use an existing venue</div>
+            <p className="mt-1 text-xs opacity-80">Share boards and devices already managed through another league.</p>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+              <select value={linkVenueId} disabled={availableVenues.length === 0} onChange={(event) => setLinkVenueId(event.target.value)} className="flex-1 rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-3 disabled:opacity-60">
+                {availableVenues.length === 0 && <option value="">No other venues available</option>}
+                {availableVenues.map((venue) => <option key={venue.id} value={venue.id}>{venue.name}{venue.status === "archived" ? " — archived" : ""}</option>)}
+              </select>
+              <button disabled={linkingVenue || !linkVenueId} className="rounded-lg bg-[var(--color-primary)] px-4 py-3 font-black text-white disabled:opacity-60">{linkingVenue ? "Linking…" : "Make Available"}</button>
+            </div>
+          </form>
+        </div>
+
+        {selectedVenue && (
+          <div className="mt-5 rounded-xl border border-[var(--color-panel-border)] p-4">
+            <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+              <label className="block">
+                <span className="mb-1 block text-sm font-bold">Selected venue name</span>
+                <input maxLength={100} value={venueNameDraft} onChange={(event) => setVenueNameDraft(event.target.value)} className="w-full rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-3" />
+              </label>
+              <button type="button" disabled={savingVenue || !venueNameDraft.trim()} onClick={() => void updateVenue({ name: venueNameDraft })} className="self-end rounded-lg bg-[var(--color-panel-soft)] px-4 py-3 font-black disabled:opacity-60">{savingVenue ? "Saving…" : "Save Venue Name"}</button>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2 border-t border-[var(--color-panel-border)] pt-4">
+              <button type="button" disabled={savingVenue || removingVenue} onClick={() => void toggleVenueArchive()} className="rounded-lg border border-amber-500/40 px-4 py-2 text-sm font-bold disabled:opacity-50">{selectedVenue.status === "active" ? "Archive Venue" : "Restore Venue"}</button>
+              {linkedVenues.length > 1 && (
+                <button type="button" disabled={removingVenue || savingVenue} onClick={() => void removeVenueFromLeague()} className="rounded-lg border border-[var(--color-panel-border)] px-4 py-2 text-sm font-bold disabled:opacity-50">Remove from This League</button>
+              )}
+              <button type="button" disabled={removingVenue || savingVenue} onClick={() => void deleteEmptyVenue()} className="rounded-lg border border-red-500/40 px-4 py-2 text-sm font-bold text-red-200 disabled:opacity-50">Delete Empty Venue</button>
+            </div>
+            <p className="mt-3 text-xs text-[var(--color-text-muted)]">
+              Delete is intentionally limited to venues with no boards, devices, or Game Night history. Archive preserves all historical records. A shared venue can be removed from just this league while other leagues keep using it.
+            </p>
+          </div>
+        )}
       </section>
 
-      {availableVenues.length > 0 && (
-        <form onSubmit={linkVenue} className="mb-6 rounded-2xl border border-sky-500/30 bg-sky-500/10 p-5">
-          <div className="font-black">Use an existing venue</div><p className="mt-1 text-sm opacity-80">Share boards and devices already managed through another league.</p>
-          <div className="mt-3 flex flex-col gap-2 sm:flex-row"><select value={linkVenueId} onChange={(event) => setLinkVenueId(event.target.value)} className="flex-1 rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-3">{availableVenues.map((venue) => <option key={venue.id} value={venue.id}>{venue.name}</option>)}</select><button disabled={linkingVenue} className="rounded-xl bg-[var(--color-primary)] px-4 py-3 font-black text-white disabled:opacity-60">{linkingVenue ? "Linking…" : "Make Available to League"}</button></div>
-        </form>
+      {!selectedVenue && (
+        <section className="rounded-2xl border border-dashed border-[var(--color-panel-border)] p-6 text-center text-sm text-[var(--color-text-muted)]">
+          Create a venue above, or make an existing venue available to this league, before configuring physical boards and scoring devices.
+        </section>
+      )}
+
+      {selectedVenue && venueArchived && (
+        <div className="mb-6 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-5">
+          <div className="font-black">This venue is archived.</div>
+          <p className="mt-1 text-sm opacity-80">Its boards and devices are preserved below for reference, but hardware changes and new Game Night use are disabled until the venue is restored.</p>
+        </div>
       )}
 
       {selectedVenue && (
         <>
           <section className="mb-6 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
-            <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-2xl font-black">Physical Boards</h2><p className="text-sm text-[var(--color-text-muted)]">These are permanent venue resources. A scorer can be replaced without moving the match.</p></div><span className="rounded-full bg-[var(--color-panel-soft)] px-3 py-1 text-xs font-bold">{boards.length} configured</span></div>
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2 className="text-2xl font-black">Physical Boards at {selectedVenue.name}</h2>
+                <p className="text-sm text-[var(--color-text-muted)]">Permanent venue resources. Replacing a scorer does not move or restart the match.</p>
+              </div>
+              <span className="rounded-full bg-[var(--color-panel-soft)] px-3 py-1 text-xs font-bold">{boards.length} configured</span>
+            </div>
+
             <div className="mt-4 grid gap-3 lg:grid-cols-2">
               {boards.map((board) => {
                 const scorer = deviceByBoard.get(board.id) ?? null;
                 const saving = savingBoardIds.has(board.id) || Boolean(scorer && savingDeviceIds.has(scorer.id));
-                return <article key={board.id} className="rounded-xl border border-[var(--color-panel-border)] p-4"><div className="flex items-center justify-between gap-3"><div><div className="font-black">Board {board.boardNumber}</div><div className="text-xs text-[var(--color-text-muted)]">{board.status === "active" ? "Available for play" : "Out of service"}</div></div><button type="button" disabled={saving} onClick={() => void saveBoard(board, board.status === "active" ? "out_of_service" : "active")} className="rounded-lg border border-[var(--color-panel-border)] px-3 py-2 text-xs font-bold disabled:opacity-50">{board.status === "active" ? "Mark Out of Service" : "Restore"}</button></div><div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]"><input value={boardNames[board.id] ?? board.name} onChange={(event) => setBoardNames((current) => ({ ...current, [board.id]: event.target.value }))} className="rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] px-3 py-2"/><button type="button" disabled={savingBoardIds.has(board.id)} onClick={() => void saveBoard(board)} className="rounded-lg bg-[var(--color-panel-soft)] px-3 py-2 font-bold disabled:opacity-50">Save Name</button></div><label className="mt-3 block"><span className="mb-1 block text-xs font-bold">Scorer for this board</span><select value={scorer?.id ?? ""} disabled={saving} onChange={(event) => void setBoardScorer(board, event.target.value)} className="w-full rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] px-3 py-2"><option value="">No scorer assigned</option>{devices.map((device) => <option key={device.id} value={device.id}>{device.name}{device.physicalBoardId && device.physicalBoardId !== board.id ? ` — move from ${device.boardName}` : device.status === "disabled" ? " — disabled" : ""}</option>)}</select></label>{scorer && <div className="mt-2 text-xs text-[var(--color-text-muted)]">{scorer.status === "active" ? "Enabled" : "Disabled"} · {seenLabel(scorer.lastSeenAt)}{savingDeviceIds.has(scorer.id) ? " · Saving…" : ""}</div>}</article>;
+                return (
+                  <article key={board.id} className="rounded-xl border border-[var(--color-panel-border)] p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <div className="font-black">Board {board.boardNumber}</div>
+                        <div className="text-xs text-[var(--color-text-muted)]">{board.status === "active" ? "Available for play" : "Out of service"}</div>
+                      </div>
+                      <button type="button" disabled={saving || venueArchived} onClick={() => void saveBoard(board, board.status === "active" ? "out_of_service" : "active")} className="rounded-lg border border-[var(--color-panel-border)] px-3 py-2 text-xs font-bold disabled:opacity-50">{board.status === "active" ? "Mark Out of Service" : "Restore"}</button>
+                    </div>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
+                      <input disabled={venueArchived} value={boardNames[board.id] ?? board.name} onChange={(event) => setBoardNames((current) => ({ ...current, [board.id]: event.target.value }))} className="rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] px-3 py-2 disabled:opacity-60" />
+                      <button type="button" disabled={savingBoardIds.has(board.id) || venueArchived} onClick={() => void saveBoard(board)} className="rounded-lg bg-[var(--color-panel-soft)] px-3 py-2 font-bold disabled:opacity-50">Save Name</button>
+                    </div>
+                    <label className="mt-3 block">
+                      <span className="mb-1 block text-xs font-bold">Scorer for this board</span>
+                      <select value={scorer?.id ?? ""} disabled={saving || venueArchived} onChange={(event) => void setBoardScorer(board, event.target.value)} className="w-full rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] px-3 py-2 disabled:opacity-60">
+                        <option value="">No scorer assigned</option>
+                        {devices.map((device) => (
+                          <option key={device.id} value={device.id}>
+                            {device.name}{device.physicalBoardId && device.physicalBoardId !== board.id ? ` — move from ${device.boardName}` : device.status === "disabled" ? " — disabled" : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    {scorer && <div className="mt-2 text-xs text-[var(--color-text-muted)]">{scorer.status === "active" ? "Enabled" : "Disabled"} · {seenLabel(scorer.lastSeenAt)}{savingDeviceIds.has(scorer.id) ? " · Saving…" : ""}</div>}
+                  </article>
+                );
               })}
             </div>
-            <form onSubmit={addBoard} className="mt-4 grid gap-2 rounded-xl border border-dashed border-[var(--color-panel-border)] p-4 sm:grid-cols-[120px_1fr_auto]"><label className="text-xs font-bold">Board number<input type="number" min={1} max={128} value={newBoardNumber} onChange={(event) => setNewBoardNumber(Number(event.target.value))} className="mt-1 w-full rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-2"/></label><label className="text-xs font-bold">Name (optional)<input value={newBoardName} onChange={(event) => setNewBoardName(event.target.value)} placeholder={`Board ${newBoardNumber}`} className="mt-1 w-full rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-2"/></label><button disabled={addingBoard} className="self-end rounded-lg bg-[var(--color-primary)] px-4 py-2.5 font-black text-white disabled:opacity-60">{addingBoard ? "Adding…" : "Add Board"}</button></form>
+
+            <form onSubmit={addBoard} className="mt-4 grid gap-2 rounded-xl border border-dashed border-[var(--color-panel-border)] p-4 sm:grid-cols-[120px_1fr_auto]">
+              <label className="text-xs font-bold">Board number<input disabled={venueArchived} type="number" min={1} max={128} value={newBoardNumber} onChange={(event) => setNewBoardNumber(Number(event.target.value))} className="mt-1 w-full rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-2 disabled:opacity-60" /></label>
+              <label className="text-xs font-bold">Name (optional)<input disabled={venueArchived} value={newBoardName} onChange={(event) => setNewBoardName(event.target.value)} placeholder={`Board ${newBoardNumber}`} className="mt-1 w-full rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-2 disabled:opacity-60" /></label>
+              <button disabled={addingBoard || venueArchived} className="self-end rounded-lg bg-[var(--color-primary)] px-4 py-2.5 font-black text-white disabled:opacity-60">{addingBoard ? "Adding…" : "Add Board"}</button>
+            </form>
           </section>
 
           <section className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
-            <div><h2 className="text-2xl font-black">Scoring Devices</h2><p className="text-sm text-[var(--color-text-muted)]">A device may serve one board at a time or stay unassigned as a ready spare.</p></div>
-            <div className="mt-4 space-y-3">{devices.map((device) => { const saving = savingDeviceIds.has(device.id); return <article key={device.id} className="rounded-xl border border-[var(--color-panel-border)] p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex items-center gap-2"><span className="font-black">{device.name}</span><span className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase ${device.status === "active" ? "bg-emerald-500/20" : "bg-red-500/20"}`}>{device.status}</span>{saving && <span className="text-xs text-[var(--color-text-muted)]">Saving…</span>}</div><div className="mt-1 text-xs text-[var(--color-text-muted)]">{device.boardName ?? "Spare / unassigned"} · {seenLabel(device.lastSeenAt)}</div></div><div className="flex gap-2"><button type="button" disabled={saving || device.status !== "active"} onClick={() => void pairExisting(device)} className="rounded-lg border border-[var(--color-panel-border)] px-3 py-2 text-sm font-bold disabled:opacity-50">{pairingDeviceId === device.id ? "Pairing…" : "Pair / Re-pair"}</button><button type="button" disabled={saving} onClick={() => void toggleDevice(device)} className="rounded-lg border border-[var(--color-panel-border)] px-3 py-2 text-sm font-bold disabled:opacity-50">{device.status === "active" ? "Disable" : "Enable"}</button></div></div><div className="mt-3 grid gap-2 sm:grid-cols-[1fr_220px_auto]"><input value={deviceNames[device.id] ?? device.name} onChange={(event) => setDeviceNames((current) => ({ ...current, [device.id]: event.target.value }))} className="rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] px-3 py-2"/><select value={device.physicalBoardId ?? ""} disabled={saving} onChange={(event) => void assignDevice(device, event.target.value || null)} className="rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] px-3 py-2"><option value="">Spare / unassigned</option>{boards.map((board) => <option key={board.id} value={board.id}>{board.name}{deviceByBoard.get(board.id) && deviceByBoard.get(board.id)?.id !== device.id ? ` — replace ${deviceByBoard.get(board.id)?.name}` : ""}</option>)}</select><button type="button" disabled={saving} onClick={() => void saveDeviceName(device)} className="rounded-lg bg-[var(--color-panel-soft)] px-3 py-2 font-bold disabled:opacity-50">Save Name</button></div></article>; })}{devices.length === 0 && <p className="text-sm text-[var(--color-text-muted)]">No scoring devices registered yet.</p>}</div>
-            <form onSubmit={registerDevice} className="mt-4 grid gap-2 rounded-xl border border-dashed border-[var(--color-panel-border)] p-4 sm:grid-cols-[1fr_220px_auto]"><input required maxLength={80} value={newDeviceName} onChange={(event) => setNewDeviceName(event.target.value)} placeholder="Spare Scorer" className="rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-3"/><select value={newDeviceBoardId} onChange={(event) => setNewDeviceBoardId(event.target.value)} className="rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-3"><option value="">Register as spare</option>{boards.map((board) => <option key={board.id} value={board.id}>{board.name}{deviceByBoard.has(board.id) ? ` — replace current scorer` : ""}</option>)}</select><button disabled={registering} className="rounded-lg bg-[var(--color-primary)] px-4 py-3 font-black text-white disabled:opacity-60">{registering ? "Registering…" : "Register & Pair"}</button></form>
+            <div>
+              <h2 className="text-2xl font-black">Scoring Devices at {selectedVenue.name}</h2>
+              <p className="text-sm text-[var(--color-text-muted)]">A device may serve one board at a time or remain unassigned as a ready spare.</p>
+            </div>
+            <div className="mt-4 space-y-3">
+              {devices.map((device) => {
+                const saving = savingDeviceIds.has(device.id);
+                return (
+                  <article key={device.id} className="rounded-xl border border-[var(--color-panel-border)] p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-black">{device.name}</span>
+                          <span className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase ${device.status === "active" ? "bg-emerald-500/20" : "bg-red-500/20"}`}>{device.status}</span>
+                          {saving && <span className="text-xs text-[var(--color-text-muted)]">Saving…</span>}
+                        </div>
+                        <div className="mt-1 text-xs text-[var(--color-text-muted)]">{device.boardName ?? "Spare / unassigned"} · {seenLabel(device.lastSeenAt)}</div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button type="button" disabled={saving || device.status !== "active" || venueArchived} onClick={() => void pairExisting(device)} className="rounded-lg border border-[var(--color-panel-border)] px-3 py-2 text-sm font-bold disabled:opacity-50">{pairingDeviceId === device.id ? "Pairing…" : "Pair / Re-pair"}</button>
+                        <button type="button" disabled={saving || venueArchived} onClick={() => void toggleDevice(device)} className="rounded-lg border border-[var(--color-panel-border)] px-3 py-2 text-sm font-bold disabled:opacity-50">{device.status === "active" ? "Disable" : "Enable"}</button>
+                      </div>
+                    </div>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_220px_auto]">
+                      <input disabled={venueArchived} value={deviceNames[device.id] ?? device.name} onChange={(event) => setDeviceNames((current) => ({ ...current, [device.id]: event.target.value }))} className="rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] px-3 py-2 disabled:opacity-60" />
+                      <select value={device.physicalBoardId ?? ""} disabled={saving || venueArchived} onChange={(event) => void assignDevice(device, event.target.value || null)} className="rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] px-3 py-2 disabled:opacity-60">
+                        <option value="">Spare / unassigned</option>
+                        {boards.map((board) => <option key={board.id} value={board.id}>{board.name}{deviceByBoard.get(board.id) && deviceByBoard.get(board.id)?.id !== device.id ? ` — replace ${deviceByBoard.get(board.id)?.name}` : ""}</option>)}
+                      </select>
+                      <button type="button" disabled={saving || venueArchived} onClick={() => void saveDeviceName(device)} className="rounded-lg bg-[var(--color-panel-soft)] px-3 py-2 font-bold disabled:opacity-50">Save Name</button>
+                    </div>
+                  </article>
+                );
+              })}
+              {devices.length === 0 && <p className="text-sm text-[var(--color-text-muted)]">No scoring devices registered yet.</p>}
+            </div>
+
+            <form onSubmit={registerDevice} className="mt-4 grid gap-2 rounded-xl border border-dashed border-[var(--color-panel-border)] p-4 sm:grid-cols-[1fr_220px_auto]">
+              <input disabled={venueArchived} required maxLength={80} value={newDeviceName} onChange={(event) => setNewDeviceName(event.target.value)} placeholder="Spare Scorer" className="rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-3 disabled:opacity-60" />
+              <select disabled={venueArchived} value={newDeviceBoardId} onChange={(event) => setNewDeviceBoardId(event.target.value)} className="rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-3 disabled:opacity-60">
+                <option value="">Register as spare</option>
+                {boards.map((board) => <option key={board.id} value={board.id}>{board.name}{deviceByBoard.has(board.id) ? " — replace current scorer" : ""}</option>)}
+              </select>
+              <button disabled={registering || venueArchived} className="rounded-lg bg-[var(--color-primary)] px-4 py-3 font-black text-white disabled:opacity-60">{registering ? "Registering…" : "Register & Pair"}</button>
+            </form>
           </section>
         </>
       )}
