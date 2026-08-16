@@ -15,12 +15,8 @@ export default function HomePage() {
               🎯
             </div>
             <div>
-              <div className="text-xl font-black tracking-tight sm:text-2xl">
-                Dart Scorekeeper
-              </div>
-              <div className="text-xs text-[var(--color-text-muted)]">
-                v{APP_VERSION}
-              </div>
+              <div className="text-xl font-black tracking-tight sm:text-2xl">Dart Scorekeeper</div>
+              <div className="text-xs text-[var(--color-text-muted)]">v{APP_VERSION}</div>
             </div>
           </div>
 
@@ -45,12 +41,9 @@ export default function HomePage() {
         <section className="flex flex-1 items-center py-10">
           <div className="w-full">
             <div className="mx-auto mb-8 max-w-2xl text-center">
-              <h1 className="text-4xl font-black tracking-tight sm:text-5xl">
-                How are you playing?
-              </h1>
+              <h1 className="text-4xl font-black tracking-tight sm:text-5xl">What is this screen for?</h1>
               <p className="mt-3 text-base text-[var(--color-text-muted)] sm:text-lg">
-                Pick a mode. Casual play stays entirely local; League Play opens
-                the connected league workflow.
+                Choose the job this screen is doing. Casual play and league administration stay separate from the dedicated dartboard scorer.
               </p>
             </div>
 
@@ -59,18 +52,13 @@ export default function HomePage() {
                 href="/casual"
                 className="group rounded-3xl border border-emerald-500/35 bg-[var(--color-panel)] p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-500/70 hover:shadow-lg sm:p-8"
               >
-                <div className="mb-6 grid size-14 place-items-center rounded-2xl bg-emerald-500/15 text-3xl">
-                  👥
-                </div>
-                <h2 className="text-3xl font-black text-emerald-300">
-                  Casual Play
-                </h2>
+                <div className="mb-6 grid size-14 place-items-center rounded-2xl bg-emerald-500/15 text-3xl">👥</div>
+                <h2 className="text-3xl font-black text-emerald-300">Casual Game</h2>
                 <p className="mt-3 min-h-12 text-[var(--color-text-muted)]">
-                  Enter the players and basic X01 rules, then go straight to the
-                  scoring board. No account or network required.
+                  Pick the players and X01 rules, then go directly to scoring. No league setup required.
                 </p>
                 <div className="mt-7 flex items-center justify-between rounded-2xl bg-emerald-600 px-5 py-4 font-black text-white">
-                  Start Casual Play
+                  Start Casual Game
                   <span className="text-xl transition group-hover:translate-x-1">→</span>
                 </div>
               </Link>
@@ -79,20 +67,30 @@ export default function HomePage() {
                 href="/league-play"
                 className="group rounded-3xl border border-blue-500/35 bg-[var(--color-panel)] p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-500/70 hover:shadow-lg sm:p-8"
               >
-                <div className="mb-6 grid size-14 place-items-center rounded-2xl bg-blue-500/15 text-3xl">
-                  🏆
-                </div>
-                <h2 className="text-3xl font-black text-blue-300">
-                  League Play
-                </h2>
+                <div className="mb-6 grid size-14 place-items-center rounded-2xl bg-blue-500/15 text-3xl">🏆</div>
+                <h2 className="text-3xl font-black text-blue-300">League Admin</h2>
                 <p className="mt-3 min-h-12 text-[var(--color-text-muted)]">
-                  Run league nights, manage players and devices, or open a
-                  centrally assigned match.
+                  Run tonight&apos;s league, check readiness, manage players, venues, boards, and scoring devices.
                 </p>
                 <div className="mt-7 flex items-center justify-between rounded-2xl bg-blue-600 px-5 py-4 font-black text-white">
-                  Open League Play
+                  Open Admin Terminal
                   <span className="text-xl transition group-hover:translate-x-1">→</span>
                 </div>
+              </Link>
+            </div>
+
+            <div className="mx-auto mt-5 flex max-w-4xl flex-col gap-3 rounded-2xl border border-violet-500/35 bg-[var(--color-panel)] p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="font-black">Is this screen mounted at a dartboard?</div>
+                <div className="mt-1 text-sm text-[var(--color-text-muted)]">
+                  Open the dedicated scorer. Once paired, it remembers its board and automatically follows league assignments.
+                </div>
+              </div>
+              <Link
+                href="/board-device"
+                className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-xl bg-violet-600 px-5 py-3 font-black text-white"
+              >
+                Open Scoring Device →
               </Link>
             </div>
           </div>
