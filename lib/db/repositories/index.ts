@@ -60,10 +60,8 @@ export {
   updateGameNightAttendanceForUser,
   updateGameNightSettingsForUser,
 } from "./gameNightSetupLifecycle";
-export {
-  assignGameNightPhysicalBoardsForUser,
-  setGameNightVenueForUser,
-} from "./gameNights";
+export { assignGameNightPhysicalBoardsForUser } from "./gameNights";
+export { setGameNightVenueForUser } from "./gameNightVenue";
 export {
   createGameNightForUser,
   populateGameNightBoardsForUser,
