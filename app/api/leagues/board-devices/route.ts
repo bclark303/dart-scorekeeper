@@ -2,17 +2,21 @@ import { getRequestSession } from "@/lib/auth/server";
 import {
   BoardDeviceCredentialError,
   createPhysicalBoardForUser,
+  createVenueForLeagueForUser,
   getVenueHardwareForUser,
   LeaguePermissionError,
   linkVenueToLeagueForUser,
   registerBoardDeviceForUser,
   rotateBoardDeviceKeyForUser,
+  unlinkVenueFromLeagueForUser,
   updateBoardDeviceForUser,
   updatePhysicalBoardForUser,
+  updateVenueForUser,
 } from "@/lib/db";
 import type {
   BoardDeviceStatus,
   PhysicalBoardStatus,
+  VenueStatus,
 } from "@/lib/league/boardDeviceContracts";
 
 export const runtime = "nodejs";
@@ -94,6 +98,11 @@ export async function POST(request: Request) {
         name?: string;
       }
     | {
+        action: "createVenue";
+        leagueId?: string;
+        name?: string;
+      }
+    | {
         action: "linkVenue";
         leagueId?: string;
         venueId?: string;
@@ -104,11 +113,23 @@ export async function POST(request: Request) {
     return noStoreJson({ error: "Invalid venue hardware request." }, { status: 400 });
   }
 
-  if (!input.leagueId || !input.venueId) {
-    return noStoreJson({ error: "League and venue are required." }, { status: 400 });
-  }
-
   try {
+    if (input.action === "createVenue") {
+      if (!input.leagueId || typeof input.name !== "string") {
+        return noStoreJson({ error: "League and venue name are required." }, { status: 400 });
+      }
+      const venue = await createVenueForLeagueForUser({
+        leagueId: input.leagueId,
+        userId: authState.user.id,
+        name: input.name,
+      });
+      return noStoreJson({ venue }, { status: 201 });
+    }
+
+    if (!input.leagueId || !input.venueId) {
+      return noStoreJson({ error: "League and venue are required." }, { status: 400 });
+    }
+
     if (input.action === "linkVenue") {
       const venue = await linkVenueToLeagueForUser({
         leagueId: input.leagueId,
@@ -167,6 +188,12 @@ export async function PATCH(request: Request) {
         boardId: string;
         name?: string;
         status?: PhysicalBoardStatus;
+      }
+    | {
+        action: "venue";
+        venueId: string;
+        name?: string;
+        status?: VenueStatus;
       };
   try {
     input = await request.json();
@@ -182,6 +209,19 @@ export async function PATCH(request: Request) {
           userId: authState.user.id,
         }),
       );
+    }
+    if (input.action === "venue") {
+      if (!input.venueId) return noStoreJson({ error: "venueId is required." }, { status: 400 });
+      if (input.status && input.status !== "active" && input.status !== "archived") {
+        return noStoreJson({ error: "Invalid venue status." }, { status: 400 });
+      }
+      const venue = await updateVenueForUser({
+        venueId: input.venueId,
+        userId: authState.user.id,
+        name: input.name,
+        status: input.status,
+      });
+      return noStoreJson({ venue });
     }
     if (input.action === "board") {
       if (input.status && input.status !== "active" && input.status !== "out_of_service") {
@@ -211,6 +251,33 @@ export async function PATCH(request: Request) {
       return noStoreJson({ device });
     }
     return noStoreJson({ error: "Unknown venue hardware action." }, { status: 400 });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+
+export async function DELETE(request: Request) {
+  const authState = await getAuthenticatedUser(request);
+  if (!authState.user) return authFailureResponse(authState.unavailable);
+
+  let input: { action?: "unlinkVenue"; leagueId?: string; venueId?: string };
+  try {
+    input = await request.json();
+  } catch {
+    return noStoreJson({ error: "Invalid venue removal request." }, { status: 400 });
+  }
+
+  if (input.action !== "unlinkVenue" || !input.leagueId || !input.venueId) {
+    return noStoreJson({ error: "League and venue are required." }, { status: 400 });
+  }
+
+  try {
+    await unlinkVenueFromLeagueForUser({
+      leagueId: input.leagueId,
+      venueId: input.venueId,
+      userId: authState.user.id,
+    });
+    return noStoreJson({ removed: true });
   } catch (error) {
     return errorResponse(error);
   }
