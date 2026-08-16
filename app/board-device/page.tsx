@@ -102,6 +102,23 @@ export default function BoardDevicePage() {
     return () => window.clearTimeout(timeout);
   }, [claimPairingCode]);
 
+  // Pairing links use a URL hash so they can be opened without a server-side
+  // route. If the scorer is already sitting on this page, navigating to a new
+  // #pair=123456 value is a same-document navigation and React does not remount
+  // the page. Listen for that hash change so QR/link pairing works whether the
+  // scoring screen was closed or already waiting for setup.
+  useEffect(() => {
+    function claimHashPairing() {
+      const hashMatch = window.location.hash.match(/pair=(\d{6})/);
+      if (!hashMatch?.[1]) return;
+      setPairCode(hashMatch[1]);
+      void claimPairingCode(hashMatch[1]);
+    }
+
+    window.addEventListener("hashchange", claimHashPairing);
+    return () => window.removeEventListener("hashchange", claimHashPairing);
+  }, [claimPairingCode]);
+
   const loadConnection = useCallback(async () => {
     if (!deviceKey) return;
     setLoading(true);
