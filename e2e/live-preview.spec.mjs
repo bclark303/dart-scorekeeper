@@ -220,7 +220,7 @@ async function ensureGameNight(page, league, season) {
 }
 
 /**
- * Alpha.12 separates scoring-device identity from board identity. The durable
+ * Alpha.12+ separates scoring-device identity from board identity. The durable
  * E2E scorer may legitimately migrate as a spare, so explicitly attach it to
  * the physical board used by the active E2E Game Night before pairing it.
  */
@@ -287,7 +287,7 @@ async function ensureDevice(page, league, night) {
   return device;
 }
 
-test("alpha.12 live preview supports venue hardware, pairing, and scoring", async ({ page, browser }) => {
+test("alpha.15 live preview supports walk-up admin, pairing, and scoring", async ({ page, browser }) => {
   const pageErrors = [];
   const serverErrors = [];
 
@@ -300,7 +300,8 @@ test("alpha.12 live preview supports venue hardware, pairing, and scoring", asyn
 
   const homeResponse = await page.goto("/", { waitUntil: "domcontentloaded" });
   expect(homeResponse?.status()).toBeLessThan(400);
-  await expect(page.getByRole("heading", { name: "How are you playing?" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "What is this screen for?" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Open Scoring Device/i })).toBeVisible();
 
   await page.goto("/account", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Account", exact: true })).toBeVisible();
@@ -317,10 +318,10 @@ test("alpha.12 live preview supports venue hardware, pairing, and scoring", asyn
   console.log(`LIVE_E2E league=${league.id} season=${season.id} night=${night.id} device=${device.id} physicalBoard=${device.physicalBoardId}`);
 
   const routes = [
-    ["/league-play", "League Play"],
+    ["/league-play", "League Admin"],
     ["/league-roster", "Player Directory"],
     ["/game-nights/check-in", "Player Check-in"],
-    ["/game-nights/control", "Game Night Control"],
+    ["/game-nights/control", "Control Room"],
     ["/game-nights/fixtures", "Fixture & Round Control"],
     ["/league-devices", "Venue Hardware"],
   ];
@@ -330,6 +331,10 @@ test("alpha.12 live preview supports venue hardware, pairing, and scoring", asyn
     await expect(page.getByText(marker, { exact: false }).first()).toBeVisible();
     await expect(page.getByText(/Sign in before|Sign in to open/i)).toHaveCount(0);
   }
+
+  await page.goto("/league-play", { waitUntil: "domcontentloaded" });
+  await expect(page.getByText("Start here on league night", { exact: false })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Run Game Night" })).toBeVisible();
 
   const pairing = await requireOk(
     await requestJson(page, "/api/leagues/board-devices/pairing", {
@@ -350,6 +355,10 @@ test("alpha.12 live preview supports venue hardware, pairing, and scoring", asyn
   const devicePage = await deviceContext.newPage();
   const deviceErrors = [];
   devicePage.on("pageerror", (error) => deviceErrors.push(error.message));
+
+  await devicePage.goto("/board-device", { waitUntil: "domcontentloaded" });
+  await expect(devicePage.getByRole("heading", { name: "Pair this scorer" })).toBeVisible();
+  await expect(devicePage.getByText("Enter the six-digit code here.", { exact: false })).toBeVisible();
 
   await devicePage.goto(`/board-device#pair=${pairing.code}`, { waitUntil: "domcontentloaded" });
   await expect(devicePage.getByText("ONLINE", { exact: true })).toBeVisible({ timeout: 30_000 });
