@@ -3,6 +3,7 @@ import {
   BoardDeviceCredentialError,
   createPhysicalBoardForUser,
   createVenueForLeagueForUser,
+  deleteEmptyVenueForUser,
   getVenueHardwareForUser,
   LeaguePermissionError,
   linkVenueToLeagueForUser,
@@ -260,24 +261,41 @@ export async function DELETE(request: Request) {
   const authState = await getAuthenticatedUser(request);
   if (!authState.user) return authFailureResponse(authState.unavailable);
 
-  let input: { action?: "unlinkVenue"; leagueId?: string; venueId?: string };
+  let input: {
+    action?: "unlinkVenue" | "deleteVenue";
+    leagueId?: string;
+    venueId?: string;
+  };
   try {
     input = await request.json();
   } catch {
     return noStoreJson({ error: "Invalid venue removal request." }, { status: 400 });
   }
 
-  if (input.action !== "unlinkVenue" || !input.leagueId || !input.venueId) {
-    return noStoreJson({ error: "League and venue are required." }, { status: 400 });
+  if (!input.venueId) {
+    return noStoreJson({ error: "venueId is required." }, { status: 400 });
   }
 
   try {
-    await unlinkVenueFromLeagueForUser({
-      leagueId: input.leagueId,
-      venueId: input.venueId,
-      userId: authState.user.id,
-    });
-    return noStoreJson({ removed: true });
+    if (input.action === "deleteVenue") {
+      await deleteEmptyVenueForUser({
+        venueId: input.venueId,
+        userId: authState.user.id,
+      });
+      return noStoreJson({ removed: true });
+    }
+    if (input.action === "unlinkVenue") {
+      if (!input.leagueId) {
+        return noStoreJson({ error: "leagueId is required." }, { status: 400 });
+      }
+      await unlinkVenueFromLeagueForUser({
+        leagueId: input.leagueId,
+        venueId: input.venueId,
+        userId: authState.user.id,
+      });
+      return noStoreJson({ removed: true });
+    }
+    return noStoreJson({ error: "Unknown venue removal action." }, { status: 400 });
   } catch (error) {
     return errorResponse(error);
   }
