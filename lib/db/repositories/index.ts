@@ -105,6 +105,11 @@ export {
   updatePhysicalBoardForUser,
 } from "./venueHardware";
 export {
+  createVenueForLeagueForUser,
+  updateVenueForUser,
+  unlinkVenueFromLeagueForUser,
+} from "./venueAdministration";
+export {
   getBoardDeviceAssignment,
   getBoardDeviceConnectionForCredential,
   getBoardDeviceMatchForCredential,
