@@ -63,6 +63,10 @@ export {
 export { assignGameNightPhysicalBoardsForUser } from "./gameNights";
 export { setGameNightVenueForUser } from "./gameNightVenue";
 export {
+  listGameNightBoardUsagesForUser,
+  relocateGameNightBoardForUser,
+} from "./gameNightBoardOperations";
+export {
   createGameNightForUser,
   populateGameNightBoardsForUser,
   regenerateGameNightRoundForUser,
