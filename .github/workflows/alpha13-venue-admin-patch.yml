@@ -1,0 +1,94 @@
+name: Alpha 13 venue administration patch
+
+"on":
+  push:
+    branches:
+      - internal/alpha13-venue-administration
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    env:
+      BETTER_AUTH_URL: http://127.0.0.1:3000
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: internal/alpha13-venue-administration
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply alpha.13 edge-case guards
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('lib/db/repositories/boardDevices.ts')
+          text = path.read_text()
+          marker = 'export async function getVenueHardwareForUser'
+          start = text.index(marker)
+          end = text.index('/** Compatibility helper', start)
+          block = text[start:end]
+          old = '  if (!venue) throw new Error("This league does not have a venue configured.");\n  await requireVenueLinkedToLeague(input.leagueId, venue.id);'
+          new = '''  if (!venue) {
+            if (input.venueId) throw new Error("That venue is not available to this league.");
+            return { venues: linkedVenues, availableVenues, boards: [], devices: [] };
+          }
+          await requireVenueLinkedToLeague(input.leagueId, venue.id);'''
+          if old not in block:
+            raise SystemExit('getVenueHardwareForUser venue guard target not found')
+          block = block.replace(old, new, 1)
+          path.write_text(text[:start] + block + text[end:])
+
+          path = Path('lib/db/repositories/venueHardware.ts')
+          text = path.read_text()
+          old = '''  const existing = await getDefaultVenueForLeagueForUser(input.leagueId, input.userId);
+          if (existing) return existing;'''
+          new = '''  const existing = (await listVenuesForLeagueForUser(input.leagueId, input.userId)).find(
+            (venue) => venue.status === "active",
+          ) ?? null;
+          if (existing) return existing;'''
+          if old not in text:
+            raise SystemExit('ensureDefaultVenue active venue target not found')
+          path.write_text(text.replace(old, new, 1))
+
+          path = Path('app/game-nights/boards/page.tsx')
+          text = path.read_text()
+          old = '    setVenues(result.venues ?? []);'
+          new = '    setVenues((result.venues ?? []).filter((venue) => venue.status === "active"));'
+          if old not in text:
+            raise SystemExit('Game Night active venue filter target not found')
+          path.write_text(text.replace(old, new, 1))
+      - run: npm ci
+      - name: Prepare database
+        run: |
+          mkdir -p data
+          npm run db:migrate
+      - name: Validate venue and Game Night contracts
+        run: |
+          npm run league:test
+          npm run game-night:test
+          npm run venue-hardware:test
+          npm run board-device:test
+          npm run board-device:pairing:test
+      - name: Lint
+        run: npm run lint
+      - name: Production build
+        run: npm run build
+      - name: Commit guarded implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib/db/repositories/boardDevices.ts lib/db/repositories/venueHardware.ts app/game-nights/boards/page.tsx
+          if git diff --cached --quiet; then
+            echo "No guard changes to commit."
+          else
+            git commit -m "Harden venue administration boundaries"
+            git push origin HEAD:internal/alpha13-venue-administration
+          fi
