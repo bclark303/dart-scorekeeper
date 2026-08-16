@@ -28,6 +28,7 @@
     "board-device:offline:test": "tsx scripts/board-offline-queue-contract-test.ts",
     "board-device:pairing:test": "tsx scripts/board-device-pairing-contract-test.ts",
     "venue-hardware:test": "tsx scripts/venue-hardware-contract-test.ts",
+    "game-night:board-ops:test": "tsx scripts/game-night-board-operations-contract-test.ts",
     "x01:test": "tsx scripts/x01-engine-contract-test.ts",
     "db:studio": "drizzle-kit studio"
   },

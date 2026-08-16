@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { GameNightBoardOperationsPanel } from "@/components/GameNightBoardOperationsPanel";
 import { authClient } from "@/lib/auth/client";
 import type { GameNightSummary } from "@/lib/league/gameNightContracts";
 import { useGameNightWorkspace } from "@/lib/league/useGameNightWorkspace";
@@ -365,6 +366,12 @@ export default function GameNightControlPage() {
                 </div>
               </div>
             </section>
+
+            <GameNightBoardOperationsPanel
+              leagueId={workspace.leagueId}
+              night={night}
+              onNightChange={workspace.applyNight}
+            />
 
             <section>
               <div className="mb-3 flex flex-wrap items-end justify-between gap-3">

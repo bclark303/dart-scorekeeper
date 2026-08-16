@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { GameNightWorkspacePicker } from "@/components/GameNightWorkspacePicker";
+import { GameNightBoardPlanningWarnings } from "@/components/GameNightBoardPlanningWarnings";
 import { authClient } from "@/lib/auth/client";
 import type {
   BoardDeviceSummary,
@@ -204,6 +205,7 @@ export default function GameNightBoardsPage() {
 
       {night && (
         <div className="mt-6 space-y-6">
+          <GameNightBoardPlanningWarnings night={night} />
           <section className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
             <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-xl font-black">Venue & board allocation</h2><p className="mt-1 text-sm text-[var(--color-text-muted)]">{structuralLocked ? "The physical board allocation is locked because this Game Night has started or closed." : `Select ${requiredBoardCount} physical ${requiredBoardCount === 1 ? "board" : "boards"} before play.`}</p></div><span className="rounded-full bg-[var(--color-panel-soft)] px-3 py-1 text-xs font-bold">{selectedBoardIds.length}/{requiredBoardCount} selected</span></div>
 

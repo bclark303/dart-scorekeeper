@@ -380,6 +380,7 @@ export async function assertGameNightPhysicalBoardsAvailable(gameNightId: string
       physicalBoardId: gameNightBoards.physicalBoardId,
       boardNumber: physicalBoards.boardNumber,
       boardName: physicalBoards.name,
+      boardStatus: physicalBoards.status,
     })
     .from(gameNightBoards)
     .leftJoin(physicalBoards, eq(gameNightBoards.physicalBoardId, physicalBoards.id))
@@ -388,6 +389,18 @@ export async function assertGameNightPhysicalBoardsAvailable(gameNightId: string
     .map((row) => row.physicalBoardId)
     .filter((id): id is string => Boolean(id));
   if (!targetIds.length) throw new Error("Assign physical boards before starting the Game Night.");
+
+  const unavailable = target.filter(
+    (board) => !board.physicalBoardId || board.boardStatus !== "active",
+  );
+  if (unavailable.length) {
+    const boardNames = unavailable.map(
+      (board) => board.boardName || `Board ${board.boardNumber ?? "?"}`,
+    );
+    throw new Error(
+      `${boardNames.join(", ")} ${boardNames.length === 1 ? "is" : "are"} unavailable or out of service. Choose active physical boards before starting the Game Night.`,
+    );
+  }
 
   const conflicts = await getDatabase()
     .select({
