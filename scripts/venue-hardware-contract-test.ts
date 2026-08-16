@@ -7,16 +7,21 @@ import {
   createLeagueForUser,
   createLeaguePlayerForUser,
   createPhysicalBoardForUser,
+  createVenueForLeagueForUser,
+  deleteEmptyVenueForUser,
   getBoardDeviceConnectionForCredential,
   getVenueHardwareForUser,
   linkVenueToLeagueForUser,
+  listVenuesForLeagueForUser,
   populateGameNightBoardsForUser,
   prepareGameNightTeamsForUser,
   registerBoardDeviceForUser,
   setGameNightStatusForUser,
   setGameNightVenueForUser,
+  unlinkVenueFromLeagueForUser,
   updateBoardDeviceForUser,
   updateGameNightAttendanceForUser,
+  updateVenueForUser,
 } from "@/lib/db";
 import { DEFAULT_GAME_NIGHT_SETTINGS } from "@/lib/league/gameNightContracts";
 
@@ -150,6 +155,30 @@ async function run() {
   assert.ok(hardwareA.venue, "League A should have a default venue.");
   const sharedVenueId = hardwareA.venue.id;
 
+  // Venue administration: a newly created empty venue can be renamed and
+  // permanently deleted because it has no hardware or history yet.
+  const temporaryVenue = await createVenueForLeagueForUser({
+    leagueId: leagueA.leagueId,
+    userId: ownerUserId,
+    name: "Temporary Venue",
+    now: BASE_NOW + 1_500,
+  });
+  const renamedTemporaryVenue = await updateVenueForUser({
+    venueId: temporaryVenue.id,
+    userId: ownerUserId,
+    name: "Temporary Venue Renamed",
+    now: BASE_NOW + 1_501,
+  });
+  assert.equal(renamedTemporaryVenue.name, "Temporary Venue Renamed");
+  await deleteEmptyVenueForUser({ venueId: temporaryVenue.id, userId: ownerUserId });
+  assert.equal(
+    (await listVenuesForLeagueForUser(leagueA.leagueId, ownerUserId)).some(
+      (venue) => venue.id === temporaryVenue.id,
+    ),
+    false,
+    "An empty venue should be permanently deletable.",
+  );
+
   await linkVenueToLeagueForUser({
     leagueId: leagueB.leagueId,
     venueId: sharedVenueId,
@@ -185,6 +214,12 @@ async function run() {
     now: BASE_NOW + 3_001,
   });
 
+  await assert.rejects(
+    () => deleteEmptyVenueForUser({ venueId: sharedVenueId, userId: ownerUserId }),
+    /Archive it instead/i,
+    "A venue with real hardware must not be permanently deleted.",
+  );
+
   const scorerA = await registerBoardDeviceForUser({
     id: `scorer-a-${suffix}`,
     leagueId: leagueA.leagueId,
@@ -219,6 +254,17 @@ async function run() {
     nowOffset: 10_000,
   });
   await setGameNightStatusForUser(nightA, ownerUserId, "active");
+
+  await assert.rejects(
+    () => updateVenueForUser({
+      venueId: sharedVenueId,
+      userId: ownerUserId,
+      status: "archived",
+      now: BASE_NOW + 10_500,
+    }),
+    /unfinished Game Night/i,
+    "A venue with an active or otherwise unfinished Game Night must not be archived.",
+  );
 
   const scorerAConnection = await getBoardDeviceConnectionForCredential(
     scorerA.deviceKey,
@@ -290,7 +336,96 @@ async function run() {
   const oldConnection = await getBoardDeviceConnectionForCredential(scorerA.deviceKey);
   assert.equal(oldConnection.assignment, null, "The old scorer should remain paired but idle as a spare.");
 
-  console.log("Venue hardware architecture contract passed.");
+  // Finish/cancel the live work so the venue is safe to archive. Completed and
+  // cancelled history remains attached and does not prevent archival.
+  await setGameNightStatusForUser(nightA, ownerUserId, "completed");
+  await setGameNightStatusForUser(nightB, ownerUserId, "cancelled");
+  const archived = await updateVenueForUser({
+    venueId: sharedVenueId,
+    userId: ownerUserId,
+    status: "archived",
+    now: BASE_NOW + 40_000,
+  });
+  assert.equal(archived.status, "archived");
+
+  // Keep another active venue available so a fresh Game Night can be created,
+  // then prove the archived shared venue cannot be selected for it.
+  const fallbackVenue = await createVenueForLeagueForUser({
+    leagueId: leagueA.leagueId,
+    userId: ownerUserId,
+    name: "Fallback Active Venue",
+    now: BASE_NOW + 40_100,
+  });
+  const freshNightId = `archive-guard-night-${suffix}`;
+  await createGameNightForUser({
+    id: freshNightId,
+    leagueId: leagueA.leagueId,
+    seasonId: leagueA.seasonId,
+    userId: ownerUserId,
+    name: "Archive Guard Night",
+    scheduledAt: BASE_NOW + 200_000,
+    settings: {
+      ...DEFAULT_GAME_NIGHT_SETTINGS,
+      boardCount: 1,
+    },
+    now: BASE_NOW + 40_200,
+  });
+  await assert.rejects(
+    () => setGameNightVenueForUser(freshNightId, sharedVenueId, ownerUserId),
+    /Archived venues cannot be assigned/i,
+    "Archived venues must not be assignable to new Game Nights.",
+  );
+
+  const restored = await updateVenueForUser({
+    venueId: sharedVenueId,
+    userId: ownerUserId,
+    status: "active",
+    now: BASE_NOW + 40_300,
+  });
+  assert.equal(restored.status, "active");
+
+  // A shared venue can be removed from one league after that league has no
+  // unfinished work there, without affecting the other league's access.
+  await unlinkVenueFromLeagueForUser({
+    leagueId: leagueB.leagueId,
+    venueId: sharedVenueId,
+    userId: ownerUserId,
+  });
+  assert.equal(
+    (await listVenuesForLeagueForUser(leagueB.leagueId, ownerUserId)).some(
+      (venue) => venue.id === sharedVenueId,
+    ),
+    false,
+    "Removing a shared venue from League B must leave the venue itself intact.",
+  );
+  assert.equal(
+    (await listVenuesForLeagueForUser(leagueA.leagueId, ownerUserId)).some(
+      (venue) => venue.id === sharedVenueId,
+    ),
+    true,
+    "League A must retain access to the shared venue.",
+  );
+
+  // Once only League A remains linked, unlinking the venue would orphan its
+  // hardware/history. The safe choices are archive or empty-delete instead.
+  await assert.rejects(
+    () => unlinkVenueFromLeagueForUser({
+      leagueId: leagueA.leagueId,
+      venueId: sharedVenueId,
+      userId: ownerUserId,
+    }),
+    /only league link/i,
+  );
+
+  // Clean up the fallback venue only if it stayed empty. Creating the fresh
+  // Game Night may have selected it automatically, so it should now be protected
+  // from destructive deletion as historical/structural data.
+  await assert.rejects(
+    () => deleteEmptyVenueForUser({ venueId: fallbackVenue.id, userId: ownerUserId }),
+    /Archive it instead/i,
+  );
+
+  console.log("Venue hardware and administration contract passed.");
 }
 
 run().catch((error) => {
