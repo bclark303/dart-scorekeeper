@@ -1,10 +1,11 @@
 import { and, eq } from "drizzle-orm";
 
 import type { VenueStatus, VenueSummary } from "@/lib/league/boardDeviceContracts";
+import { boardDevices } from "../board-device-schema";
 import { getDatabase } from "../client";
 import { gameNights } from "../game-night-schema";
 import { seasons } from "../schema";
-import { leagueVenues, venues } from "../venue-schema";
+import { leagueVenues, physicalBoards, venues } from "../venue-schema";
 import {
   requireLeagueAdminForVenueAccess,
   requireVenueAdminForUser,
@@ -126,8 +127,39 @@ export async function updateVenueForUser(input: {
 }
 
 /**
- * Remove a league's permission to use a venue. Historical Game Nights keep
- * their venue reference, but unfinished nights must be moved or closed first.
+ * Permanently delete only a genuinely empty venue. Any hardware or Game Night
+ * history makes archive the required safe removal path.
+ */
+export async function deleteEmptyVenueForUser(input: {
+  venueId: string;
+  userId: string;
+}) {
+  await requireVenueAdminForUser(input.venueId, input.userId);
+  const [existing] = await getDatabase()
+    .select({ id: venues.id })
+    .from(venues)
+    .where(eq(venues.id, input.venueId))
+    .limit(1);
+  if (!existing) throw new Error("Venue was not found.");
+
+  const [boards, devices, nights] = await Promise.all([
+    getDatabase().select({ id: physicalBoards.id }).from(physicalBoards).where(eq(physicalBoards.venueId, input.venueId)),
+    getDatabase().select({ id: boardDevices.id }).from(boardDevices).where(eq(boardDevices.venueId, input.venueId)),
+    getDatabase().select({ id: gameNights.id }).from(gameNights).where(eq(gameNights.venueId, input.venueId)),
+  ]);
+
+  if (boards.length || devices.length || nights.length) {
+    throw new Error(
+      "This venue already has boards, scoring devices, or Game Night history. Archive it instead so those records remain intact.",
+    );
+  }
+
+  await getDatabase().delete(venues).where(eq(venues.id, input.venueId));
+}
+
+/**
+ * Remove a league's permission to use a shared venue. Historical Game Nights
+ * keep their venue reference, but unfinished nights must be moved or closed.
  */
 export async function unlinkVenueFromLeagueForUser(input: {
   leagueId: string;
@@ -142,6 +174,16 @@ export async function unlinkVenueFromLeagueForUser(input: {
   if (unfinished.length) {
     throw new Error(
       `This league still has ${unfinished.length} unfinished Game Night${unfinished.length === 1 ? "" : "s"} at this venue. Complete, cancel, or move them before removing the venue from the league.`,
+    );
+  }
+
+  const links = await getDatabase()
+    .select({ id: leagueVenues.id })
+    .from(leagueVenues)
+    .where(eq(leagueVenues.venueId, input.venueId));
+  if (links.length <= 1) {
+    throw new Error(
+      "This is the venue's only league link. Delete it if it is empty, or archive it if it contains hardware or history.",
     );
   }
 
