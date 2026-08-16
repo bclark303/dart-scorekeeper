@@ -8,11 +8,30 @@ import type { LeagueListResponse, LeagueSummary } from "@/lib/league/contracts";
 const ACTIVE_LEAGUE_KEY = "dart-scorekeeper:active-league-id";
 
 const leagueMenu = [
-  { href: "/leagues", title: "League Setup", description: "Leagues, seasons, rules, schedule, and league-level statistics.", icon: "🏛️" },
-  { href: "/game-nights/control", title: "Game Night", description: "Check-in, teams, boards, fixtures, and live night control.", icon: "📅" },
-  { href: "/league-roster", title: "Players", description: "Add and manage players, league membership, and player statistics.", icon: "👥" },
-  { href: "/league-devices", title: "Devices", description: "Registered scoring devices, status, pairing, and maintenance.", icon: "🖥️" },
-  { href: "/league-play/play", title: "Play", description: "Open the current centrally managed match and board status.", icon: "🎯" },
+  {
+    href: "/leagues",
+    title: "League Setup",
+    description: "Leagues, seasons, rules, schedule, and league-level statistics.",
+    icon: "🏛️",
+  },
+  {
+    href: "/league-roster",
+    title: "Players",
+    description: "Add and manage players, league membership, and player statistics.",
+    icon: "👥",
+  },
+  {
+    href: "/league-devices",
+    title: "Venue Hardware",
+    description: "Venues, physical boards, scoring devices, pairing, and maintenance.",
+    icon: "🖥️",
+  },
+  {
+    href: "/league-play/play",
+    title: "Match View",
+    description: "Open the current centrally managed match when you need a direct match-level view.",
+    icon: "🎯",
+  },
 ] as const;
 
 type AccessState = "checking" | "logged-out" | "logged-in" | "error";
@@ -51,7 +70,7 @@ export default function LeaguePlayPage() {
       if (resolved) window.localStorage.setItem(ACTIVE_LEAGUE_KEY, resolved);
     } catch (error) {
       setAccess("error");
-      setErrorMessage(error instanceof Error ? error.message : "Could not load League Play.");
+      setErrorMessage(error instanceof Error ? error.message : "Could not load League Admin.");
     }
   }, []);
 
@@ -72,8 +91,10 @@ export default function LeaguePlayPage() {
         <header className="mb-8 flex items-start justify-between gap-4">
           <div>
             <Link href="/" className="text-sm font-bold text-[var(--color-primary)]">← Home</Link>
-            <h1 className="mt-2 text-4xl font-black">League Play</h1>
-            <p className="mt-1 text-[var(--color-text-muted)]">Connected league scoring and administration.</p>
+            <h1 className="mt-2 text-4xl font-black">League Admin</h1>
+            <p className="mt-1 text-[var(--color-text-muted)]">
+              The walk-up home for running a league night and maintaining the league.
+            </p>
           </div>
           <div className="flex gap-2">
             <Link href="/settings" aria-label="Settings" className="rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] px-3 py-2 text-sm font-bold">⚙</Link>
@@ -87,20 +108,24 @@ export default function LeaguePlayPage() {
           <div className="grid gap-5 md:grid-cols-2">
             <Link href="/account" className="rounded-3xl border border-blue-500/40 bg-[var(--color-panel)] p-7 transition hover:border-blue-500">
               <div className="text-3xl">🔐</div>
-              <h2 className="mt-4 text-2xl font-black">Log In</h2>
-              <p className="mt-2 text-sm text-[var(--color-text-muted)]">Sign in to access League Setup, Game Night, Players, Devices, and Play.</p>
+              <h2 className="mt-4 text-2xl font-black">Administrator Login</h2>
+              <p className="mt-2 text-sm text-[var(--color-text-muted)]">
+                Sign in to run Game Night Control, manage players, venues, boards, and league settings.
+              </p>
             </Link>
             <Link href="/board-device" className="rounded-3xl border border-violet-500/40 bg-[var(--color-panel)] p-7 transition hover:border-violet-500">
-              <div className="text-3xl">🖥️</div>
-              <h2 className="mt-4 text-2xl font-black">Device Setup</h2>
-              <p className="mt-2 text-sm text-[var(--color-text-muted)]">Pair this scorer with a registered league board using its device code.</p>
+              <div className="text-3xl">🎯</div>
+              <h2 className="mt-4 text-2xl font-black">This is a Scoring Device</h2>
+              <p className="mt-2 text-sm text-[var(--color-text-muted)]">
+                Go directly to the scorer pairing/assignment screen. An administrator login is not required on the board device.
+              </p>
             </Link>
           </div>
         )}
 
         {access === "error" && (
           <div className="rounded-2xl border border-red-500/40 bg-red-500/10 p-5">
-            <div className="font-black">League Play could not be loaded.</div>
+            <div className="font-black">League Admin could not be loaded.</div>
             <div className="mt-1 text-sm">{errorMessage}</div>
             <button onClick={() => void loadWorkspace()} className="mt-4 rounded-xl bg-[var(--color-primary)] px-4 py-2 font-black text-white">Retry</button>
           </div>
@@ -116,8 +141,13 @@ export default function LeaguePlayPage() {
                   {activeLeague?.seasons[0] && <div className="text-sm text-[var(--color-text-muted)]">{activeLeague.seasons[0].name}</div>}
                 </div>
                 {leagues.length > 1 && (
-                  <label className="text-sm font-bold">Switch league
-                    <select value={activeLeagueId} onChange={(event) => changeActiveLeague(event.target.value)} className="mt-1 block min-w-60 rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] px-3 py-2.5">
+                  <label className="text-sm font-bold">
+                    Switch league
+                    <select
+                      value={activeLeagueId}
+                      onChange={(event) => changeActiveLeague(event.target.value)}
+                      className="mt-1 block min-w-60 rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] px-3 py-2.5"
+                    >
                       {leagues.map((league) => <option key={league.id} value={league.id}>{league.name}</option>)}
                     </select>
                   </label>
@@ -129,21 +159,44 @@ export default function LeaguePlayPage() {
               <section className="rounded-3xl border border-dashed border-[var(--color-panel-border)] bg-[var(--color-panel)] p-8 text-center">
                 <h2 className="text-2xl font-black">No leagues yet</h2>
                 <p className="mt-2 text-[var(--color-text-muted)]">Create your first league and season to unlock the league workflow.</p>
-                <Link href="/leagues" className="mt-5 inline-flex rounded-xl bg-[var(--color-primary)] px-5 py-3 font-black text-white">Open League Setup</Link>
+                <Link href="/leagues" className="mt-5 inline-flex rounded-xl bg-[var(--color-primary)] px-5 py-3 font-black text-white">Create a League</Link>
               </section>
             ) : (
-              <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {leagueMenu.map((item) => (
-                  <Link key={item.href} href={item.href} className="group rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5 transition hover:-translate-y-0.5 hover:border-[var(--color-primary)]">
-                    <div className="text-2xl">{item.icon}</div>
-                    <div className="mt-3 flex items-center justify-between gap-3">
-                      <h2 className="text-xl font-black">{item.title}</h2>
-                      <span className="text-xl text-[var(--color-text-muted)] transition group-hover:translate-x-1">→</span>
+              <>
+                <Link
+                  href="/game-nights/control"
+                  className="group mb-7 block rounded-3xl border border-blue-500/45 bg-blue-500/10 p-6 transition hover:border-blue-400 sm:p-7"
+                >
+                  <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <div className="text-xs font-black uppercase tracking-[0.16em] text-blue-300">Start here on league night</div>
+                      <h2 className="mt-2 text-3xl font-black">Run Game Night</h2>
+                      <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-text-muted)]">
+                        Control tells you exactly what is ready, what needs attention, and where to fix it. Once play starts, the same screen becomes the live operations dashboard.
+                      </p>
                     </div>
-                    <p className="mt-2 text-sm leading-6 text-[var(--color-text-muted)]">{item.description}</p>
-                  </Link>
-                ))}
-              </section>
+                    <div className="inline-flex min-h-14 shrink-0 items-center justify-center rounded-2xl bg-blue-600 px-6 py-4 text-lg font-black text-white">
+                      Open Control <span className="ml-2 transition group-hover:translate-x-1">→</span>
+                    </div>
+                  </div>
+                </Link>
+
+                <div className="mb-3 text-xs font-black uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
+                  Administration & maintenance
+                </div>
+                <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {leagueMenu.map((item) => (
+                    <Link key={item.href} href={item.href} className="group rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5 transition hover:-translate-y-0.5 hover:border-[var(--color-primary)]">
+                      <div className="text-2xl">{item.icon}</div>
+                      <div className="mt-3 flex items-center justify-between gap-3">
+                        <h2 className="text-lg font-black">{item.title}</h2>
+                        <span className="text-xl text-[var(--color-text-muted)] transition group-hover:translate-x-1">→</span>
+                      </div>
+                      <p className="mt-2 text-sm leading-6 text-[var(--color-text-muted)]">{item.description}</p>
+                    </Link>
+                  ))}
+                </section>
+              </>
             )}
           </>
         )}
