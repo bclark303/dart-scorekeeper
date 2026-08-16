@@ -66,6 +66,7 @@ export {
   listGameNightBoardUsagesForUser,
   relocateGameNightBoardForUser,
 } from "./gameNightBoardOperations";
+export { getGameNightReadinessForUser } from "./gameNightReadiness";
 export {
   createGameNightForUser,
   populateGameNightBoardsForUser,
