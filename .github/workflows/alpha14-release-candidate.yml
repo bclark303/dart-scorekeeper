@@ -1,0 +1,107 @@
+name: Alpha 14 release candidate
+
+"on":
+  push:
+    branches:
+      - internal/alpha14-game-night-board-operations
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    env:
+      BETTER_AUTH_URL: http://127.0.0.1:3000
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: internal/alpha14-game-night-board-operations
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Synchronize alpha.14 version metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm version 0.5.0-alpha.14 --no-git-tag-version
+          sed -i 's/export const APP_VERSION = "[^"]*";/export const APP_VERSION = "0.5.0-alpha.14";/' lib/appInfo.ts
+          node - <<'NODE'
+          const fs = require('fs');
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+          if (pkg.version !== '0.5.0-alpha.14') throw new Error('package.json version mismatch');
+          if (lock.version !== '0.5.0-alpha.14') throw new Error('package-lock top-level version mismatch');
+          if (lock.packages?.['']?.version !== '0.5.0-alpha.14') throw new Error('package-lock root package version mismatch');
+          if (!fs.readFileSync('lib/appInfo.ts', 'utf8').includes('APP_VERSION = "0.5.0-alpha.14"')) {
+            throw new Error('APP_VERSION mismatch');
+          }
+          NODE
+      - run: npm ci
+      - name: Verify Drizzle migration state is committed
+        shell: bash
+        run: |
+          set -euo pipefail
+          before="$(git status --porcelain -- drizzle)"
+          npm run db:generate
+          after="$(git status --porcelain -- drizzle)"
+          if [ "$before" != "$after" ]; then
+            echo "::error::Drizzle generated uncommitted migration/schema changes"
+            git status --short -- drizzle
+            exit 1
+          fi
+      - name: Prepare database
+        run: |
+          mkdir -p data
+          npm run db:migrate
+      - name: Run complete contract suite
+        run: |
+          npm run db:test
+          npm run local:test
+          npm run auth:test
+          npm run setup:test
+          npm run x01:test
+          npm run league:test
+          npm run league:roster:test
+          npm run game-night:test
+          npm run game-night:templates:test
+          npm run game-night:stats:test
+          npm run game-night:multi-board:test
+          npm run game-night:fixtures:test
+          npm run game-night:layout:test
+          npm run game-night:board-ops:test
+          npm run dummy-scoring:test
+          npm run dummy-team-balance:test
+          npm run league-match:test
+          npm run board-device:test
+          npm run board-device:offline:test
+          npm run board-device:pairing:test
+          npm run venue-hardware:test
+      - name: Lint
+        run: npm run lint
+      - name: Production build
+        run: npm run build
+      - name: Docker build
+        run: docker build -t dart-scorekeeper-alpha14 .
+      - name: Verify only version metadata remains uncommitted
+        shell: bash
+        run: |
+          set -euo pipefail
+          git status --short
+          unexpected="$(git status --porcelain | grep -vE '^( M|M |MM) (package.json|package-lock.json|lib/appInfo.ts)$' || true)"
+          if [ -n "$unexpected" ]; then
+            echo "::error::Unexpected working-tree changes after validation"
+            echo "$unexpected"
+            exit 1
+          fi
+      - name: Commit validated alpha.14 version
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json lib/appInfo.ts
+          git commit -m "Prepare v0.5.0-alpha.14 candidate"
+          git push origin HEAD:internal/alpha14-game-night-board-operations
