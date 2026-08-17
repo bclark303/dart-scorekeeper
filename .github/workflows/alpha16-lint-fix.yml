@@ -1,0 +1,95 @@
+name: Alpha 16 lint fix
+
+"on":
+  push:
+    branches:
+      - internal/alpha16-walkup-ux
+
+permissions:
+  contents: write
+
+jobs:
+  fix-and-verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      BETTER_AUTH_URL: http://127.0.0.1:3000
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: internal/alpha16-walkup-ux
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply React-purity fixes
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          path = Path('app/league-play/page.tsx')
+          text = path.read_text()
+          old = '''    const unfinished = gameNights
+      .filter((night) => !["completed", "cancelled"].includes(night.status))
+      .sort((a, b) => {
+        const now = Date.now();
+        const aFuture = a.scheduledAt >= now;
+        const bFuture = b.scheduledAt >= now;
+        if (aFuture !== bFuture) return aFuture ? -1 : 1;
+        return aFuture ? a.scheduledAt - b.scheduledAt : b.scheduledAt - a.scheduledAt;
+      });
+'''
+          new = '''    const priority: Record<GameNightSummary["status"], number> = {
+      active: 0,
+      ready: 1,
+      checkin: 2,
+      draft: 3,
+      completed: 4,
+      cancelled: 5,
+    };
+    const unfinished = gameNights
+      .filter((night) => !["completed", "cancelled"].includes(night.status))
+      .sort((a, b) => {
+        const byStatus = priority[a.status] - priority[b.status];
+        if (byStatus !== 0) return byStatus;
+        return b.scheduledAt - a.scheduledAt;
+      });
+'''
+          if old not in text:
+              raise SystemExit('Expected current-night sorting block not found')
+          text = text.replace(old, new)
+          old_effect = '''  useEffect(() => {
+    if (access !== "logged-in" || !activeLeagueId) {
+      setGameNights([]);
+      return;
+    }
+'''
+          new_effect = '''  useEffect(() => {
+    if (access !== "logged-in" || !activeLeagueId) return;
+'''
+          if old_effect not in text:
+              raise SystemExit('Expected Game Night effect guard not found')
+          text = text.replace(old_effect, new_effect)
+          path.write_text(text)
+          PY
+      - run: npm ci
+      - run: npm run db:migrate
+      - name: Core regression contracts
+        run: |
+          npm run league:test
+          npm run league:roster:test
+          npm run game-night:test
+          npm run game-night:readiness:test
+          npm run venue-hardware:test
+          npm run board-device:test
+      - run: npm run lint
+      - run: npm run build
+      - name: Commit verified fix
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/league-play/page.tsx
+          git commit -m "Fix alpha.16 admin dashboard purity"
+          git push origin HEAD:internal/alpha16-walkup-ux
