@@ -40,6 +40,14 @@ jobs:
               raise SystemExit('Could not locate alpha.17 APP_VERSION patch hook.')
           script = script.replace(bad, good)
           exec(compile(script, 'alpha17-entity-navigation-patch.py', 'exec'))
+
+          path = Path('app/league-devices/page.tsx')
+          text = path.read_text()
+          old = '''  useEffect(() => {\n    const params = new URLSearchParams(window.location.search);\n    setTargetBoardId(params.get("boardId") ?? "");\n    setTargetDeviceId(params.get("deviceId") ?? "");\n  }, []);'''
+          new = '''  useEffect(() => {\n    const timer = window.setTimeout(() => {\n      const params = new URLSearchParams(window.location.search);\n      setTargetBoardId(params.get("boardId") ?? "");\n      setTargetDeviceId(params.get("deviceId") ?? "");\n    }, 0);\n    return () => window.clearTimeout(timer);\n  }, []);'''
+          if old not in text:
+              raise SystemExit('Could not locate deep-link initialization effect.')
+          path.write_text(text.replace(old, new, 1))
           PY
           npm version 0.5.0-alpha.17 --no-git-tag-version
 
