@@ -105,14 +105,17 @@ test("alpha.17 entity bubbles and names drill into the represented object", asyn
   await boardsLink.click();
   await expect(page).toHaveURL(/\/game-nights\/boards$/);
   await page.goto("/league-play", { waitUntil: "domcontentloaded" });
-  if (await changeLeague.isVisible().catch(() => false)) {
-    await changeLeague.selectOption(league.id);
+  const refreshedChangeLeague = page.getByLabel("Change league");
+  if (await refreshedChangeLeague.isVisible().catch(() => false)) {
+    await refreshedChangeLeague.selectOption(league.id);
   }
   await page.getByRole("link", { name: /checked in →/i }).click();
   await expect(page).toHaveURL(/\/game-nights\/check-in$/);
+  await expect(page.getByRole("heading", { name: "Player Check-in" })).toBeVisible();
 
-  // A player name opens the existing master player profile.
-  await selectWorkspace(page, league.id, night.id);
+  // Check-in deliberately uses the shared remembered Game Night context rather
+  // than the generic workspace dropdown. The represented player should still
+  // be an immediate drill-down to the master profile.
   const playerLink = page.getByRole("link", { name: E2E_PLAYER, exact: true }).first();
   await expect(playerLink).toHaveAttribute(
     "href",
