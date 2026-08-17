@@ -75,6 +75,15 @@ jobs:
           if old_effect not in text:
               raise SystemExit("Expected Game Night effect guard not found")
           text = text.replace(old_effect, new_effect)
+          text = text.replace(
+              '  const [gameNightsLoading, setGameNightsLoading] = useState(false);',
+              '  const [gameNightsLoading, setGameNightsLoading] = useState(true);',
+          )
+          text = text.replace('    setGameNightsLoading(true);\n    fetch(', '    fetch(', 1)
+          text = text.replace(
+              '    setActiveLeagueId(leagueId);\n    setGameNights([]);',
+              '    setActiveLeagueId(leagueId);\n    setGameNights([]);\n    setGameNightsLoading(true);',
+          )
           path.write_text(text)
           PY
       - run: npm ci
