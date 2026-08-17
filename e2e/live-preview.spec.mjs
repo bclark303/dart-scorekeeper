@@ -287,7 +287,7 @@ async function ensureDevice(page, league, night) {
   return device;
 }
 
-test("alpha.15 live preview supports walk-up admin, pairing, and scoring", async ({ page, browser }) => {
+test("alpha.16 live preview supports walk-up admin, pairing, and scoring", async ({ page, browser }) => {
   const pageErrors = [];
   const serverErrors = [];
 
@@ -300,8 +300,8 @@ test("alpha.15 live preview supports walk-up admin, pairing, and scoring", async
 
   const homeResponse = await page.goto("/", { waitUntil: "domcontentloaded" });
   expect(homeResponse?.status()).toBeLessThan(400);
-  await expect(page.getByRole("heading", { name: "What is this screen for?" })).toBeVisible();
-  await expect(page.getByRole("link", { name: /Open Scoring Device/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "What do you want to do?" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Score at a Dartboard/i })).toBeVisible();
 
   await page.goto("/account", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Account", exact: true })).toBeVisible();
@@ -318,12 +318,12 @@ test("alpha.15 live preview supports walk-up admin, pairing, and scoring", async
   console.log(`LIVE_E2E league=${league.id} season=${season.id} night=${night.id} device=${device.id} physicalBoard=${device.physicalBoardId}`);
 
   const routes = [
-    ["/league-play", "League Admin"],
-    ["/league-roster", "Player Directory"],
+    ["/league-play", "League Administration"],
+    ["/league-roster", "Players"],
     ["/game-nights/check-in", "Player Check-in"],
     ["/game-nights/control", "Control Room"],
     ["/game-nights/fixtures", "Fixture & Round Control"],
-    ["/league-devices", "Venue Hardware"],
+    ["/league-devices", "Venues, Dartboards & Scoring Devices"],
   ];
   for (const [path, marker] of routes) {
     const response = await page.goto(path, { waitUntil: "domcontentloaded" });
@@ -333,8 +333,10 @@ test("alpha.15 live preview supports walk-up admin, pairing, and scoring", async
   }
 
   await page.goto("/league-play", { waitUntil: "domcontentloaded" });
-  await expect(page.getByText("Start here on league night", { exact: false })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Run Game Night" })).toBeVisible();
+  await expect(page.getByText("Tonight", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Run the league night" })).toBeVisible();
+  await expect(page.getByText("Add or Edit Players", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Venues & Dartboards", { exact: true }).first()).toBeVisible();
 
   const pairing = await requireOk(
     await requestJson(page, "/api/leagues/board-devices/pairing", {
