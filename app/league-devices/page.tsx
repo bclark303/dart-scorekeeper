@@ -511,7 +511,7 @@ export default function VenueHardwarePage() {
   if (!session?.user) {
     return (
       <main className="mx-auto max-w-3xl p-6">
-        <h1 className="text-3xl font-black">Venue Hardware</h1>
+        <h1 className="text-3xl font-black">Venues, Dartboards & Scoring Devices</h1>
         <p className="mt-2 text-[var(--color-text-muted)]">Sign in to manage venues, boards, and scoring devices.</p>
       </main>
     );
@@ -521,14 +521,14 @@ export default function VenueHardwarePage() {
     <main className="mx-auto max-w-6xl p-4 sm:p-6">
       <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <Link href="/league-play" className="text-sm font-bold text-[var(--color-primary)]">← League Play</Link>
-          <h1 className="mt-2 text-3xl font-black">Venue Hardware</h1>
+          <Link href="/league-play" className="text-sm font-bold text-[var(--color-primary)]">← League Administration</Link>
+          <h1 className="mt-2 text-3xl font-black">Venues, Dartboards & Scoring Devices</h1>
           <p className="mt-1 max-w-3xl text-sm text-[var(--color-text-muted)]">
-            Manage real venues first, then the physical boards and scoring devices installed at each venue.
-            Leagues may share a venue without owning its hardware.
+            Set up the club or hall, its dartboards, and the tablet or computer used to score each board.
+            The same venue can be used by more than one league.
           </p>
         </div>
-        <Link href="/board-device" className="rounded-xl border border-[var(--color-panel-border)] px-4 py-2 text-sm font-bold">Open Device Client</Link>
+        <Link href="/board-device" className="rounded-xl border border-[var(--color-panel-border)] px-4 py-2 text-sm font-bold">Open a Scoring Screen</Link>
       </header>
 
       {errorMessage && <div className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-100">{errorMessage}</div>}
@@ -549,8 +549,8 @@ export default function VenueHardwarePage() {
       <section className="mb-6 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-2xl font-black">Venue Administration</h2>
-            <p className="mt-1 text-sm text-[var(--color-text-muted)]">Create, rename, share, archive, restore, or safely remove venues.</p>
+            <h2 className="text-2xl font-black">Venues</h2>
+            <p className="mt-1 text-sm text-[var(--color-text-muted)]">Add a club or hall, rename it, or take an old venue out of use.</p>
           </div>
           {selectedVenue && (
             <span className={`rounded-full px-3 py-1 text-xs font-black uppercase ${selectedVenue.status === "active" ? "bg-emerald-500/20" : "bg-amber-500/20"}`}>
@@ -561,7 +561,7 @@ export default function VenueHardwarePage() {
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <label className="block">
-            <span className="mb-1 block text-sm font-bold">Administration context</span>
+            <span className="mb-1 block text-sm font-bold">League</span>
             <select
               value={leagueId}
               onChange={(event) => {
@@ -573,7 +573,7 @@ export default function VenueHardwarePage() {
             >
               {leagues.map((league) => <option key={league.id} value={league.id}>{league.name}</option>)}
             </select>
-            <span className="mt-1 block text-xs text-[var(--color-text-muted)]">The league grants your administrative access. Hardware remains venue-owned.</span>
+            <span className="mt-1 block text-xs text-[var(--color-text-muted)]">Choose the league you are managing. The same venue can be used by more than one league.</span>
           </label>
 
           <label className="block">
@@ -610,7 +610,7 @@ export default function VenueHardwarePage() {
 
           <form onSubmit={linkVenue} className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-4">
             <div className="font-black">Use an existing venue</div>
-            <p className="mt-1 text-xs opacity-80">Share boards and devices already managed through another league.</p>
+            <p className="mt-1 text-xs opacity-80">Already set up for another league? Make this venue available here too.</p>
             <div className="mt-3 flex flex-col gap-2 sm:flex-row">
               <select value={linkVenueId} disabled={availableVenues.length === 0} onChange={(event) => setLinkVenueId(event.target.value)} className="flex-1 rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-3 disabled:opacity-60">
                 {availableVenues.length === 0 && <option value="">No other venues available</option>}
@@ -625,7 +625,7 @@ export default function VenueHardwarePage() {
           <div className="mt-5 rounded-xl border border-[var(--color-panel-border)] p-4">
             <div className="grid gap-3 md:grid-cols-[1fr_auto]">
               <label className="block">
-                <span className="mb-1 block text-sm font-bold">Selected venue name</span>
+                <span className="mb-1 block text-sm font-bold">Venue name</span>
                 <input maxLength={100} value={venueNameDraft} onChange={(event) => setVenueNameDraft(event.target.value)} className="w-full rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-3" />
               </label>
               <button type="button" disabled={savingVenue || !venueNameDraft.trim()} onClick={() => void updateVenue({ name: venueNameDraft })} className="self-end rounded-lg bg-[var(--color-panel-soft)] px-4 py-3 font-black disabled:opacity-60">{savingVenue ? "Saving…" : "Save Venue Name"}</button>
@@ -647,7 +647,7 @@ export default function VenueHardwarePage() {
 
       {!selectedVenue && (
         <section className="rounded-2xl border border-dashed border-[var(--color-panel-border)] p-6 text-center text-sm text-[var(--color-text-muted)]">
-          Create a venue above, or make an existing venue available to this league, before configuring physical boards and scoring devices.
+          Create or choose a venue before adding dartboards and scoring devices.
         </section>
       )}
 
@@ -663,8 +663,8 @@ export default function VenueHardwarePage() {
           <section className="mb-6 rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <h2 className="text-2xl font-black">Physical Boards at {selectedVenue.name}</h2>
-                <p className="text-sm text-[var(--color-text-muted)]">Permanent venue resources. Replacing a scorer does not move or restart the match.</p>
+                <h2 className="text-2xl font-black">Dartboards at {selectedVenue.name}</h2>
+                <p className="text-sm text-[var(--color-text-muted)]">These are the actual dartboards at this venue. Mark one out of service if it cannot be used.</p>
               </div>
               <span className="rounded-full bg-[var(--color-panel-soft)] px-3 py-1 text-xs font-bold">{boards.length} configured</span>
             </div>

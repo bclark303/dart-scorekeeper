@@ -330,11 +330,11 @@ export default function LeagueRosterPage() {
         <header className="flex items-start justify-between gap-4">
           <div>
             <Link href="/league-play" className="text-sm font-black text-[var(--color-primary)]">
-              ← League Play
+              ← League Administration
             </Link>
-            <h1 className="mt-2 text-3xl font-black">Player Directory</h1>
+            <h1 className="mt-2 text-3xl font-black">Players</h1>
             <p className="mt-1 max-w-2xl text-sm text-[var(--color-text-muted)]">
-              Each person exists once. Add that master player to any league, then choose the seasons they play in.
+              Add a player, find someone already in the system, or choose which seasons they play in.
             </p>
           </div>
           <Link
@@ -364,7 +364,7 @@ export default function LeagueRosterPage() {
             <h2 className="text-xl font-black">Create a league first</h2>
             <p className="mt-2 text-sm text-[var(--color-text-muted)]">A new master player is created with an initial league membership.</p>
             <Link href="/leagues" className="mt-4 inline-block rounded-xl bg-[var(--color-primary)] px-4 py-2.5 font-bold text-white">
-              Open League Setup
+              Set Up a League
             </Link>
           </section>
         )}
@@ -374,7 +374,7 @@ export default function LeagueRosterPage() {
             <section className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
               <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                 <label className="block flex-1">
-                  <span className="mb-1 block text-sm font-bold">Manage membership for</span>
+                  <span className="mb-1 block text-sm font-bold">League</span>
                   <select
                     value={selectedLeagueId}
                     onChange={(event) => {
@@ -401,7 +401,7 @@ export default function LeagueRosterPage() {
 
             <section className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
               <label className="block">
-                <span className="mb-1 block text-sm font-bold">Search all players</span>
+                <span className="mb-1 block text-sm font-bold">Find or add a player</span>
                 <input
                   value={query}
                   onChange={(event) => {
@@ -416,13 +416,13 @@ export default function LeagueRosterPage() {
 
               {normalizedQuery && exactNameMatch && (
                 <div className="mt-3 rounded-xl bg-emerald-500/10 px-4 py-3 text-sm">
-                  <span className="font-bold">Existing player found:</span> {exactNameMatch.displayName}. Use that profile rather than creating another one.
+                  <span className="font-bold">Player already exists:</span> {exactNameMatch.displayName}. Use that profile rather than creating another one.
                 </div>
               )}
 
               {canAdmin && normalizeName(query) && !exactNameMatch && (
                 <form onSubmit={createNewPlayer} className="mt-3 rounded-xl border border-dashed border-[var(--color-panel-border)] p-4">
-                  <div className="text-sm text-[var(--color-text-muted)]">No exact master-player match was found.</div>
+                  <div className="text-sm text-[var(--color-text-muted)]">No player with that exact name was found.</div>
                   <button
                     type="submit"
                     disabled={workingKey === "create"}
@@ -439,9 +439,9 @@ export default function LeagueRosterPage() {
             <section>
               <div className="mb-3 flex items-end justify-between gap-4">
                 <div>
-                  <h2 className="text-2xl font-black">All Players</h2>
+                  <h2 className="text-2xl font-black">Players</h2>
                   <p className="text-sm text-[var(--color-text-muted)]">
-                    {directory.length} master {directory.length === 1 ? "player" : "players"} across your leagues.
+                    {directory.length} {directory.length === 1 ? "player" : "players"} in your leagues.
                   </p>
                 </div>
                 {isLoadingDirectory && <span className="text-sm text-[var(--color-text-muted)]">Refreshing…</span>}
@@ -449,7 +449,7 @@ export default function LeagueRosterPage() {
 
               {!isLoadingDirectory && directory.length === 0 && (
                 <div className="rounded-2xl border border-dashed border-[var(--color-panel-border)] bg-[var(--color-panel)] p-6 text-sm text-[var(--color-text-muted)]">
-                  No master players yet. Search for a name above to create the first player in {selectedLeague.name}.
+                  No players yet. Type a name above to add the first player to {selectedLeague.name}.
                 </div>
               )}
 
@@ -504,7 +504,7 @@ export default function LeagueRosterPage() {
                           <div className="mb-3 flex items-center justify-between gap-3">
                             <div>
                               <div className="font-black">{selectedLeague.name}</div>
-                              <div className="text-xs text-[var(--color-text-muted)]">League member · choose season participation below</div>
+                              <div className="text-xs text-[var(--color-text-muted)]">Choose which seasons this player takes part in</div>
                             </div>
                             <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-black text-emerald-300">Member</span>
                           </div>
