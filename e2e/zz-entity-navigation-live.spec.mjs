@@ -33,15 +33,6 @@ async function signIn(page) {
   await expect(page.getByText("Signed in", { exact: true })).toBeVisible({ timeout: 30_000 });
 }
 
-async function selectWorkspace(page, leagueId, nightId) {
-  const leagueSelect = page.getByLabel("League", { exact: true });
-  await expect(leagueSelect).toBeVisible();
-  await leagueSelect.selectOption(leagueId);
-  const nightSelect = page.getByLabel("Game Night", { exact: true });
-  await expect(nightSelect).toBeEnabled();
-  await nightSelect.selectOption(nightId);
-}
-
 test("alpha.17 entity bubbles and names drill into the represented object", async ({ page }) => {
   const pageErrors = [];
   const serverErrors = [];
@@ -113,9 +104,8 @@ test("alpha.17 entity bubbles and names drill into the represented object", asyn
   await expect(page).toHaveURL(/\/game-nights\/check-in$/);
   await expect(page.getByRole("heading", { name: "Player Check-in" })).toBeVisible();
 
-  // Check-in deliberately uses the shared remembered Game Night context rather
-  // than the generic workspace dropdown. The represented player should still
-  // be an immediate drill-down to the master profile.
+  // Check-in uses the remembered Game Night context. A represented player should
+  // still drill directly into the master profile.
   const playerLink = page.getByRole("link", { name: E2E_PLAYER, exact: true }).first();
   await expect(playerLink).toHaveAttribute(
     "href",
@@ -125,10 +115,11 @@ test("alpha.17 entity bubbles and names drill into the represented object", asyn
   await expect(page).toHaveURL(new RegExp(`/players/${player.playerId}$`));
   await expect(page.getByRole("heading", { name: E2E_PLAYER, exact: true })).toBeVisible();
 
-  // In Control, a board name represents the live assignment/match; its status
-  // badge represents the physical board; the scorer bubble represents the device.
+  // Control also uses the remembered current Game Night. A board name represents
+  // the live assignment/match; its status badge represents the physical board;
+  // the scorer bubble represents the device.
   await page.goto("/game-nights/control", { waitUntil: "domcontentloaded" });
-  await selectWorkspace(page, league.id, night.id);
+  await expect(page.getByRole("heading", { name: E2E_NIGHT, exact: true })).toBeVisible();
   const healthHeading = page.getByRole("heading", { name: "Board & scorer health" });
   await expect(healthHeading).toBeVisible();
   const healthSection = page.locator("section").filter({ has: healthHeading });
@@ -166,8 +157,9 @@ test("alpha.17 entity bubbles and names drill into the represented object", asyn
     new RegExp(`boardId=${physicalBoard.id}`),
   );
 
+  const escapedDeviceName = device.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const deviceLink = healthSection.getByRole("link", {
-    name: new RegExp(`^${device.name.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")} · `),
+    name: new RegExp(`^${escapedDeviceName} · `),
   }).first();
   await expect(deviceLink).toBeVisible();
   const deviceHref = await deviceLink.getAttribute("href");
