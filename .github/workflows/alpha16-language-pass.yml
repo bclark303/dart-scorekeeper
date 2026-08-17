@@ -1,0 +1,93 @@
+name: Alpha 16 plain language pass
+
+"on":
+  push:
+    branches:
+      - internal/alpha16-walkup-ux
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      BETTER_AUTH_URL: http://127.0.0.1:3000
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: internal/alpha16-walkup-ux
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Make player and venue screens task-oriented
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          roster = Path("app/league-roster/page.tsx")
+          text = roster.read_text()
+          replacements = {
+              "← League Play": "← League Administration",
+              "Player Directory": "Players",
+              "Each person exists once. Add that master player to any league, then choose the seasons they play in.": "Add a player, find someone already in the system, or choose which seasons they play in.",
+              "Manage membership for": "League",
+              "Search all players": "Find or add a player",
+              "Existing player found:": "Player already exists:",
+              "No exact master-player match was found.": "No player with that exact name was found.",
+              "All Players": "Players",
+              "master {directory.length === 1 ? \"player\" : \"players\"} across your leagues.": "{directory.length === 1 ? \"player\" : \"players\"} in your leagues.",
+              "No master players yet. Search for a name above to create the first player in {selectedLeague.name}.": "No players yet. Type a name above to add the first player to {selectedLeague.name}.",
+              "League member · choose season participation below": "Choose which seasons this player takes part in",
+              "Open League Setup": "Set Up a League",
+          }
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f"Roster text not found: {old}")
+              text = text.replace(old, new)
+          roster.write_text(text)
+
+          devices = Path("app/league-devices/page.tsx")
+          text = devices.read_text()
+          replacements = {
+              "← League Play": "← League Administration",
+              "Venue Hardware": "Venues, Dartboards & Scoring Devices",
+              "Manage real venues first, then the physical boards and scoring devices installed at each venue.\n            Leagues may share a venue without owning its hardware.": "Set up the club or hall, its dartboards, and the tablet or computer used to score each board.\n            The same venue can be used by more than one league.",
+              "Open Device Client": "Open a Scoring Screen",
+              "Venue Administration": "Venues",
+              "Create, rename, share, archive, restore, or safely remove venues.": "Add a club or hall, rename it, or take an old venue out of use.",
+              "Administration context": "League",
+              "The league grants your administrative access. Hardware remains venue-owned.": "Choose the league you are managing. The same venue can be used by more than one league.",
+              "Share boards and devices already managed through another league.": "Already set up for another league? Make this venue available here too.",
+              "Selected venue name": "Venue name",
+              "Physical Boards at {selectedVenue.name}": "Dartboards at {selectedVenue.name}",
+              "Permanent venue resources. Replacing a scorer does not move or restart the match.": "These are the actual dartboards at this venue. Mark one out of service if it cannot be used.",
+              "Create a venue above, or make an existing venue available to this league, before configuring physical boards and scoring devices.": "Create or choose a venue before adding dartboards and scoring devices.",
+          }
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f"Venue text not found: {old}")
+              text = text.replace(old, new)
+          devices.write_text(text)
+          PY
+      - run: npm ci
+      - run: npm run db:migrate
+      - name: Relevant contracts
+        run: |
+          npm run league:roster:test
+          npm run venue-hardware:test
+          npm run board-device:test
+      - run: npm run lint
+      - run: npm run build
+      - name: Commit verified language pass
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/league-roster/page.tsx app/league-devices/page.tsx
+          git commit -m "Use plain language in player and venue administration"
+          git push origin HEAD:internal/alpha16-walkup-ux
