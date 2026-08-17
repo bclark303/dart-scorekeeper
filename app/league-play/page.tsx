@@ -74,7 +74,7 @@ export default function LeaguePlayPage() {
   const [leagues, setLeagues] = useState<LeagueSummary[]>([]);
   const [activeLeagueId, setActiveLeagueId] = useState("");
   const [gameNights, setGameNights] = useState<GameNightSummary[]>([]);
-  const [gameNightsLoading, setGameNightsLoading] = useState(false);
+  const [gameNightsLoading, setGameNightsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
   const activeLeague = useMemo(
@@ -86,14 +86,20 @@ export default function LeaguePlayPage() {
     const active = gameNights.find((night) => night.status === "active");
     if (active) return active;
 
+    const priority: Record<GameNightSummary["status"], number> = {
+      active: 0,
+      ready: 1,
+      checkin: 2,
+      draft: 3,
+      completed: 4,
+      cancelled: 5,
+    };
     const unfinished = gameNights
       .filter((night) => !["completed", "cancelled"].includes(night.status))
       .sort((a, b) => {
-        const now = Date.now();
-        const aFuture = a.scheduledAt >= now;
-        const bFuture = b.scheduledAt >= now;
-        if (aFuture !== bFuture) return aFuture ? -1 : 1;
-        return aFuture ? a.scheduledAt - b.scheduledAt : b.scheduledAt - a.scheduledAt;
+        const byStatus = priority[a.status] - priority[b.status];
+        if (byStatus !== 0) return byStatus;
+        return b.scheduledAt - a.scheduledAt;
       });
     return unfinished[0] ?? null;
   }, [gameNights]);
@@ -131,13 +137,9 @@ export default function LeaguePlayPage() {
   }, [loadWorkspace]);
 
   useEffect(() => {
-    if (access !== "logged-in" || !activeLeagueId) {
-      setGameNights([]);
-      return;
-    }
+    if (access !== "logged-in" || !activeLeagueId) return;
 
     const controller = new AbortController();
-    setGameNightsLoading(true);
     fetch(`/api/leagues/game-nights?leagueId=${encodeURIComponent(activeLeagueId)}`, {
       cache: "no-store",
       signal: controller.signal,
@@ -164,6 +166,7 @@ export default function LeaguePlayPage() {
   function changeActiveLeague(leagueId: string) {
     setActiveLeagueId(leagueId);
     setGameNights([]);
+    setGameNightsLoading(true);
     if (leagueId) window.localStorage.setItem(ACTIVE_LEAGUE_KEY, leagueId);
     else window.localStorage.removeItem(ACTIVE_LEAGUE_KEY);
   }
