@@ -1,0 +1,49 @@
+name: Alpha 16 E2E expectation update
+
+"on":
+  push:
+    branches:
+      - internal/live-preview-e2e
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: internal/live-preview-e2e
+      - name: Update alpha.16 walk-up expectations
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          path = Path('e2e/live-preview.spec.mjs')
+          text = path.read_text()
+          replacements = {
+            'test("alpha.15 live preview supports walk-up admin, pairing, and scoring"': 'test("alpha.16 live preview supports walk-up admin, pairing, and scoring"',
+            'getByRole("heading", { name: "What is this screen for?" })': 'getByRole("heading", { name: "What do you want to do?" })',
+            'getByRole("link", { name: /Open Scoring Device/i })': 'getByRole("link", { name: /Score at a Dartboard/i })',
+            '["/league-play", "League Admin"]': '["/league-play", "League Administration"]',
+            '["/league-roster", "Player Directory"]': '["/league-roster", "Players"]',
+            '["/league-devices", "Venue Hardware"]': '["/league-devices", "Venues, Dartboards & Scoring Devices"]',
+            'await expect(page.getByText("Start here on league night", { exact: false })).toBeVisible();\n  await expect(page.getByRole("heading", { name: "Run Game Night" })).toBeVisible();': 'await expect(page.getByText("Tonight", { exact: true }).first()).toBeVisible();\n  await expect(page.getByRole("heading", { name: "Run the league night" })).toBeVisible();\n  await expect(page.getByText("Add or Edit Players", { exact: true }).first()).toBeVisible();\n  await expect(page.getByText("Venues & Dartboards", { exact: true }).first()).toBeVisible();',
+          }
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f'Expected test text not found: {old}')
+              text = text.replace(old, new)
+          path.write_text(text)
+          PY
+      - name: Commit test update and remove temporary workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add e2e/live-preview.spec.mjs
+          git rm .github/workflows/alpha16-e2e-expectations.yml
+          git commit -m "Update live E2E for alpha.16 walk-up UX"
+          git push origin HEAD:internal/live-preview-e2e
