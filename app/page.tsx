@@ -6,92 +6,62 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-[var(--color-app-bg)] px-4 py-6 text-[var(--color-text-main)] sm:px-6">
       <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-5xl flex-col">
-        <header className="flex items-center justify-between gap-4">
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <div
-              aria-hidden="true"
-              className="grid size-11 place-items-center rounded-full border border-[var(--color-panel-border)] bg-[var(--color-panel)] text-2xl"
-            >
-              🎯
-            </div>
+            <div aria-hidden="true" className="grid size-12 place-items-center rounded-full border border-[var(--color-panel-border)] bg-[var(--color-panel)] text-2xl">🎯</div>
             <div>
-              <div className="text-xl font-black tracking-tight sm:text-2xl">Dart Scorekeeper</div>
+              <div className="text-2xl font-black tracking-tight">Dart Scorekeeper</div>
               <div className="text-xs text-[var(--color-text-muted)]">v{APP_VERSION}</div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Link
-              href="/settings"
-              aria-label="Settings"
-              className="rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] px-3 py-2 text-sm font-bold hover:bg-[var(--color-panel-soft)]"
-            >
-              ⚙ <span className="hidden sm:inline">Settings</span>
-            </Link>
-            <Link
-              href="/help?from=home"
-              aria-label="Help"
-              className="rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] px-3 py-2 text-sm font-bold hover:bg-[var(--color-panel-soft)]"
-            >
-              ? <span className="hidden sm:inline">Help</span>
-            </Link>
+          <div className="flex gap-2">
+            <Link href="/help?from=home" className="min-h-11 rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] px-4 py-2.5 text-sm font-black">Help</Link>
+            <Link href="/settings" className="min-h-11 rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] px-4 py-2.5 text-sm font-black">Settings</Link>
           </div>
         </header>
 
         <section className="flex flex-1 items-center py-10">
           <div className="w-full">
             <div className="mx-auto mb-8 max-w-2xl text-center">
-              <h1 className="text-4xl font-black tracking-tight sm:text-5xl">What is this screen for?</h1>
-              <p className="mt-3 text-base text-[var(--color-text-muted)] sm:text-lg">
-                Choose the job this screen is doing. Casual play and league administration stay separate from the dedicated dartboard scorer.
+              <h1 className="text-4xl font-black tracking-tight sm:text-5xl">What do you want to do?</h1>
+              <p className="mt-3 text-base leading-7 text-[var(--color-text-muted)] sm:text-lg">
+                Pick the job in front of you. The app will take you to the right place.
               </p>
             </div>
 
-            <div className="mx-auto grid max-w-4xl gap-5 md:grid-cols-2">
-              <Link
-                href="/casual"
-                className="group rounded-3xl border border-emerald-500/35 bg-[var(--color-panel)] p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-500/70 hover:shadow-lg sm:p-8"
-              >
-                <div className="mb-6 grid size-14 place-items-center rounded-2xl bg-emerald-500/15 text-3xl">👥</div>
-                <h2 className="text-3xl font-black text-emerald-300">Casual Game</h2>
-                <p className="mt-3 min-h-12 text-[var(--color-text-muted)]">
-                  Pick the players and X01 rules, then go directly to scoring. No league setup required.
-                </p>
-                <div className="mt-7 flex items-center justify-between rounded-2xl bg-emerald-600 px-5 py-4 font-black text-white">
-                  Start Casual Game
-                  <span className="text-xl transition group-hover:translate-x-1">→</span>
+            <div className="mx-auto grid max-w-4xl gap-5">
+              <Link href="/league-play" className="group rounded-3xl border border-blue-500/50 bg-blue-500/10 p-6 shadow-sm transition hover:border-blue-400 sm:p-8">
+                <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex gap-4">
+                    <div aria-hidden="true" className="grid size-14 shrink-0 place-items-center rounded-2xl bg-blue-500/15 text-3xl">🏆</div>
+                    <div>
+                      <div className="text-xs font-black uppercase tracking-[0.14em] text-blue-300">League administrator</div>
+                      <h2 className="mt-1 text-3xl font-black">Run or Manage a League</h2>
+                      <p className="mt-2 max-w-2xl text-[var(--color-text-muted)]">Run tonight&apos;s league, add players, schedule games, manage venues and dartboards, or pair scoring devices.</p>
+                    </div>
+                  </div>
+                  <div className="inline-flex min-h-14 shrink-0 items-center justify-center rounded-2xl bg-blue-600 px-6 py-4 text-lg font-black text-white">
+                    League Administration <span aria-hidden="true" className="ml-2 transition group-hover:translate-x-1">→</span>
+                  </div>
                 </div>
               </Link>
 
-              <Link
-                href="/league-play"
-                className="group rounded-3xl border border-blue-500/35 bg-[var(--color-panel)] p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-500/70 hover:shadow-lg sm:p-8"
-              >
-                <div className="mb-6 grid size-14 place-items-center rounded-2xl bg-blue-500/15 text-3xl">🏆</div>
-                <h2 className="text-3xl font-black text-blue-300">League Admin</h2>
-                <p className="mt-3 min-h-12 text-[var(--color-text-muted)]">
-                  Run tonight&apos;s league, check readiness, manage players, venues, boards, and scoring devices.
-                </p>
-                <div className="mt-7 flex items-center justify-between rounded-2xl bg-blue-600 px-5 py-4 font-black text-white">
-                  Open Admin Terminal
-                  <span className="text-xl transition group-hover:translate-x-1">→</span>
-                </div>
-              </Link>
-            </div>
+              <div className="grid gap-5 md:grid-cols-2">
+                <Link href="/board-device" className="group rounded-3xl border border-violet-500/40 bg-[var(--color-panel)] p-6 transition hover:border-violet-400 sm:p-7">
+                  <div aria-hidden="true" className="text-4xl">📱</div>
+                  <h2 className="mt-4 text-2xl font-black">Score at a Dartboard</h2>
+                  <p className="mt-2 text-sm leading-6 text-[var(--color-text-muted)]">Use the tablet or computer mounted beside a league dartboard. Once paired, it follows that board automatically.</p>
+                  <div className="mt-5 font-black text-violet-300">Open Scorer →</div>
+                </Link>
 
-            <div className="mx-auto mt-5 flex max-w-4xl flex-col gap-3 rounded-2xl border border-violet-500/35 bg-[var(--color-panel)] p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="font-black">Is this screen mounted at a dartboard?</div>
-                <div className="mt-1 text-sm text-[var(--color-text-muted)]">
-                  Open the dedicated scorer. Once paired, it remembers its board and automatically follows league assignments.
-                </div>
+                <Link href="/casual" className="group rounded-3xl border border-emerald-500/40 bg-[var(--color-panel)] p-6 transition hover:border-emerald-400 sm:p-7">
+                  <div aria-hidden="true" className="text-4xl">👥</div>
+                  <h2 className="mt-4 text-2xl font-black">Play a Casual Game</h2>
+                  <p className="mt-2 text-sm leading-6 text-[var(--color-text-muted)]">Pick players and rules, then start scoring. No league or administrator setup is required.</p>
+                  <div className="mt-5 font-black text-emerald-300">Start Casual Game →</div>
+                </Link>
               </div>
-              <Link
-                href="/board-device"
-                className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-xl bg-violet-600 px-5 py-3 font-black text-white"
-              >
-                Open Scoring Device →
-              </Link>
             </div>
           </div>
         </section>
