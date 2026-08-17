@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { authClient } from "@/lib/auth/client";
 import type { LeagueListResponse, LeagueSummary } from "@/lib/league/contracts";
@@ -80,6 +80,9 @@ export default function VenueHardwarePage() {
   const [pairingDeviceId, setPairingDeviceId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
+  const [targetBoardId, setTargetBoardId] = useState("");
+  const [targetDeviceId, setTargetDeviceId] = useState("");
+  const deepLinkAppliedRef = useRef(false);
 
   const pairingExpiryLabel = useMemo(() => {
     if (!pairing) return "";
@@ -110,7 +113,13 @@ export default function VenueHardwarePage() {
     const result = (await response.json()) as LeagueListResponse & { error?: string };
     if (!response.ok) throw new Error(result.error ?? "Could not load leagues.");
     setLeagues(result.leagues);
-    setLeagueId((current) => current || result.leagues[0]?.id || "");
+    const requestedLeagueId = new URLSearchParams(window.location.search).get("leagueId");
+    setLeagueId((current) =>
+      current ||
+      (requestedLeagueId && result.leagues.some((league) => league.id === requestedLeagueId)
+        ? requestedLeagueId
+        : result.leagues[0]?.id || ""),
+    );
   }, []);
 
   const loadHardware = useCallback(async (selectedLeagueId: string, requestedVenueId?: string) => {
@@ -146,6 +155,15 @@ export default function VenueHardwarePage() {
   }, []);
 
   useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const params = new URLSearchParams(window.location.search);
+      setTargetBoardId(params.get("boardId") ?? "");
+      setTargetDeviceId(params.get("deviceId") ?? "");
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
     if (!session?.user) return;
     const timer = window.setTimeout(() => {
       void loadLeagues().catch((error) =>
@@ -157,13 +175,30 @@ export default function VenueHardwarePage() {
 
   useEffect(() => {
     if (!leagueId) return;
+    const requestedVenueId = !deepLinkAppliedRef.current
+      ? new URLSearchParams(window.location.search).get("venueId") ?? undefined
+      : undefined;
+    deepLinkAppliedRef.current = true;
     const timer = window.setTimeout(() => {
-      void loadHardware(leagueId).catch((error) =>
+      void loadHardware(leagueId, requestedVenueId).catch((error) =>
         setErrorMessage(error instanceof Error ? error.message : "Could not load venue hardware."),
       );
     }, 0);
     return () => window.clearTimeout(timer);
   }, [leagueId, loadHardware]);
+
+  useEffect(() => {
+    const targetId = targetDeviceId
+      ? `device-${targetDeviceId}`
+      : targetBoardId
+        ? `board-${targetBoardId}`
+        : "";
+    if (!targetId) return;
+    const timer = window.setTimeout(() => {
+      document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [boards, devices, targetBoardId, targetDeviceId]);
 
   function clearNotices() {
     setErrorMessage("");
@@ -674,7 +709,15 @@ export default function VenueHardwarePage() {
                 const scorer = deviceByBoard.get(board.id) ?? null;
                 const saving = savingBoardIds.has(board.id) || Boolean(scorer && savingDeviceIds.has(scorer.id));
                 return (
-                  <article key={board.id} className="rounded-xl border border-[var(--color-panel-border)] p-4">
+                  <article
+                    id={`board-${board.id}`}
+                    key={board.id}
+                    className={`scroll-mt-6 rounded-xl border p-4 transition ${
+                      targetBoardId === board.id
+                        ? "border-[var(--color-primary)] bg-blue-500/10 ring-2 ring-[var(--color-primary)]/40"
+                        : "border-[var(--color-panel-border)]"
+                    }`}
+                  >
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <div className="font-black">Board {board.boardNumber}</div>
@@ -697,7 +740,18 @@ export default function VenueHardwarePage() {
                         ))}
                       </select>
                     </label>
-                    {scorer && <div className="mt-2 text-xs text-[var(--color-text-muted)]">{scorer.status === "active" ? "Enabled" : "Disabled"} · {seenLabel(scorer.lastSeenAt)}{savingDeviceIds.has(scorer.id) ? " · Saving…" : ""}</div>}
+                    {scorer && (
+                      <div className="mt-2 text-xs text-[var(--color-text-muted)]">
+                        Scorer:{" "}
+                        <Link
+                          href={`/league-devices?leagueId=${encodeURIComponent(leagueId)}&venueId=${encodeURIComponent(venueId)}&deviceId=${encodeURIComponent(scorer.id)}`}
+                          className="font-black hover:text-[var(--color-primary)] hover:underline"
+                        >
+                          {scorer.name}
+                        </Link>{" "}
+                        · {scorer.status === "active" ? "Enabled" : "Disabled"} · {seenLabel(scorer.lastSeenAt)}{savingDeviceIds.has(scorer.id) ? " · Saving…" : ""}
+                      </div>
+                    )}
                   </article>
                 );
               })}
@@ -719,7 +773,15 @@ export default function VenueHardwarePage() {
               {devices.map((device) => {
                 const saving = savingDeviceIds.has(device.id);
                 return (
-                  <article key={device.id} className="rounded-xl border border-[var(--color-panel-border)] p-4">
+                  <article
+                    id={`device-${device.id}`}
+                    key={device.id}
+                    className={`scroll-mt-6 rounded-xl border p-4 transition ${
+                      targetDeviceId === device.id
+                        ? "border-[var(--color-primary)] bg-blue-500/10 ring-2 ring-[var(--color-primary)]/40"
+                        : "border-[var(--color-panel-border)]"
+                    }`}
+                  >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
                         <div className="flex items-center gap-2">
@@ -727,7 +789,19 @@ export default function VenueHardwarePage() {
                           <span className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase ${device.status === "active" ? "bg-emerald-500/20" : "bg-red-500/20"}`}>{device.status}</span>
                           {saving && <span className="text-xs text-[var(--color-text-muted)]">Saving…</span>}
                         </div>
-                        <div className="mt-1 text-xs text-[var(--color-text-muted)]">{device.boardName ?? "Spare / unassigned"} · {seenLabel(device.lastSeenAt)}</div>
+                        <div className="mt-1 text-xs text-[var(--color-text-muted)]">
+                          {device.physicalBoardId && device.boardName ? (
+                            <Link
+                              href={`/league-devices?leagueId=${encodeURIComponent(leagueId)}&venueId=${encodeURIComponent(venueId)}&boardId=${encodeURIComponent(device.physicalBoardId)}`}
+                              className="font-bold hover:text-[var(--color-primary)] hover:underline"
+                            >
+                              {device.boardName}
+                            </Link>
+                          ) : (
+                            "Spare / unassigned"
+                          )}{" "}
+                          · {seenLabel(device.lastSeenAt)}
+                        </div>
                       </div>
                       <div className="flex gap-2">
                         <button type="button" disabled={saving || device.status !== "active" || venueArchived} onClick={() => void pairExisting(device)} className="rounded-lg border border-[var(--color-panel-border)] px-3 py-2 text-sm font-bold disabled:opacity-50">{pairingDeviceId === device.id ? "Pairing…" : "Pair / Re-pair"}</button>

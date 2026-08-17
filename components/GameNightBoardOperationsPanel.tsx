@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type {
@@ -249,6 +250,27 @@ export function GameNightBoardOperationsPanel({ leagueId, night, onNightChange }
           );
           const moveKey = `move:${nightBoard.id}`;
           const deviceKey = `device:${physical?.id ?? nightBoard.id}`;
+          const currentRoundNumber = night.activeRoundNumber ?? night.currentRoundNumber ?? 1;
+          const currentPairing =
+            night.pairings.find(
+              (pairing) => pairing.boardId === nightBoard.id && pairing.matchStatus === "active",
+            ) ??
+            night.pairings.find(
+              (pairing) =>
+                pairing.boardId === nightBoard.id &&
+                pairing.roundNumber === currentRoundNumber &&
+                pairing.matchStatus !== "completed",
+            ) ??
+            null;
+          const boardDetailsHref = physical
+            ? `/league-devices?leagueId=${encodeURIComponent(leagueId)}&venueId=${encodeURIComponent(night.venueId ?? "")}&boardId=${encodeURIComponent(physical.id)}`
+            : "/league-devices";
+          const boardPrimaryHref = currentPairing?.matchSessionId
+            ? `/league-match/${encodeURIComponent(currentPairing.matchSessionId)}`
+            : boardDetailsHref;
+          const deviceDetailsHref = scorer
+            ? `/league-devices?leagueId=${encodeURIComponent(leagueId)}&venueId=${encodeURIComponent(night.venueId ?? "")}&deviceId=${encodeURIComponent(scorer.id)}`
+            : boardDetailsHref;
 
           return (
             <article
@@ -263,20 +285,23 @@ export function GameNightBoardOperationsPanel({ leagueId, night, onNightChange }
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <div className="text-lg font-black">{physical?.name ?? nightBoard.name}</div>
+                  <Link href={boardPrimaryHref} className="group inline-flex items-center gap-2 text-lg font-black hover:text-[var(--color-primary)]">
+                    {physical?.name ?? nightBoard.name}
+                    <span aria-hidden="true" className="transition group-hover:translate-x-1">→</span>
+                  </Link>
                   <div className="mt-1 text-xs text-[var(--color-text-muted)]">
                     {physical ? `Physical Board ${physical.boardNumber}` : "Physical board mapping missing"}
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <span className={`rounded-full border px-2.5 py-1 text-xs font-black ${
+                  <Link href={boardDetailsHref} className={`rounded-full border px-2.5 py-1 text-xs font-black transition hover:ring-2 ${
                     physical?.status === "active" ? toneClasses("green") : toneClasses("red")
                   }`}>
                     {physical?.status === "active" ? "Board available" : "Board out of service"}
-                  </span>
-                  <span className={`rounded-full border px-2.5 py-1 text-xs font-black ${toneClasses(health.tone)}`}>
-                    {health.label}
-                  </span>
+                  </Link>
+                  <Link href={deviceDetailsHref} className={`rounded-full border px-2.5 py-1 text-xs font-black transition hover:ring-2 ${toneClasses(health.tone)}`}>
+                    {scorer ? `${scorer.name} · ${health.label}` : health.label}
+                  </Link>
                 </div>
               </div>
 

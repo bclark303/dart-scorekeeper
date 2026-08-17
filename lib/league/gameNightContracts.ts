@@ -70,6 +70,7 @@ export type ResolvedGameNightSettings = GameNightSettingsSummary & {
 };
 
 export type GameNightAttendanceSummary = {
+  playerId: string;
   leaguePlayerId: string;
   displayName: string;
   status: GameNightAttendanceStatus;
@@ -79,6 +80,7 @@ export type GameNightAttendanceSummary = {
 
 export type GameNightTeamMemberSummary = {
   id: string;
+  playerId: string | null;
   leaguePlayerId: string | null;
   displayName: string;
   isDummy: boolean;

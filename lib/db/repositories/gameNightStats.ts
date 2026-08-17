@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { buildGameNightStats } from "@/lib/league/gameNightStats";
 import { getDatabase } from "../client";
 import { gameNights } from "../game-night-schema";
+import { leaguePlayers } from "../league-schema";
 import { leagueMatchSessions, leagueMatchTurns } from "../league-match-schema";
 import { leagueMemberships, seasons } from "../schema";
 import { LeaguePermissionError } from "./leagues";
@@ -39,6 +40,7 @@ export async function getGameNightStatsForUser(
 
   const turns = await database
     .select({
+      playerId: leaguePlayers.playerId,
       leaguePlayerId: leagueMatchTurns.leaguePlayerId,
       displayName: leagueMatchTurns.displayName,
       scoreEntered: leagueMatchTurns.scoreEntered,
@@ -53,6 +55,7 @@ export async function getGameNightStatsForUser(
       leagueMatchSessions,
       eq(leagueMatchTurns.matchSessionId, leagueMatchSessions.id),
     )
+    .leftJoin(leaguePlayers, eq(leagueMatchTurns.leaguePlayerId, leaguePlayers.id))
     .where(eq(leagueMatchSessions.gameNightId, gameNightId));
 
   return buildGameNightStats(turns);

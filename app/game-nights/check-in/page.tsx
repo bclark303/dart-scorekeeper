@@ -354,24 +354,24 @@ export default function GameNightCheckInPage() {
                   </p>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-center text-sm sm:grid-cols-4">
-                  <div className="rounded-xl bg-[var(--color-panel-soft)] px-3 py-2">
+                  <button type="button" onClick={() => setAttendanceFilter("all")} className="rounded-xl bg-[var(--color-panel-soft)] px-3 py-2 transition hover:ring-2 hover:ring-[var(--color-primary)]">
                     <div className="text-lg font-black">{night.attendance.length}</div>
                     <div className="text-xs text-[var(--color-text-muted)]">Roster</div>
-                  </div>
-                  <div className="rounded-xl bg-emerald-500/10 px-3 py-2">
+                  </button>
+                  <button type="button" onClick={() => setAttendanceFilter("checked_in")} className="rounded-xl bg-emerald-500/10 px-3 py-2 transition hover:ring-2 hover:ring-emerald-400">
                     <div className="text-lg font-black text-emerald-200">{checkedInCount}</div>
                     <div className="text-xs text-[var(--color-text-muted)]">Here</div>
-                  </div>
-                  <div className="rounded-xl bg-[var(--color-panel-soft)] px-3 py-2">
+                  </button>
+                  <button type="button" onClick={() => setAttendanceFilter("waiting")} className="rounded-xl bg-[var(--color-panel-soft)] px-3 py-2 transition hover:ring-2 hover:ring-[var(--color-primary)]">
                     <div className="text-lg font-black">{waitingCount}</div>
                     <div className="text-xs text-[var(--color-text-muted)]">Still out</div>
-                  </div>
-                  <div className={`rounded-xl px-3 py-2 ${duesPendingCount ? "bg-amber-500/10" : "bg-[var(--color-panel-soft)]"}`}>
+                  </button>
+                  <button type="button" onClick={() => setAttendanceFilter("dues")} className={`rounded-xl px-3 py-2 transition hover:ring-2 hover:ring-amber-400 ${duesPendingCount ? "bg-amber-500/10" : "bg-[var(--color-panel-soft)]"}`}>
                     <div className={`text-lg font-black ${duesPendingCount ? "text-amber-200" : ""}`}>
                       {duesPendingCount}
                     </div>
                     <div className="text-xs text-[var(--color-text-muted)]">Dues pending</div>
-                  </div>
+                  </button>
                 </div>
               </div>
 
@@ -441,7 +441,9 @@ export default function GameNightCheckInPage() {
                     >
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <div className="font-black">{player.displayName}</div>
+                          <Link href={`/players/${encodeURIComponent(player.playerId)}`} className="font-black hover:text-[var(--color-primary)] hover:underline">
+                            {player.displayName}
+                          </Link>
                           <span
                             className={`rounded-full px-2 py-0.5 text-[11px] font-black uppercase tracking-wide ${
                               isCheckedIn

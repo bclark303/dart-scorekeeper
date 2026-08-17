@@ -249,6 +249,7 @@ async function resetBoards(gameNightId: string, boardCount: number, now: number)
 async function getSeasonRosterPlayers(seasonId: string) {
   return getDatabase()
     .select({
+      playerId: players.id,
       leaguePlayerId: leaguePlayers.id,
       displayName: players.displayName,
     })
@@ -349,6 +350,9 @@ export async function getGameNightForUser(
   const matchSessionByPairing = new Map(
     matchSessionRows.map((session) => [session.pairingId, session]),
   );
+  const playerIdByLeaguePlayerId = new Map(
+    roster.map((player) => [player.leaguePlayerId, player.playerId]),
+  );
 
   return {
     ...night,
@@ -370,6 +374,9 @@ export async function getGameNightForUser(
       source: team.source === "manual" ? "manual" : "automatic",
       members: (membersByTeam.get(team.id) ?? []).map((member) => ({
         id: member.id,
+        playerId: member.leaguePlayerId
+          ? playerIdByLeaguePlayerId.get(member.leaguePlayerId) ?? null
+          : null,
         leaguePlayerId: member.leaguePlayerId,
         displayName: member.displayName,
         isDummy: member.isDummy,

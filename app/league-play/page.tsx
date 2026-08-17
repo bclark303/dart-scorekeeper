@@ -245,8 +245,14 @@ export default function LeaguePlayPage() {
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                     <div>
                       <div className="text-xs font-black uppercase tracking-[0.14em] text-[var(--color-text-muted)]">You are managing</div>
-                      <div className="mt-1 text-2xl font-black">{activeLeague?.name ?? "League"}</div>
-                      {activeLeague?.seasons[0] && <div className="mt-1 text-sm text-[var(--color-text-muted)]">Current season: {activeLeague.seasons[0].name}</div>}
+                      <Link href="/leagues" className="mt-1 inline-flex items-center gap-2 text-2xl font-black hover:text-[var(--color-primary)]">
+                        {activeLeague?.name ?? "League"} <span aria-hidden="true" className="text-base">→</span>
+                      </Link>
+                      {activeLeague?.seasons[0] && (
+                        <div className="mt-1 text-sm text-[var(--color-text-muted)]">
+                          Current season: <Link href="/leagues" className="font-bold hover:text-[var(--color-primary)]">{activeLeague.seasons[0].name}</Link>
+                        </div>
+                      )}
                     </div>
                     {leagues.length > 1 && (
                       <label className="text-sm font-black">
@@ -275,30 +281,56 @@ export default function LeaguePlayPage() {
                   {gameNightsLoading ? (
                     <div className="rounded-3xl border border-blue-500/35 bg-blue-500/10 p-7 text-[var(--color-text-muted)]">Checking tonight&apos;s schedule…</div>
                   ) : currentNight ? (
-                    <Link href="/game-nights/control" className="group block rounded-3xl border border-blue-500/50 bg-blue-500/10 p-6 transition hover:border-blue-400 sm:p-8">
+                    <article className="rounded-3xl border border-blue-500/50 bg-blue-500/10 p-6 sm:p-8">
                       <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="rounded-full bg-blue-500/15 px-3 py-1 text-xs font-black uppercase tracking-wide text-blue-200">{gameNightStatusLabel(currentNight.status)}</span>
-                            <span className="text-sm text-[var(--color-text-muted)]">{formatScheduledAt(currentNight.scheduledAt)}</span>
+                            <Link href="/game-nights/control" className="rounded-full bg-blue-500/15 px-3 py-1 text-xs font-black uppercase tracking-wide text-blue-200 hover:bg-blue-500/25">
+                              {gameNightStatusLabel(currentNight.status)}
+                            </Link>
+                            <Link href="/game-nights" className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)]">
+                              {formatScheduledAt(currentNight.scheduledAt)}
+                            </Link>
                           </div>
-                          <h3 className="mt-3 text-3xl font-black">{currentNight.name}</h3>
+                          <Link href="/game-nights/control" className="group mt-3 inline-flex items-center gap-2">
+                            <h3 className="text-3xl font-black group-hover:text-[var(--color-primary)]">{currentNight.name}</h3>
+                            <span aria-hidden="true" className="text-xl transition group-hover:translate-x-1">→</span>
+                          </Link>
                           <p className="mt-2 text-[var(--color-text-muted)]">
-                            {currentNight.venueName ? `At ${currentNight.venueName}. ` : "Venue not chosen yet. "}
+                            {currentNight.venueName && currentNight.venueId ? (
+                              <>
+                                At <Link
+                                  href={`/league-devices?leagueId=${encodeURIComponent(activeLeagueId)}&venueId=${encodeURIComponent(currentNight.venueId)}`}
+                                  className="font-bold hover:text-[var(--color-primary)]"
+                                >
+                                  {currentNight.venueName}
+                                </Link>.{" "}
+                              </>
+                            ) : (
+                              <>Venue not chosen yet. </>
+                            )}
                             Control will tell you what needs attention and what to do next.
                           </p>
                           <div className="mt-5 flex flex-wrap gap-2 text-sm font-bold">
-                            <span className="rounded-full bg-[var(--color-panel)] px-3 py-2">{checkedIn} checked in</span>
-                            <span className="rounded-full bg-[var(--color-panel)] px-3 py-2">{currentNight.boards.length} {currentNight.boards.length === 1 ? "dartboard" : "dartboards"}</span>
-                            {totalMatches > 0 && <span className="rounded-full bg-[var(--color-panel)] px-3 py-2">{completedMatches}/{totalMatches} games complete</span>}
+                            <Link href="/game-nights/check-in" className="rounded-full bg-[var(--color-panel)] px-3 py-2 transition hover:ring-2 hover:ring-[var(--color-primary)]">
+                              {checkedIn} checked in →
+                            </Link>
+                            <Link href="/game-nights/boards" className="rounded-full bg-[var(--color-panel)] px-3 py-2 transition hover:ring-2 hover:ring-[var(--color-primary)]">
+                              {currentNight.boards.length} {currentNight.boards.length === 1 ? "dartboard" : "dartboards"} →
+                            </Link>
+                            {totalMatches > 0 && (
+                              <Link href="/game-nights/fixtures" className="rounded-full bg-[var(--color-panel)] px-3 py-2 transition hover:ring-2 hover:ring-[var(--color-primary)]">
+                                {completedMatches}/{totalMatches} games complete →
+                              </Link>
+                            )}
                           </div>
                         </div>
-                        <div className="inline-flex min-h-16 shrink-0 items-center justify-center rounded-2xl bg-blue-600 px-7 py-4 text-xl font-black text-white">
+                        <Link href="/game-nights/control" className="group inline-flex min-h-16 shrink-0 items-center justify-center rounded-2xl bg-blue-600 px-7 py-4 text-xl font-black text-white">
                           {currentNight.status === "active" ? "Continue Game Night" : "Prepare Game Night"}
                           <span aria-hidden="true" className="ml-2 transition group-hover:translate-x-1">→</span>
-                        </div>
+                        </Link>
                       </div>
-                    </Link>
+                    </article>
                   ) : (
                     <div className="rounded-3xl border border-dashed border-blue-500/45 bg-blue-500/10 p-6 sm:p-8">
                       <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">

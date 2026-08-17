@@ -1,11 +1,28 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import type { GameNightStatsSummary } from "@/lib/league/gameNightStats";
 
-function leaderNames(leader: GameNightStatsSummary["most180s"]) {
-  return leader?.players.map((player) => player.displayName).join(", ") ?? "";
+function LeaderNames({ leader }: { leader: GameNightStatsSummary["most180s"] }) {
+  if (!leader) return null;
+  return (
+    <>
+      {leader.players.map((player, index) => (
+        <span key={player.leaguePlayerId}>
+          {index > 0 ? ", " : ""}
+          {player.playerId ? (
+            <Link href={`/players/${encodeURIComponent(player.playerId)}`} className="hover:text-[var(--color-primary)] hover:underline">
+              {player.displayName}
+            </Link>
+          ) : (
+            player.displayName
+          )}
+        </span>
+      ))}
+    </>
+  );
 }
 
 export function GameNightStatsPanel({
@@ -92,7 +109,7 @@ export function GameNightStatsPanel({
                     {stats.most180s.value}
                   </div>
                   <div className="mt-1 font-bold">
-                    {leaderNames(stats.most180s)}
+                    <LeaderNames leader={stats.most180s} />
                   </div>
                 </>
               ) : (
@@ -112,7 +129,7 @@ export function GameNightStatsPanel({
                     {stats.highestTurn.value}
                   </div>
                   <div className="mt-1 font-bold">
-                    {leaderNames(stats.highestTurn)}
+                    <LeaderNames leader={stats.highestTurn} />
                   </div>
                 </>
               ) : (
@@ -144,7 +161,13 @@ export function GameNightStatsPanel({
                       className="border-t border-[var(--color-panel-border)]"
                     >
                       <td className="py-3 pr-4 font-bold">
-                        {player.displayName}
+                        {player.playerId ? (
+                          <Link href={`/players/${encodeURIComponent(player.playerId)}`} className="hover:text-[var(--color-primary)] hover:underline">
+                            {player.displayName}
+                          </Link>
+                        ) : (
+                          player.displayName
+                        )}
                       </td>
                       <td className="py-3 pr-4">{player.count180s}</td>
                       <td className="py-3 pr-4">{player.count140Plus}</td>

@@ -416,7 +416,11 @@ export default function LeagueRosterPage() {
 
               {normalizedQuery && exactNameMatch && (
                 <div className="mt-3 rounded-xl bg-emerald-500/10 px-4 py-3 text-sm">
-                  <span className="font-bold">Player already exists:</span> {exactNameMatch.displayName}. Use that profile rather than creating another one.
+                  <span className="font-bold">Player already exists:</span>{" "}
+                  <Link href={`/players/${encodeURIComponent(exactNameMatch.playerId)}`} className="font-black text-[var(--color-primary)] hover:underline">
+                    {exactNameMatch.displayName} →
+                  </Link>{" "}
+                  Use that profile rather than creating another one.
                 </div>
               )}
 
@@ -468,13 +472,14 @@ export default function LeagueRosterPage() {
                     <article key={player.playerId} className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
-                          <h3 className="text-xl font-black">{player.displayName}</h3>
                           <Link
                             href={`/players/${encodeURIComponent(player.playerId)}`}
-                            className="mt-1 inline-block text-sm font-bold text-[var(--color-primary)]"
+                            className="group inline-flex items-center gap-2"
                           >
-                            View overall & league stats →
+                            <h3 className="text-xl font-black group-hover:text-[var(--color-primary)]">{player.displayName}</h3>
+                            <span aria-hidden="true" className="transition group-hover:translate-x-1">→</span>
                           </Link>
+                          <div className="mt-1 text-sm text-[var(--color-text-muted)]">Click the player name for profile, league history, and statistics.</div>
                           <div className="mt-2 flex flex-wrap gap-2">
                             {player.memberships.map((item) => (
                               <span key={item.leaguePlayerId} className="rounded-full bg-[var(--color-panel-soft)] px-3 py-1 text-xs font-bold">

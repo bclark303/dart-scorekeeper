@@ -1,4 +1,5 @@
 export type GameNightStatTurnInput = {
+  playerId?: string | null;
   leaguePlayerId: string | null;
   displayName: string;
   scoreEntered: number;
@@ -10,6 +11,7 @@ export type GameNightStatTurnInput = {
 };
 
 export type GameNightPlayerStats = {
+  playerId: string | null;
   leaguePlayerId: string;
   displayName: string;
   turns: number;
@@ -25,6 +27,7 @@ export type GameNightPlayerStats = {
 export type GameNightLeader = {
   value: number;
   players: Array<{
+    playerId: string | null;
     leaguePlayerId: string;
     displayName: string;
   }>;
@@ -41,8 +44,10 @@ export type GameNightStatsSummary = {
 function emptyPlayer(
   leaguePlayerId: string,
   displayName: string,
+  playerId: string | null,
 ): GameNightPlayerStats {
   return {
+    playerId,
     leaguePlayerId,
     displayName,
     turns: 0,
@@ -69,6 +74,7 @@ function leaderFor(
     players: players
       .filter((player) => valueFor(player) === value)
       .map((player) => ({
+        playerId: player.playerId,
         leaguePlayerId: player.leaguePlayerId,
         displayName: player.displayName,
       })),
@@ -92,8 +98,9 @@ export function buildGameNightStats(
 
     const player =
       byPlayer.get(turn.leaguePlayerId) ??
-      emptyPlayer(turn.leaguePlayerId, turn.displayName);
+      emptyPlayer(turn.leaguePlayerId, turn.displayName, turn.playerId ?? null);
     player.displayName = turn.displayName;
+    if (turn.playerId) player.playerId = turn.playerId;
     player.turns += 1;
 
     if (!turn.isBust) {

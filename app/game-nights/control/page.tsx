@@ -135,11 +135,17 @@ export default function GameNightControlPage() {
             </div>
             <h1 className="mt-1 text-3xl font-black">{night.name}</h1>
             <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-              {workspace.league?.name} · {night.seasonName} · {formatDate(night.scheduledAt)}
+              <Link href="/leagues" className="font-bold hover:text-[var(--color-primary)] hover:underline">{workspace.league?.name}</Link> ·{" "}
+              <Link href="/leagues" className="font-bold hover:text-[var(--color-primary)] hover:underline">{night.seasonName}</Link> · {formatDate(night.scheduledAt)}
             </p>
             {night.venueName && (
               <p className="mt-1 text-sm font-bold text-[var(--color-text-muted)]">
-                {night.venueName}
+                <Link
+                  href={`/league-devices?leagueId=${encodeURIComponent(workspace.leagueId)}&venueId=${encodeURIComponent(night.venueId ?? "")}`}
+                  className="hover:text-[var(--color-primary)] hover:underline"
+                >
+                  {night.venueName} →
+                </Link>
               </p>
             )}
           </div>
@@ -242,16 +248,29 @@ export default function GameNightControlPage() {
                     >
                       <div className="flex items-center justify-between gap-3">
                         <h3 className="font-black">
-                          {board?.name ?? `Board ${pairing.boardNumber}`}
+                          {pairing.matchSessionId ? (
+                            <Link href={`/league-match/${pairing.matchSessionId}`} className="hover:text-[var(--color-primary)] hover:underline">
+                              {board?.name ?? `Board ${pairing.boardNumber}`} →
+                            </Link>
+                          ) : board?.physicalBoardId && night.venueId ? (
+                            <Link
+                              href={`/league-devices?leagueId=${encodeURIComponent(workspace.leagueId)}&venueId=${encodeURIComponent(night.venueId)}&boardId=${encodeURIComponent(board.physicalBoardId)}`}
+                              className="hover:text-[var(--color-primary)] hover:underline"
+                            >
+                              {board.name} →
+                            </Link>
+                          ) : (
+                            board?.name ?? `Board ${pairing.boardNumber}`
+                          )}
                         </h3>
                         <span className="rounded-full bg-[var(--color-panel-soft)] px-3 py-1 text-xs font-black uppercase">
                           {niceStatus(status)}
                         </span>
                       </div>
                       <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center">
-                        <div className="font-black">{teamA?.name ?? "Team A"}</div>
+                        <Link href="/game-nights/teams" className="font-black hover:text-[var(--color-primary)] hover:underline">{teamA?.name ?? "Team A"}</Link>
                         <div className="text-xs font-black uppercase text-[var(--color-text-muted)]">vs</div>
-                        <div className="font-black">{teamB?.name ?? "Team B"}</div>
+                        <Link href="/game-nights/teams" className="font-black hover:text-[var(--color-primary)] hover:underline">{teamB?.name ?? "Team B"}</Link>
                       </div>
                       {pairing.matchSessionId && (
                         <Link

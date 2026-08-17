@@ -349,7 +349,13 @@ export default function GameNightTeamsPage() {
                               : "font-semibold"
                           }
                         >
-                          {member.displayName}
+                          {!member.isDummy && member.playerId ? (
+                            <Link href={`/players/${encodeURIComponent(member.playerId)}`} className="hover:text-[var(--color-primary)] hover:underline">
+                              {member.displayName}
+                            </Link>
+                          ) : (
+                            member.displayName
+                          )}
                           {member.isDummy ? " · dummy" : ""}
                         </div>
                       ))}
@@ -388,7 +394,9 @@ export default function GameNightTeamsPage() {
                           className="flex items-center justify-between gap-3 rounded-xl border border-[var(--color-panel-border)] p-3 text-sm"
                         >
                           <span className="flex flex-wrap items-center gap-2 font-black">
-                            {player.displayName}
+                            <Link href={`/players/${encodeURIComponent(player.playerId)}`} className="hover:text-[var(--color-primary)] hover:underline">
+                              {player.displayName}
+                            </Link>
                             {isSaving && (
                               <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-blue-200">
                                 Saving…
