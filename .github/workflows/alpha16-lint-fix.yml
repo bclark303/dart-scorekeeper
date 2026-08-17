@@ -28,48 +28,52 @@ jobs:
         run: |
           python3 <<'PY'
           from pathlib import Path
-          path = Path('app/league-play/page.tsx')
+          path = Path("app/league-play/page.tsx")
           text = path.read_text()
-          old = '''    const unfinished = gameNights
-      .filter((night) => !["completed", "cancelled"].includes(night.status))
-      .sort((a, b) => {
-        const now = Date.now();
-        const aFuture = a.scheduledAt >= now;
-        const bFuture = b.scheduledAt >= now;
-        if (aFuture !== bFuture) return aFuture ? -1 : 1;
-        return aFuture ? a.scheduledAt - b.scheduledAt : b.scheduledAt - a.scheduledAt;
-      });
-'''
-          new = '''    const priority: Record<GameNightSummary["status"], number> = {
-      active: 0,
-      ready: 1,
-      checkin: 2,
-      draft: 3,
-      completed: 4,
-      cancelled: 5,
-    };
-    const unfinished = gameNights
-      .filter((night) => !["completed", "cancelled"].includes(night.status))
-      .sort((a, b) => {
-        const byStatus = priority[a.status] - priority[b.status];
-        if (byStatus != 0) return byStatus;
-        return b.scheduledAt - a.scheduledAt;
-      });
-'''
+          old = (
+              '    const unfinished = gameNights\n'
+              '      .filter((night) => !["completed", "cancelled"].includes(night.status))\n'
+              '      .sort((a, b) => {\n'
+              '        const now = Date.now();\n'
+              '        const aFuture = a.scheduledAt >= now;\n'
+              '        const bFuture = b.scheduledAt >= now;\n'
+              '        if (aFuture !== bFuture) return aFuture ? -1 : 1;\n'
+              '        return aFuture ? a.scheduledAt - b.scheduledAt : b.scheduledAt - a.scheduledAt;\n'
+              '      });\n'
+          )
+          new = (
+              '    const priority: Record<GameNightSummary["status"], number> = {\n'
+              '      active: 0,\n'
+              '      ready: 1,\n'
+              '      checkin: 2,\n'
+              '      draft: 3,\n'
+              '      completed: 4,\n'
+              '      cancelled: 5,\n'
+              '    };\n'
+              '    const unfinished = gameNights\n'
+              '      .filter((night) => !["completed", "cancelled"].includes(night.status))\n'
+              '      .sort((a, b) => {\n'
+              '        const byStatus = priority[a.status] - priority[b.status];\n'
+              '        if (byStatus !== 0) return byStatus;\n'
+              '        return b.scheduledAt - a.scheduledAt;\n'
+              '      });\n'
+          )
           if old not in text:
-              raise SystemExit('Expected current-night sorting block not found')
+              raise SystemExit("Expected current-night sorting block not found")
           text = text.replace(old, new)
-          old_effect = '''  useEffect(() => {
-    if (access !== "logged-in" || !activeLeagueId) {
-      setGameNights([]);
-      return;
-    }
-'''
-          new_effect = '''  useEffect(() => {
-    if (access !== "logged-in" || !activeLeagueId) return;
-'''
+          old_effect = (
+              '  useEffect(() => {\n'
+              '    if (access !== "logged-in" || !activeLeagueId) {\n'
+              '      setGameNights([]);\n'
+              '      return;\n'
+              '    }\n'
+          )
+          new_effect = (
+              '  useEffect(() => {\n'
+              '    if (access !== "logged-in" || !activeLeagueId) return;\n'
+          )
           if old_effect not in text:
-              raise SystemExit('Expected Game Night effect guard not found')
+              raise SystemExit("Expected Game Night effect guard not found")
           text = text.replace(old_effect, new_effect)
           path.write_text(text)
           PY
