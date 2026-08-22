@@ -1,0 +1,48 @@
+name: Polish casual multiplayer X01
+
+on:
+  push:
+    branches:
+      - agent/casual-multiplayer-x01
+
+permissions:
+  contents: write
+
+jobs:
+  polish-and-verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    env:
+      DB_PROVIDER: libsql
+      DATABASE_URL: file:./data/ci.db
+      DATABASE_AUTH_TOKEN: ""
+      BETTER_AUTH_SECRET: ci-only-dart-scorekeeper-auth-secret-123456789
+      BETTER_AUTH_URL: http://localhost:3000
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/casual-multiplayer-x01
+      - run: python3 scripts/polish-casual-multiplayer-x01.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: |
+          mkdir -p data
+          npm run db:migrate
+          npm run db:test
+          npm run local:test
+          npm run auth:test
+          npm run lint
+          npm run build
+      - run: |
+          rm scripts/polish-casual-multiplayer-x01.py
+          rm .github/workflows/polish-casual-multiplayer-x01.yml
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Polish casual individual turn display"
+          git push origin HEAD:agent/casual-multiplayer-x01
