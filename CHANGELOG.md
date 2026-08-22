@@ -3,6 +3,8 @@
 ## Unreleased
 
 ### Added
+- Casual X01 now supports any number of individual players, with turn order rotating across every participant.
+- X01 starting scores can now be selected from 101 through 901 in 100-point increments.
 - Portable persistence foundation for v0.4.0.
 - SQLite-compatible Drizzle schema and migration tooling.
 - Provider boundary under `lib/db/adapters/` and repository boundary under `lib/db/repositories/`.
@@ -32,7 +34,7 @@
 - Session storage persistence for full-screen board state across dummy turns.
 
 ### Changed
-- Updated development version to v0.4.0-alpha.1.
+- Updated development version to v0.4.0-alpha.2.
 - Enabled Next.js standalone output so the same app can run as a normal Node/Docker deployment.
 - Production database configuration now requires an explicit `DATABASE_URL`; local-file fallback is development-only.
 - Historical match participants are modeled separately from optional long-lived player profiles so guest/dummy play and name snapshots remain valid.

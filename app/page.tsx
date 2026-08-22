@@ -2,6 +2,7 @@
 
 import {
   BestOfLegs,
+  CompetitionFormat,
   CompletedLeg,
   MatchPlayer,
   MatchSide,
@@ -79,6 +80,12 @@ export default function Home() {
   // Match setup options.
   // These control the X01 rules used when a new match is started.
   const [startingScore, setStartingScore] = useState<StartingScore>(501);
+  const [competitionFormat, setCompetitionFormat] =
+    useState<CompetitionFormat>("individual");
+  const [individualPlayerNames, setIndividualPlayerNames] = useState<string[]>([
+    "",
+    "",
+  ]);
   const [finishRule, setFinishRule] = useState<FinishRule>("double_out");
   const [bestOfLegs, setBestOfLegs] = useState<BestOfLegs>(3);
 
@@ -271,6 +278,27 @@ export default function Home() {
         parsedMatch.teamSize ??
         (parsedMatch.matchType === "doubles" ? 2 : 1);
 
+      const loadedSides = normalizeSavedSides(
+        parsedMatch.sides ?? parsedMatch.players ?? [],
+      );
+      const loadedCompetitionFormat =
+        parsedMatch.competitionFormat ??
+        (loadedSides.length > 2 ||
+        (loadedSideOneSize === 1 && loadedSideTwoSize === 1)
+          ? "individual"
+          : "team");
+
+      setCompetitionFormat(loadedCompetitionFormat);
+      setIndividualPlayerNames(
+        parsedMatch.individualPlayerNames ??
+          (loadedCompetitionFormat === "individual" && loadedSides.length >= 2
+            ? loadedSides.map((side) => side.name)
+            : [
+                parsedMatch.playerOneName ?? "Player 1",
+                parsedMatch.playerTwoName ?? "Player 2",
+              ]),
+      );
+
       setThemeName(parsedMatch.themeName ?? "default");
 
       setBrandName(parsedMatch.brandName ?? "Dart Scorekeeper");
@@ -320,9 +348,7 @@ export default function Home() {
         ].slice(0, loadedSideTwoSize),
       );
 
-      setSides(
-        normalizeSavedSides(parsedMatch.sides ?? parsedMatch.players ?? []),
-      );
+      setSides(loadedSides);
       setCurrentSideIndex(
         parsedMatch.currentSideIndex ?? parsedMatch.currentPlayerIndex ?? 0,
       );
@@ -358,6 +384,8 @@ export default function Home() {
       matchId: matchId || undefined,
       matchCreatedAt: matchCreatedAt ?? undefined,
       startingScore,
+      competitionFormat,
+      individualPlayerNames,
       finishRule,
       bestOfLegs,
       scoreEntryMode,
@@ -392,6 +420,8 @@ export default function Home() {
     matchId,
     matchCreatedAt,
     startingScore,
+    competitionFormat,
+    individualPlayerNames,
     finishRule,
     bestOfLegs,
     scoreEntryMode,
@@ -479,10 +509,6 @@ export default function Home() {
   function getDefaultMemberName(sideNumber: 1 | 2, memberIndex: number) {
     const suffix = sideNumber === 1 ? "A" : "B";
     return `Player ${memberIndex + 1}-${suffix}`;
-  }
-
-  function getDefaultSinglesPlayerName(sideNumber: 1 | 2) {
-    return sideNumber === 1 ? "Player 1" : "Player 2";
   }
 
   function resolveMemberNames(
@@ -597,55 +623,71 @@ export default function Home() {
     setMatchId(newMatchIdentity.id);
     setMatchCreatedAt(newMatchIdentity.createdAt);
 
-    const isSinglesMatch = sideOneSize === 1 && sideTwoSize === 1;
+    let newSides: MatchSide[];
 
-    const resolvedTeamOneMemberNames = isSinglesMatch
-      ? [teamOneMemberNames[0]?.trim() || getDefaultSinglesPlayerName(1)]
-      : resolveMemberNames(teamOneMemberNames, 1, sideOneSize);
-
-    const resolvedTeamTwoMemberNames = isSinglesMatch
-      ? [teamTwoMemberNames[0]?.trim() || getDefaultSinglesPlayerName(2)]
-      : resolveMemberNames(teamTwoMemberNames, 2, sideTwoSize);
-
-    const sideOneName = isSinglesMatch
-      ? resolvedTeamOneMemberNames[0]
-      : teamOneName.trim() || getDefaultTeamName(1);
-
-    const sideTwoName = isSinglesMatch
-      ? resolvedTeamTwoMemberNames[0]
-      : teamTwoName.trim() || getDefaultTeamName(2);
-
-    let newSides: MatchSide[] = [
-      createTeamSide(
-        "side-1",
-        sideOneName,
-        resolvedTeamOneMemberNames,
-        startingScore,
-      ),
-      createTeamSide(
-        "side-2",
-        sideTwoName,
-        resolvedTeamTwoMemberNames,
-        startingScore,
-      ),
-    ];
-
-    if (rotationMode === "dummy" && sideOneSize !== sideTwoSize) {
-      const targetSize = Math.max(sideOneSize, sideTwoSize);
-
-      newSides = newSides.map((side) =>
-        addDummyMembersIfNeeded(side, targetSize),
+    if (competitionFormat === "individual") {
+      const playerCount = Math.max(2, individualPlayerNames.length);
+      const resolvedPlayerNames = Array.from(
+        { length: playerCount },
+        (_, index) =>
+          individualPlayerNames[index]?.trim() || `Player ${index + 1}`,
       );
+
+      newSides = resolvedPlayerNames.map((playerName, index) =>
+        createTeamSide(
+          `side-${index + 1}`,
+          playerName,
+          [playerName],
+          startingScore,
+        ),
+      );
+    } else {
+      const resolvedTeamOneMemberNames = resolveMemberNames(
+        teamOneMemberNames,
+        1,
+        sideOneSize,
+      );
+      const resolvedTeamTwoMemberNames = resolveMemberNames(
+        teamTwoMemberNames,
+        2,
+        sideTwoSize,
+      );
+
+      const sideOneName = teamOneName.trim() || getDefaultTeamName(1);
+      const sideTwoName = teamTwoName.trim() || getDefaultTeamName(2);
+
+      newSides = [
+        createTeamSide(
+          "side-1",
+          sideOneName,
+          resolvedTeamOneMemberNames,
+          startingScore,
+        ),
+        createTeamSide(
+          "side-2",
+          sideTwoName,
+          resolvedTeamTwoMemberNames,
+          startingScore,
+        ),
+      ];
+
+      if (rotationMode === "dummy" && sideOneSize !== sideTwoSize) {
+        const targetSize = Math.max(sideOneSize, sideTwoSize);
+        newSides = newSides.map((side) =>
+          addDummyMembersIfNeeded(side, targetSize),
+        );
+      }
     }
+
+    const initialMemberIndexes = Object.fromEntries(
+      newSides.map((side) => [side.id, 0]),
+    );
 
     setSides(newSides);
     setCurrentSideIndex(0);
     setStartingSideIndex(0);
     setCurrentLegNumber(1);
-    setStartingMemberIndexBySide({
-      "side-1": 0,
-      "side-2": 0,
-    });
+    setStartingMemberIndexBySide(initialMemberIndexes);
     setScoreInput("");
     setTurnHistory([]);
     setCompletedLegs([]);
@@ -655,8 +697,13 @@ export default function Home() {
     setPendingDartsUsedTurn(null);
     setIsGameModeActive(true);
     setIsGameMenuOpen(false);
+
+    const firstSide = newSides[0];
+    const firstThrower = getCurrentThrowerName(firstSide);
     setMessage(
-      `${getCurrentThrowerName(newSides[0])} (${newSides[0].name}) to throw`,
+      competitionFormat === "individual"
+        ? `${firstThrower} to throw`
+        : `${firstThrower} (${firstSide.name}) to throw`,
     );
   }
 
@@ -704,6 +751,8 @@ export default function Home() {
     ];
 
     setStartingScore(501);
+    setCompetitionFormat("individual");
+    setIndividualPlayerNames(["", ""]);
     setFinishRule("double_out");
     setBestOfLegs(3);
     setMatchType("singles");
@@ -759,6 +808,13 @@ export default function Home() {
 
   function getCurrentThrowerName(side: MatchSide): string {
     return side.members[side.currentMemberIndex]?.name ?? side.name;
+  }
+
+  function getTurnDisplayName(side: MatchSide): string {
+    const throwerName = getCurrentThrowerName(side);
+    return competitionFormat === "individual"
+      ? `${throwerName} to throw`
+      : `${throwerName} (${side.name}) to throw`;
   }
 
   function getDartLabel(dart: DartThrow) {
@@ -907,12 +963,8 @@ export default function Home() {
     const nextPlayerIndex = getNextSideIndex();
     setCurrentSideIndex(nextPlayerIndex);
 
-    const nextPlayerName = sides[nextPlayerIndex].name;
-    const nextThrowerName = getCurrentThrowerName(sides[nextPlayerIndex]);
-
-    setMessage(
-      `${resultWithThrower.message} ${nextThrowerName} (${nextPlayerName}) to throw.`,
-    );
+    const nextTurn = getTurnDisplayName(sides[nextPlayerIndex]);
+    setMessage(`${resultWithThrower.message} ${nextTurn}.`);
   }
 
   function submitDartTurn(darts: DartThrow[]) {
@@ -1020,7 +1072,7 @@ export default function Home() {
     setCurrentSideIndex(nextSideIndex);
 
     const nextSide = sides[nextSideIndex];
-    const nextThrowerName = getCurrentThrowerName(nextSide);
+    const nextTurn = getTurnDisplayName(nextSide);
 
     const dartSummary = getDartSummary(darts);
     const throwerName =
@@ -1032,9 +1084,7 @@ export default function Home() {
         ? `${throwerName} busts with ${dartSummary}.`
         : `${throwerName} scored ${resultWithDarts.turn.scoreEntered} with ${dartSummary}.`;
 
-    setMessage(
-      `${turnMessage} ${nextThrowerName} (${nextSide.name}) to throw.`,
-    );
+    setMessage(`${turnMessage} ${nextTurn}.`);
   }
 
   function submitDummyScore() {
@@ -1151,11 +1201,11 @@ export default function Home() {
     advanceCurrentSideMember();
 
     const nextPlayerIndex = getNextSideIndex();
-    const nextThrowerName = getCurrentThrowerName(sides[nextPlayerIndex]);
+    const nextTurn = getTurnDisplayName(sides[nextPlayerIndex]);
 
     setCurrentSideIndex(nextPlayerIndex);
     setMessage(
-      `${pendingCheckoutTurn.throwerName ?? pendingCheckoutTurn.playerName} busts! ${nextThrowerName} (${sides[nextPlayerIndex].name}) to throw.`,
+      `${pendingCheckoutTurn.throwerName ?? pendingCheckoutTurn.playerName} busts! ${nextTurn}.`,
     );
     setPendingCheckoutTurn(null);
   }
@@ -1260,7 +1310,8 @@ export default function Home() {
       return;
     }
 
-    const nextstartingSideIndex = startingSideIndex === 0 ? 1 : 0;
+    const nextstartingSideIndex =
+      sides.length === 0 ? 0 : (startingSideIndex + 1) % sides.length;
     const nextStartingSide = sides[nextstartingSideIndex];
 
     const nextStartingMemberIndexBySide = {
@@ -1294,11 +1345,20 @@ export default function Home() {
     const startingSide = resetSides[nextstartingSideIndex];
     const startingThrower = getCurrentThrowerName(startingSide);
 
-    setMessage(`${startingThrower} (${startingSide.name}) to throw`);
+    setMessage(
+      competitionFormat === "individual"
+        ? `${startingThrower} to throw`
+        : `${startingThrower} (${startingSide.name}) to throw`,
+    );
   }
   function getOpponentLegs(sideList: MatchSide[], winnerPlayerId: string) {
-    const opponent = sideList.find((side) => side.id !== winnerPlayerId);
-    return opponent?.legsWon ?? 0;
+    return sideList.reduce((highestLegCount, side) => {
+      if (side.id === winnerPlayerId) {
+        return highestLegCount;
+      }
+
+      return Math.max(highestLegCount, side.legsWon);
+    }, 0);
   }
 
   function getAllMatchTurns(): Turn[] {
@@ -1378,7 +1438,11 @@ export default function Home() {
   }
 
   function getNextSideIndex() {
-    return currentSideIndex === 0 ? 1 : 0;
+    if (sides.length === 0) {
+      return 0;
+    }
+
+    return (currentSideIndex + 1) % sides.length;
   }
 
   function undoLastTurn() {
@@ -1610,6 +1674,8 @@ export default function Home() {
         refreshBehavior,
         game: {
           startingScore,
+          competitionFormat,
+          individualPlayerCount: individualPlayerNames.length,
           finishRule,
           bestOfLegs,
           scoreEntryMode,
@@ -1911,7 +1977,7 @@ export default function Home() {
                   <h1 className="text-4xl font-bold mb-2">{brandName}</h1>
 
                   <p className="text-[var(--color-text-muted)]">
-                    X01 scorer for singles, doubles, and team play
+                    X01 scorer for individual and team play
                   </p>
                 </div>
 
@@ -1952,6 +2018,8 @@ export default function Home() {
             teamOneName={teamOneName}
             teamTwoName={teamTwoName}
             startingScore={startingScore}
+            competitionFormat={competitionFormat}
+            individualPlayerNames={individualPlayerNames}
             finishRule={finishRule}
             bestOfLegs={bestOfLegs}
             scoreEntryMode={scoreEntryMode}
@@ -1971,6 +2039,8 @@ export default function Home() {
             setTeamOneMemberNames={setTeamOneMemberNames}
             setTeamTwoMemberNames={setTeamTwoMemberNames}
             setStartingScore={setStartingScore}
+            setCompetitionFormat={setCompetitionFormat}
+            setIndividualPlayerNames={setIndividualPlayerNames}
             setFinishRule={setFinishRule}
             setBestOfLegs={setBestOfLegs}
             startNewGame={handleStartNewGame}
