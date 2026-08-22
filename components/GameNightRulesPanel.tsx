@@ -8,6 +8,7 @@ import type {
 } from "@/lib/league/gameNightContracts";
 import { getDummyScoringRule } from "@/lib/league/dummyScoring";
 import { X01_BEST_OF_OPTIONS } from "@/lib/league/matchFormat";
+import { X01_STARTING_SCORES } from "@/lib/scoring";
 
 function numberValue(value: string, fallback: number) {
   const parsed = Number(value);
@@ -263,9 +264,9 @@ export function GameNightRulesPanel({
                 onChange={(event) => patch("startingScore", Number(event.target.value))}
                 className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-2.5"
               >
-                <option value={301}>301</option>
-                <option value={501}>501</option>
-                <option value={701}>701</option>
+                {X01_STARTING_SCORES.map((score) => (
+                  <option key={score} value={score}>{score}</option>
+                ))}
               </select>
             </label>
             <label className="text-sm">

@@ -33,6 +33,8 @@
 
 
 ### Added
+- Casual X01 now supports any number of individual players, with independent scores and circular turn order.
+- X01 starting scores can now be selected from 101 through 901 in 100-point increments in both casual and league rule setup.
 - Shared League Workspace navigation across league administration pages.
 - Complete League landing shortcuts for Game Nights, league/season setup, players/rosters, rules templates, and board devices.
 - Portable persistence foundation for v0.4.0.

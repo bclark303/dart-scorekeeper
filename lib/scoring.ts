@@ -21,7 +21,28 @@ function createTurnId(): string {
  * "Given this player/side and this score, what happens?"
  */
 
-export type StartingScore = 301 | 501 | 701;
+export type StartingScore = number;
+
+export const X01_STARTING_SCORES = [
+    101,
+    201,
+    301,
+    401,
+    501,
+    601,
+    701,
+    801,
+    901,
+] as const;
+
+export function isSupportedX01StartingScore(score: number): boolean {
+    return (
+        Number.isInteger(score) &&
+        score >= 101 &&
+        score <= 901 &&
+        score % 100 === 1
+    );
+}
 
 export type FinishRule = "straight_out" | "double_out";
 

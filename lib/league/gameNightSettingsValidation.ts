@@ -1,5 +1,6 @@
 import type { ResolvedGameNightSettings } from "@/lib/league/gameNightContracts";
 import { isSupportedBestOfLegs } from "@/lib/league/matchFormat";
+import { isSupportedX01StartingScore } from "@/lib/scoring";
 
 /**
  * Validate a fully resolved Game Night rule set at the domain boundary.
@@ -51,7 +52,7 @@ export function isValidResolvedGameNightSettings(
     settings.intermissionDurationMinutes >= 0 &&
     settings.intermissionDurationMinutes <= 180 &&
     isSupportedBestOfLegs(settings.legsPerMatch) &&
-    [301, 501, 701].includes(settings.startingScore) &&
+    isSupportedX01StartingScore(settings.startingScore) &&
     ["straight", "double"].includes(settings.finishRule)
   );
 }
