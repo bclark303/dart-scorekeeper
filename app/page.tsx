@@ -810,6 +810,13 @@ export default function Home() {
     return side.members[side.currentMemberIndex]?.name ?? side.name;
   }
 
+  function getTurnDisplayName(side: MatchSide): string {
+    const throwerName = getCurrentThrowerName(side);
+    return competitionFormat === "individual"
+      ? `${throwerName} to throw`
+      : `${throwerName} (${side.name}) to throw`;
+  }
+
   function getDartLabel(dart: DartThrow) {
     if (dart.segment === "miss") {
       return "Miss";
@@ -956,12 +963,8 @@ export default function Home() {
     const nextPlayerIndex = getNextSideIndex();
     setCurrentSideIndex(nextPlayerIndex);
 
-    const nextPlayerName = sides[nextPlayerIndex].name;
-    const nextThrowerName = getCurrentThrowerName(sides[nextPlayerIndex]);
-
-    setMessage(
-      `${resultWithThrower.message} ${nextThrowerName} (${nextPlayerName}) to throw.`,
-    );
+    const nextTurn = getTurnDisplayName(sides[nextPlayerIndex]);
+    setMessage(`${resultWithThrower.message} ${nextTurn}.`);
   }
 
   function submitDartTurn(darts: DartThrow[]) {
@@ -1069,7 +1072,7 @@ export default function Home() {
     setCurrentSideIndex(nextSideIndex);
 
     const nextSide = sides[nextSideIndex];
-    const nextThrowerName = getCurrentThrowerName(nextSide);
+    const nextTurn = getTurnDisplayName(nextSide);
 
     const dartSummary = getDartSummary(darts);
     const throwerName =
@@ -1081,9 +1084,7 @@ export default function Home() {
         ? `${throwerName} busts with ${dartSummary}.`
         : `${throwerName} scored ${resultWithDarts.turn.scoreEntered} with ${dartSummary}.`;
 
-    setMessage(
-      `${turnMessage} ${nextThrowerName} (${nextSide.name}) to throw.`,
-    );
+    setMessage(`${turnMessage} ${nextTurn}.`);
   }
 
   function submitDummyScore() {
@@ -1200,11 +1201,11 @@ export default function Home() {
     advanceCurrentSideMember();
 
     const nextPlayerIndex = getNextSideIndex();
-    const nextThrowerName = getCurrentThrowerName(sides[nextPlayerIndex]);
+    const nextTurn = getTurnDisplayName(sides[nextPlayerIndex]);
 
     setCurrentSideIndex(nextPlayerIndex);
     setMessage(
-      `${pendingCheckoutTurn.throwerName ?? pendingCheckoutTurn.playerName} busts! ${nextThrowerName} (${sides[nextPlayerIndex].name}) to throw.`,
+      `${pendingCheckoutTurn.throwerName ?? pendingCheckoutTurn.playerName} busts! ${nextTurn}.`,
     );
     setPendingCheckoutTurn(null);
   }
