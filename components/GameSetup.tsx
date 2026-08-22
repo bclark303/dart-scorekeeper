@@ -1,18 +1,27 @@
-import { FinishRule, StartingScore } from "@/lib/scoring";
+import {
+  FinishRule,
+  StartingScore,
+  X01_STARTING_SCORES,
+} from "@/lib/scoring";
 import {
   BestOfLegs,
+  CompetitionFormat,
   RotationMode,
   ScoreEntryMode,
   TeamSize,
 } from "@/lib/types";
 
 type GameSetupProps = {
+  competitionFormat: CompetitionFormat;
+  individualPlayerNames: string[];
   teamOneName: string;
   teamTwoName: string;
   startingScore: StartingScore;
   finishRule: FinishRule;
   bestOfLegs: BestOfLegs;
   scoreEntryMode: ScoreEntryMode;
+  setCompetitionFormat: (format: CompetitionFormat) => void;
+  setIndividualPlayerNames: (names: string[]) => void;
   setScoreEntryMode: (mode: ScoreEntryMode) => void;
   setTeamOneName: (name: string) => void;
   setTeamTwoName: (name: string) => void;
@@ -47,12 +56,16 @@ const inputClass =
   "w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-3";
 
 export function GameSetup({
+  competitionFormat,
+  individualPlayerNames,
   teamOneName,
   teamTwoName,
   startingScore,
   finishRule,
   bestOfLegs,
   scoreEntryMode,
+  setCompetitionFormat,
+  setIndividualPlayerNames,
   setScoreEntryMode,
   setTeamOneName,
   setTeamTwoName,
@@ -80,7 +93,27 @@ export function GameSetup({
   setRotationMode,
   setDummyScore,
 }: GameSetupProps) {
-  const singles = sideOneSize === 1 && sideTwoSize === 1;
+  const isIndividual = competitionFormat === "individual";
+  const playerCount = isIndividual
+    ? individualPlayerNames.length
+    : sideOneSize + sideTwoSize;
+
+  function updateIndividualPlayerName(index: number, name: string) {
+    const next = [...individualPlayerNames];
+    next[index] = name;
+    setIndividualPlayerNames(next);
+  }
+
+  function addIndividualPlayer() {
+    setIndividualPlayerNames([...individualPlayerNames, ""]);
+  }
+
+  function removeIndividualPlayer(index: number) {
+    if (individualPlayerNames.length <= 2) return;
+    setIndividualPlayerNames(
+      individualPlayerNames.filter((_, playerIndex) => playerIndex !== index),
+    );
+  }
 
   return (
     <section className="mb-8">
@@ -90,36 +123,74 @@ export function GameSetup({
         </div>
         <h2 className="mt-1 text-3xl font-black">Casual Play Setup</h2>
         <p className="mt-2 max-w-2xl text-sm text-[var(--color-text-muted)]">
-          Enter the players and basic rules. Starting the match opens the focused
-          scoring board.
+          Choose individual or team play, enter the players, and set the X01 rules.
+          Starting the match opens the focused scoring board.
         </p>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
         <div className="space-y-5">
           <section className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
-            <h3 className="text-lg font-black">{singles ? "Players" : "Players & Teams"}</h3>
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-black">Players</h3>
+                <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                  Individual play gives every player their own score and turn.
+                </p>
+              </div>
+              <label className="min-w-44 text-sm font-bold">
+                Play as
+                <select
+                  value={competitionFormat}
+                  onChange={(event) =>
+                    setCompetitionFormat(event.target.value as CompetitionFormat)
+                  }
+                  className={`mt-2 ${selectClass}`}
+                >
+                  <option value="individual">Individuals</option>
+                  <option value="team">Teams</option>
+                </select>
+              </label>
+            </div>
 
-            {singles ? (
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <label className="text-sm font-bold">
-                  Player 1
-                  <input
-                    value={teamOneMemberNames[0] ?? ""}
-                    onChange={(event) => setTeamOneMemberNames([event.target.value])}
-                    placeholder="Player 1"
-                    className={`mt-2 ${inputClass}`}
-                  />
-                </label>
-                <label className="text-sm font-bold">
-                  Player 2
-                  <input
-                    value={teamTwoMemberNames[0] ?? ""}
-                    onChange={(event) => setTeamTwoMemberNames([event.target.value])}
-                    placeholder="Player 2"
-                    className={`mt-2 ${inputClass}`}
-                  />
-                </label>
+            {isIndividual ? (
+              <div className="mt-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {individualPlayerNames.map((playerName, index) => (
+                    <div
+                      key={index}
+                      className="rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-3"
+                    >
+                      <label className="text-sm font-bold">
+                        Player {index + 1}
+                        <input
+                          value={playerName}
+                          onChange={(event) =>
+                            updateIndividualPlayerName(index, event.target.value)
+                          }
+                          placeholder={`Player ${index + 1}`}
+                          className="mt-2 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-3"
+                        />
+                      </label>
+                      {individualPlayerNames.length > 2 && (
+                        <button
+                          type="button"
+                          onClick={() => removeIndividualPlayer(index)}
+                          className="mt-2 text-xs font-bold text-[var(--color-danger-hover)] underline underline-offset-4"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={addIndividualPlayer}
+                  className="mt-4 rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] px-4 py-2.5 text-sm font-black hover:bg-[var(--color-panel-border)]"
+                >
+                  + Add Player
+                </button>
               </div>
             ) : (
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -187,14 +258,14 @@ export function GameSetup({
                 Starting score
                 <select
                   value={startingScore}
-                  onChange={(event) =>
-                    setStartingScore(Number(event.target.value) as StartingScore)
-                  }
+                  onChange={(event) => setStartingScore(Number(event.target.value))}
                   className={`mt-2 ${selectClass}`}
                 >
-                  <option value={301}>301</option>
-                  <option value={501}>501</option>
-                  <option value={701}>701</option>
+                  {X01_STARTING_SCORES.map((score) => (
+                    <option key={score} value={score}>
+                      {score}
+                    </option>
+                  ))}
                 </select>
               </label>
 
@@ -245,78 +316,83 @@ export function GameSetup({
             </div>
           </section>
 
-          <details className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
-            <summary className="cursor-pointer font-black">More match options</summary>
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <label className="text-sm font-bold">
-                Team A size
-                <select
-                  value={sideOneSize}
-                  onChange={(event) =>
-                    resizeSideOneMembers(Number(event.target.value) as TeamSize)
-                  }
-                  className={`mt-2 ${selectClass}`}
-                >
-                  {[1, 2, 3, 4, 5].map((size) => (
-                    <option key={size} value={size}>
-                      {size} {size === 1 ? "player" : "players"}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="text-sm font-bold">
-                Team B size
-                <select
-                  value={sideTwoSize}
-                  onChange={(event) =>
-                    resizeSideTwoMembers(Number(event.target.value) as TeamSize)
-                  }
-                  className={`mt-2 ${selectClass}`}
-                >
-                  {[1, 2, 3, 4, 5].map((size) => (
-                    <option key={size} value={size}>
-                      {size} {size === 1 ? "player" : "players"}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              {sideOneSize !== sideTwoSize && (
+          {!isIndividual && (
+            <details className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
+              <summary className="cursor-pointer font-black">More team options</summary>
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
                 <label className="text-sm font-bold">
-                  Uneven-team rotation
+                  Team A size
                   <select
-                    value={rotationMode}
+                    value={sideOneSize}
                     onChange={(event) =>
-                      setRotationMode(event.target.value as RotationMode)
+                      resizeSideOneMembers(Number(event.target.value) as TeamSize)
                     }
                     className={`mt-2 ${selectClass}`}
                   >
-                    <option value="independent">Independent</option>
-                    <option value="dummy">Use Dummy Score</option>
+                    {[1, 2, 3, 4, 5].map((size) => (
+                      <option key={size} value={size}>
+                        {size} {size === 1 ? "player" : "players"}
+                      </option>
+                    ))}
                   </select>
                 </label>
-              )}
 
-              {sideOneSize !== sideTwoSize && rotationMode === "dummy" && (
                 <label className="text-sm font-bold">
-                  Dummy score
-                  <input
-                    value={dummyScore}
-                    inputMode="numeric"
+                  Team B size
+                  <select
+                    value={sideTwoSize}
                     onChange={(event) =>
-                      setDummyScore(Number(event.target.value) || 0)
+                      resizeSideTwoMembers(Number(event.target.value) as TeamSize)
                     }
-                    className={`mt-2 ${inputClass}`}
-                  />
+                    className={`mt-2 ${selectClass}`}
+                  >
+                    {[1, 2, 3, 4, 5].map((size) => (
+                      <option key={size} value={size}>
+                        {size} {size === 1 ? "player" : "players"}
+                      </option>
+                    ))}
+                  </select>
                 </label>
-              )}
-            </div>
 
+                {sideOneSize !== sideTwoSize && (
+                  <label className="text-sm font-bold">
+                    Uneven-team rotation
+                    <select
+                      value={rotationMode}
+                      onChange={(event) =>
+                        setRotationMode(event.target.value as RotationMode)
+                      }
+                      className={`mt-2 ${selectClass}`}
+                    >
+                      <option value="independent">Independent</option>
+                      <option value="dummy">Use Dummy Score</option>
+                    </select>
+                  </label>
+                )}
+
+                {sideOneSize !== sideTwoSize && rotationMode === "dummy" && (
+                  <label className="text-sm font-bold">
+                    Dummy score
+                    <input
+                      value={dummyScore}
+                      inputMode="numeric"
+                      onChange={(event) =>
+                        setDummyScore(Number(event.target.value) || 0)
+                      }
+                      className={`mt-2 ${inputClass}`}
+                    />
+                  </label>
+                )}
+              </div>
+            </details>
+          )}
+
+          <details className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
+            <summary className="cursor-pointer font-black">Local data</summary>
             <button
               type="button"
               onClick={clearSavedMatch}
-              className="mt-5 text-sm font-bold text-[var(--color-text-muted)] underline underline-offset-4"
+              className="mt-4 text-sm font-bold text-[var(--color-text-muted)] underline underline-offset-4"
             >
               Clear saved local match and preferences
             </button>
@@ -380,8 +456,12 @@ export function GameSetup({
           </div>
           <div className="mt-4 space-y-3 text-sm">
             <div className="flex items-center justify-between gap-3 border-b border-[var(--color-panel-border)] pb-3">
+              <span className="text-[var(--color-text-muted)]">Play</span>
+              <strong>{isIndividual ? "Individuals" : "Teams"}</strong>
+            </div>
+            <div className="flex items-center justify-between gap-3 border-b border-[var(--color-panel-border)] pb-3">
               <span className="text-[var(--color-text-muted)]">Players</span>
-              <strong>{sideOneSize + sideTwoSize}</strong>
+              <strong>{playerCount}</strong>
             </div>
             <div className="flex items-center justify-between gap-3 border-b border-[var(--color-panel-border)] pb-3">
               <span className="text-[var(--color-text-muted)]">Game</span>
