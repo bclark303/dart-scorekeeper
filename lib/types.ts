@@ -13,6 +13,9 @@ export type BestOfLegs = 1 | 3 | 5 | 7 | 9;
  */
 export type MatchType = "singles" | "doubles";
 
+/** How competitors are organized for a casual match. */
+export type CompetitionFormat = "individual" | "team";
+
 /**
  * Number of active player slots on a side.
  * We currently cap this at 5 to keep the setup UI simple.
@@ -113,6 +116,10 @@ export type SavedMatchState = {
   isGameModeActive?: boolean;
   matchId?: string;
   matchCreatedAt?: number;
+
+  // Current casual competition setup.
+  competitionFormat?: CompetitionFormat;
+  individualPlayerNames?: string[];
 
   // Current team/side setup.
   sideOneSize: TeamSize;

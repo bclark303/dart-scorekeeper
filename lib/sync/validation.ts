@@ -1,7 +1,7 @@
 import type { X01MatchArchive } from "@/lib/persistence/contracts";
 
 const MAX_MATCHES_PER_REQUEST = 25;
-const MAX_SIDES = 2;
+const MAX_SIDES = 128;
 const MAX_PARTICIPANTS_PER_SIDE = 5;
 const MAX_LEGS = 31;
 const MAX_TURNS_PER_LEG = 200;
@@ -47,6 +47,14 @@ function requireInteger(value: unknown, field: string, min: number, max: number)
   return number;
 }
 
+function requireX01StartingScore(value: unknown, field: string) {
+  const score = requireInteger(value, field, 101, 901);
+  if (score % 100 !== 1) {
+    throw new Error(`${field} must be an X01 score between 101 and 901.`);
+  }
+  return score;
+}
+
 function requireBoolean(value: unknown, field: string) {
   if (typeof value !== "boolean") {
     throw new Error(`${field} is invalid.`);
@@ -90,7 +98,12 @@ function parseArchive(raw: unknown): X01MatchArchive {
 
     return {
       id: requireString(rawSide.id, "side.id"),
-      sideIndex: requireInteger(rawSide.sideIndex, "side.sideIndex", 0, 1),
+      sideIndex: requireInteger(
+        rawSide.sideIndex,
+        "side.sideIndex",
+        0,
+        MAX_SIDES - 1,
+      ),
       name: requireString(rawSide.name, "side.name"),
       participants: rawSide.participants.map((rawParticipant) => {
         if (!isRecord(rawParticipant)) {
@@ -190,11 +203,10 @@ function parseArchive(raw: unknown): X01MatchArchive {
     updatedAt: requireNumber(raw.updatedAt, "match.updatedAt"),
     completedAt: requireNullableNumber(raw.completedAt, "match.completedAt"),
     settings: {
-      startingScore: requireEnum(settings.startingScore, "settings.startingScore", [
-        301,
-        501,
-        701,
-      ] as const),
+      startingScore: requireX01StartingScore(
+        settings.startingScore,
+        "settings.startingScore",
+      ),
       finishRule: requireEnum(settings.finishRule, "settings.finishRule", [
         "straight_out",
         "double_out",
