@@ -97,6 +97,7 @@
 - Sync uploads enforce request-size, batch-size, and archive-shape/range validation.
 
 ### Fixed
+- Scoring View now reserves an always-visible bottom control bar and switches to the side-by-side tablet layout at narrower widths so App View and Exit Game stay on-screen.
 - Full-screen board Exit now remains exited when Auto full screen is enabled.
 - Duplicate player name display on full-screen score cards.
 - Full-screen board mode returning to normal mode after dummy-score turns.
