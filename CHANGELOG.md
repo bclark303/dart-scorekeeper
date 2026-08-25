@@ -33,6 +33,8 @@
 
 
 ### Added
+- Casual games can now be paused into up to five named local save slots and resumed later with exact score, turn, leg, history, checkout-prompt, and in-progress dart-entry state preserved.
+- Active casual games now have a small Exit Game action with explicit Pause Game and confirmed Discard Game paths; paused/discarded games never enter completed-match statistics.
 - Casual X01 now supports any number of individual players, with independent scores and circular turn order.
 - X01 starting scores can now be selected from 101 through 901 in 100-point increments in both casual and league rule setup.
 - Shared League Workspace navigation across league administration pages.
@@ -66,6 +68,8 @@
 - Session storage persistence for full-screen board state across dummy turns.
 
 ### Changed
+- Renamed the dedicated dart-entry interface to Scoring View and its presentation-only return control to App View across casual and league scoring.
+- Updated preview version to v0.5.0-alpha.19 for casual pause/discard handling and scoring-view terminology.
 - Grouped the scorer navigation into Play and Manage areas; renamed Game to New Match, App to Settings, and Game Mode to Focused Play.
 - Updated preview version to v0.5.0-alpha.2 for the cursory navigation pass.
 - Updated development version to v0.4.0-alpha.1.

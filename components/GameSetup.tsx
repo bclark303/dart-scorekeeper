@@ -10,6 +10,8 @@ import {
   ScoreEntryMode,
   TeamSize,
 } from "@/lib/types";
+import type { PausedCasualGame } from "@/lib/persistence/casualSavedGames";
+import { PausedCasualGamesPanel } from "@/components/PausedCasualGamesPanel";
 
 type GameSetupProps = {
   competitionFormat: CompetitionFormat;
@@ -48,6 +50,9 @@ type GameSetupProps = {
   dummyScore: number;
   setRotationMode: (rotationMode: RotationMode) => void;
   setDummyScore: (dummyScore: number) => void;
+  pausedGames: PausedCasualGame[];
+  resumePausedGame: (id: string) => void;
+  deletePausedGame: (id: string) => void;
 };
 
 const selectClass =
@@ -92,6 +97,9 @@ export function GameSetup({
   dummyScore,
   setRotationMode,
   setDummyScore,
+  pausedGames,
+  resumePausedGame,
+  deletePausedGame,
 }: GameSetupProps) {
   const isIndividual = competitionFormat === "individual";
   const playerCount = isIndividual
@@ -124,12 +132,18 @@ export function GameSetup({
         <h2 className="mt-1 text-3xl font-black">Casual Play Setup</h2>
         <p className="mt-2 max-w-2xl text-sm text-[var(--color-text-muted)]">
           Choose individual or team play, enter the players, and set the X01 rules.
-          Starting the match opens the focused scoring board.
+          Starting the match opens the focused scoring interface.
         </p>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
         <div className="space-y-5">
+          <PausedCasualGamesPanel
+            games={pausedGames}
+            onResume={resumePausedGame}
+            onDelete={deletePausedGame}
+          />
+
           <section className="rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-5">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
