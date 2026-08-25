@@ -1274,11 +1274,11 @@ export function DartEntry({
 
       {shouldShowBoardFullscreen && (
         <div className="fixed inset-0 z-[90] h-[100dvh] overflow-hidden bg-neutral-950 p-2 text-white">
-          <div className="mx-auto grid h-full max-w-[1600px] grid-rows-[auto_minmax(0,1fr)_auto] gap-2 overflow-hidden">
-            <div className="shrink-0 rounded-2xl border border-white/20 bg-neutral-900 px-4 py-2 shadow-2xl">
+          <div className="mx-auto grid h-full max-w-[1600px] grid-rows-[auto_minmax(0,1fr)_auto] gap-1.5 overflow-hidden min-[760px]:grid-rows-[auto_minmax(0,1fr)]">
+            <div className="shrink-0 rounded-xl border border-white/20 bg-neutral-900 px-3 py-1.5 shadow-2xl">
               <div className="min-w-0">
                 <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <span className="truncate text-2xl font-black leading-tight sm:text-3xl">
+                  <span className="truncate text-xl font-black leading-tight sm:text-2xl">
                     {currentThrowerName}
                   </span>
 
@@ -1286,7 +1286,7 @@ export function DartEntry({
                     {currentSideName}
                   </span>
 
-                  <span className="text-4xl font-black leading-none text-white sm:text-5xl">
+                  <span className="text-3xl font-black leading-none text-white sm:text-4xl">
                     {currentScore}
                   </span>
 
@@ -1312,7 +1312,7 @@ export function DartEntry({
               </div>
             </div>
 
-            <div className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] gap-2 overflow-hidden min-[760px]:grid-cols-[minmax(0,1fr)_minmax(220px,300px)] min-[760px]:grid-rows-none">
+            <div className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] gap-1.5 overflow-hidden min-[760px]:grid-cols-[minmax(0,1fr)_minmax(210px,250px)] min-[760px]:grid-rows-none">
               <div className="min-h-0 overflow-hidden rounded-2xl border border-white/20 bg-neutral-900 p-2 shadow-2xl">
                 {showFullscreenScorecard ? (
                   renderFullscreenScorecard()
@@ -1333,10 +1333,10 @@ export function DartEntry({
                 )}
               </div>
 
-              <div className="grid max-h-[42dvh] min-h-0 grid-rows-[auto_auto_auto] gap-2 overflow-y-auto rounded-2xl border border-white/20 bg-neutral-900 p-2 shadow-2xl min-[760px]:max-h-none min-[760px]:overflow-y-auto">
+              <div className="grid max-h-[32dvh] min-h-0 grid-rows-[minmax(0,1fr)] gap-1.5 overflow-hidden rounded-xl border border-white/20 bg-neutral-900 p-1.5 shadow-2xl min-[760px]:max-h-none min-[760px]:grid-rows-[minmax(0,1fr)_auto]">
 
 
-                <div className="grid gap-2">
+                <div className="grid content-start gap-1.5 overflow-y-auto pr-0.5">
                   {!isCurrentThrowerDummy && (
                     <div className="grid grid-cols-4 gap-2">
                       <button
@@ -1427,10 +1427,69 @@ export function DartEntry({
 
 
               </div>
+
+              <div className="mt-auto hidden shrink-0 grid-cols-2 gap-1 border-t border-white/10 pt-1.5 min-[760px]:grid">
+                <label className="flex min-h-9 cursor-pointer items-center justify-center gap-1 rounded-md border border-white/15 bg-white/5 px-2 py-1 text-[0.7rem] font-bold text-white/80 hover:bg-white/10">
+                  <input
+                    type="checkbox"
+                    checked={autoFullscreenBoard}
+                    onChange={(event) => setAutoFullscreenPreference(event.target.checked)}
+                    className="h-4 w-4 accent-[var(--color-primary)]"
+                  />
+                  Auto
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDartInputStyle("board");
+                    setHasAutoOpenedBoard(false);
+                  }}
+                  className={`min-h-9 rounded-md border px-2 py-1 text-[0.7rem] font-bold ${dartInputStyle === "board"
+                    ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
+                    : "border-white/15 bg-white/5 text-white/75 hover:bg-white/10"
+                    }`}
+                >
+                  Board
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setDartInputStyle("numeric")}
+                  className={`min-h-9 rounded-md border px-2 py-1 text-[0.7rem] font-bold ${dartInputStyle === "numeric"
+                    ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
+                    : "border-white/15 bg-white/5 text-white/75 hover:bg-white/10"
+                    }`}
+                >
+                  Numeric
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowFullscreenScorecard(false);
+                    setIsBoardFullscreen(false);
+                    setHasAutoOpenedBoard(true);
+                  }}
+                  className="min-h-9 rounded-md border border-white/15 bg-white/5 px-2 py-1 text-[0.7rem] font-bold text-white/75 hover:bg-white/10"
+                >
+                  App View
+                </button>
+
+                {onExitGame && (
+                  <button
+                    type="button"
+                    onClick={onExitGame}
+                    className="col-span-2 min-h-9 rounded-md border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 px-2 py-1 text-[0.7rem] font-bold text-white/80 hover:bg-[var(--color-danger)]/20"
+                  >
+                    Exit Game
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="flex shrink-0 flex-wrap items-center gap-2 rounded-xl border border-white/20 bg-neutral-900 p-2 shadow-2xl">
-              <label className="flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs font-bold text-white/80 hover:bg-white/10">
+            <div className="flex shrink-0 flex-wrap items-center gap-1 rounded-lg border border-white/20 bg-neutral-900 p-1 shadow-2xl min-[760px]:hidden">
+              <label className="flex min-h-9 cursor-pointer items-center justify-center gap-1 rounded-md border border-white/15 bg-white/5 px-2 py-1 text-xs font-bold text-white/80 hover:bg-white/10">
                 <input
                   type="checkbox"
                   checked={autoFullscreenBoard}
@@ -1448,7 +1507,7 @@ export function DartEntry({
                   setDartInputStyle("board");
                   setHasAutoOpenedBoard(false);
                 }}
-                className={`min-h-10 rounded-lg border px-3 py-2 text-xs font-bold ${dartInputStyle === "board"
+                className={`min-h-9 rounded-md border px-2 py-1 text-xs font-bold ${dartInputStyle === "board"
                   ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
                   : "border-white/15 bg-white/5 text-white/75 hover:bg-white/10"
                   }`}
@@ -1459,7 +1518,7 @@ export function DartEntry({
               <button
                 type="button"
                 onClick={() => setDartInputStyle("numeric")}
-                className={`min-h-10 rounded-lg border px-3 py-2 text-xs font-bold ${dartInputStyle === "numeric"
+                className={`min-h-9 rounded-md border px-2 py-1 text-xs font-bold ${dartInputStyle === "numeric"
                   ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
                   : "border-white/15 bg-white/5 text-white/75 hover:bg-white/10"
                   }`}
@@ -1474,7 +1533,7 @@ export function DartEntry({
                   setIsBoardFullscreen(false);
                   setHasAutoOpenedBoard(true);
                 }}
-                className="min-h-10 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs font-bold text-white/75 hover:bg-white/10"
+                className="min-h-9 rounded-md border border-white/15 bg-white/5 px-2 py-1 text-xs font-bold text-white/75 hover:bg-white/10"
               >
                 App View
               </button>
@@ -1483,7 +1542,7 @@ export function DartEntry({
                 <button
                   type="button"
                   onClick={onExitGame}
-                  className="ml-auto min-h-10 rounded-lg border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 px-3 py-2 text-xs font-bold text-white/80 hover:bg-[var(--color-danger)]/20"
+                  className="ml-auto min-h-9 rounded-md border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 px-2 py-1 text-xs font-bold text-white/80 hover:bg-[var(--color-danger)]/20"
                 >
                   Exit Game
                 </button>
