@@ -3,6 +3,8 @@
 ## Unreleased
 
 ### Added
+- Casual games can be paused into up to five named local save slots and resumed with exact score, turn, leg, history, checkout-prompt, and in-progress dart-entry state preserved.
+- Active casual games now have an Exit Game action with Pause Game and confirmed Discard Game paths; paused/discarded games never enter completed-match statistics.
 - Casual X01 now supports any number of individual players, with turn order rotating across every participant.
 - X01 starting scores can now be selected from 101 through 901 in 100-point increments.
 - Portable persistence foundation for v0.4.0.
@@ -34,6 +36,8 @@
 - Session storage persistence for full-screen board state across dummy turns.
 
 ### Changed
+- Renamed the dedicated dart-entry interface to Scoring View and its presentation-only return control to App View.
+- Updated production version to v0.4.0-alpha.3.
 - Updated development version to v0.4.0-alpha.2.
 - Enabled Next.js standalone output so the same app can run as a normal Node/Docker deployment.
 - Production database configuration now requires an explicit `DATABASE_URL`; local-file fallback is development-only.

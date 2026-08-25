@@ -53,6 +53,9 @@ jobs:
       - name: Exercise browser archive queue contract
         run: npm run local:test
 
+      - name: Exercise paused casual game storage contract
+        run: npm run casual-saves:test
+
       - name: Exercise authentication and sync ownership contract
         run: npm run auth:test
 

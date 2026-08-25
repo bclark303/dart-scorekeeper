@@ -1,6 +1,6 @@
 {
   "name": "dart-scorekeeper",
-  "version": "0.4.0-alpha.2",
+  "version": "0.4.0-alpha.3",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -11,6 +11,7 @@
     "db:migrate": "node scripts/migrate.mjs",
     "db:test": "tsx scripts/db-contract-test.ts",
     "local:test": "tsx scripts/local-archive-contract-test.ts",
+    "casual-saves:test": "tsx scripts/casual-saved-games-contract-test.ts",
     "auth:test": "tsx scripts/auth-sync-contract-test.ts",
     "db:studio": "drizzle-kit studio"
   },

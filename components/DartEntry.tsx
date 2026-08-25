@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DartThrow, FinishRule, Turn, getCheckoutSuggestion } from "@/lib/scoring";
 import { getDartLabel } from "@/lib/darts";
+import type { ScoringViewSessionState } from "@/lib/types";
 
 type DartEntryProps = {
   message: string;
@@ -25,6 +26,9 @@ type DartEntryProps = {
   isCurrentThrowerDummy: boolean;
   dummyScore: number;
   submitDummyScore: () => void;
+  initialSessionState?: ScoringViewSessionState | null;
+  onSessionStateChange?: (state: ScoringViewSessionState) => void;
+  onExitGame?: () => void;
 };
 
 type TurnPreview = {
@@ -34,7 +38,7 @@ type TurnPreview = {
 };
 
 type NumberRing = "single-inner" | "triple" | "single-outer" | "double";
-type DartInputStyle = "board" | "numeric";
+type DartInputStyle = ScoringViewSessionState["dartInputStyle"];
 
 type FullscreenScoreCard = {
   id: string;
@@ -333,9 +337,14 @@ export function DartEntry({
   isCurrentThrowerDummy,
   dummyScore,
   submitDummyScore,
+  initialSessionState,
+  onSessionStateChange,
+  onExitGame,
 }: DartEntryProps) {
-  const [currentDarts, setCurrentDarts] = useState<DartThrow[]>([]);
+  const [currentDarts, setCurrentDarts] = useState<DartThrow[]>(initialSessionState?.currentDarts ?? []);
+  const hasAppliedInitialSessionState = useRef(initialSessionState != null);
   const [isBoardFullscreen, setIsBoardFullscreen] = useState(() => {
+    if (initialSessionState) return initialSessionState.isScoringView;
     if (typeof window === "undefined") {
       return false;
     }
@@ -355,11 +364,9 @@ export function DartEntry({
     );
   });
   const [hasAutoOpenedBoard, setHasAutoOpenedBoard] = useState(false);
-  const [dartInputStyle, setDartInputStyle] = useState<DartInputStyle>("board");
-  const [numericMultiplier, setNumericMultiplier] = useState<1 | 2 | 3 | null>(
-    null,
-  );
-  const [showFullscreenScorecard, setShowFullscreenScorecard] = useState(false);
+  const [dartInputStyle, setDartInputStyle] = useState<DartInputStyle>(initialSessionState?.dartInputStyle ?? "board");
+  const [numericMultiplier, setNumericMultiplier] = useState<1 | 2 | 3 | null>(initialSessionState?.numericMultiplier ?? null);
+  const [showFullscreenScorecard, setShowFullscreenScorecard] = useState(initialSessionState?.showScorecard ?? false);
   const turnTotal = currentDarts.reduce((total, dart) => total + dart.score, 0);
   const remainingAfterCurrentDarts = currentScore - turnTotal;
   const activeCheckoutSuggestion =
@@ -402,6 +409,16 @@ export function DartEntry({
 
 
   useEffect(() => {
+    if (!initialSessionState || hasAppliedInitialSessionState.current) return;
+    hasAppliedInitialSessionState.current = true;
+    setCurrentDarts(initialSessionState.currentDarts);
+    setDartInputStyle(initialSessionState.dartInputStyle);
+    setNumericMultiplier(initialSessionState.numericMultiplier);
+    setIsBoardFullscreen(initialSessionState.isScoringView);
+    setShowFullscreenScorecard(initialSessionState.showScorecard);
+  }, [initialSessionState]);
+
+  useEffect(() => {
     if (!shouldAutoOpenBoard || hasAutoOpenedBoard || isBoardFullscreen) {
       return;
     }
@@ -435,6 +452,16 @@ export function DartEntry({
       document.documentElement.style.overflow = originalHtmlOverflow;
     };
   }, [isBoardFullscreen, shouldShowBoardFullscreen]);
+
+  useEffect(() => {
+    onSessionStateChange?.({
+      currentDarts,
+      dartInputStyle,
+      numericMultiplier,
+      isScoringView: isBoardFullscreen,
+      showScorecard: showFullscreenScorecard,
+    });
+  }, [currentDarts, dartInputStyle, isBoardFullscreen, numericMultiplier, onSessionStateChange, showFullscreenScorecard]);
 
   function setAutoFullscreenPreference(enabled: boolean) {
     setAutoFullscreenBoard(enabled);
@@ -505,9 +532,9 @@ export function DartEntry({
           : "border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] text-[var(--color-text-main)] hover:bg-[var(--color-panel-border)]"
           }`}
         aria-pressed={autoFullscreenBoard}
-        title="Automatically open the full-screen board while Game Mode is active"
+        title="Automatically open Scoring View while a match is active"
       >
-        {autoFullscreenBoard ? "Auto full screen: On" : "Auto full screen: Off"}
+        {autoFullscreenBoard ? "Auto Scoring View: On" : "Auto Scoring View: Off"}
       </button>
     );
   }
@@ -1238,7 +1265,7 @@ export function DartEntry({
                     }}
                     className="rounded-lg bg-[var(--color-panel-soft)] border border-[var(--color-panel-border)] px-3 py-1 text-xs font-bold hover:bg-[var(--color-panel-border)]"
                   >
-                    Full screen board
+                    Scoring View
                   </button>
                 </div>
                 {renderDartBoard(
@@ -1449,9 +1476,17 @@ export function DartEntry({
                       }}
                       className="rounded-lg border border-white/15 bg-white/5 px-2 py-2 text-xs font-bold text-white/75 hover:bg-white/10"
                     >
-                      Exit
+                      App View
                     </button>
                   </div>
+
+                  {onExitGame && (
+                    <div className="flex justify-end border-t border-white/10 pt-2">
+                      <button type="button" onClick={onExitGame} className="rounded-lg border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 px-3 py-2 text-xs font-bold text-white/80 hover:bg-[var(--color-danger)]/20">
+                        Exit Game
+                      </button>
+                    </div>
+                  )}
                 </div>
 
 
