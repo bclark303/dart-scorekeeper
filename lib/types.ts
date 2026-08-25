@@ -1,4 +1,4 @@
-import { FinishRule, Player, StartingScore, Turn } from "@/lib/scoring";
+import { DartThrow, FinishRule, Player, StartingScore, Turn } from "@/lib/scoring";
 
 /**
  * Match format options.
@@ -53,6 +53,15 @@ export type RefreshBehavior = "score" | "last";
 
 /** Preferred scoring layout when the app loads. */
 export type DefaultScoreLayout = "compact" | "full";
+
+/** Transient graphical-entry state required to resume a paused game exactly. */
+export type ScoringViewSessionState = {
+  currentDarts: DartThrow[];
+  dartInputStyle: "board" | "numeric";
+  numericMultiplier: 1 | 2 | 3 | null;
+  isScoringView: boolean;
+  showScorecard: boolean;
+};
 
 /** Older player-shaped match participant kept for saved-match compatibility. */
 export type MatchPlayer = Player & {
@@ -142,6 +151,12 @@ export type SavedMatchState = {
   isLegComplete: boolean;
   isMatchComplete: boolean;
   message: string;
+
+  // Transient scoring input state. Optional for older browser saves.
+  scoreInput?: string;
+  pendingCheckoutTurn?: Turn | null;
+  pendingDartsUsedTurn?: Turn | null;
+  scoringViewSession?: ScoringViewSessionState | null;
 
   // Legacy compatibility fields from older saved matches.
   matchType?: MatchType;
