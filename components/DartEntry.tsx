@@ -1273,8 +1273,8 @@ export function DartEntry({
       )}
 
       {shouldShowBoardFullscreen && (
-        <div className="fixed inset-0 z-[90] h-[100dvh] overflow-hidden bg-neutral-950 p-2 text-white">
-          <div className="mx-auto grid h-full max-w-[1600px] grid-rows-[auto_minmax(0,1fr)_auto] gap-1.5 overflow-hidden min-[760px]:grid-rows-[auto_minmax(0,1fr)]">
+        <div className="fixed inset-0 z-[90] h-[100dvh] overflow-y-auto bg-neutral-950 p-2 text-white landscape:min-[760px]:overflow-hidden">
+          <div className="mx-auto grid min-h-full max-w-[1600px] grid-rows-[auto_auto_auto] gap-1.5 overflow-visible landscape:min-[760px]:h-full landscape:min-[760px]:min-h-0 landscape:min-[760px]:grid-rows-[auto_minmax(0,1fr)] landscape:min-[760px]:overflow-hidden">
             <div className="shrink-0 rounded-xl border border-white/20 bg-neutral-900 px-3 py-1.5 shadow-2xl">
               <div className="min-w-0">
                 <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -1312,7 +1312,7 @@ export function DartEntry({
               </div>
             </div>
 
-            <div className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] gap-1.5 overflow-hidden min-[760px]:grid-cols-[minmax(0,1fr)_minmax(210px,250px)] min-[760px]:grid-rows-none">
+            <div className="grid min-h-0 grid-rows-[auto_auto] gap-1.5 overflow-visible landscape:min-[760px]:grid-cols-[minmax(0,1fr)_minmax(210px,250px)] landscape:min-[760px]:grid-rows-none landscape:min-[760px]:overflow-hidden">
               <div className="min-h-0 overflow-hidden rounded-2xl border border-white/20 bg-neutral-900 p-2 shadow-2xl">
                 {showFullscreenScorecard ? (
                   renderFullscreenScorecard()
@@ -1323,8 +1323,8 @@ export function DartEntry({
                     </div>
                   </div>
                 ) : dartInputStyle === "board" ? (
-                  <div className="flex h-full min-h-0 items-center justify-center overflow-hidden">
-                    {renderDartBoard("h-full max-h-full w-auto max-w-full")}
+                  <div className="flex min-h-0 items-center justify-center overflow-hidden landscape:min-[760px]:h-full">
+                    {renderDartBoard("h-auto w-full max-w-full landscape:min-[760px]:h-full landscape:min-[760px]:max-h-full landscape:min-[760px]:w-auto")}
                   </div>
                 ) : (
                   <div className="h-full min-h-0 overflow-y-auto">
@@ -1333,10 +1333,10 @@ export function DartEntry({
                 )}
               </div>
 
-              <div className="grid max-h-[32dvh] min-h-0 grid-rows-[minmax(0,1fr)] gap-1.5 overflow-hidden rounded-xl border border-white/20 bg-neutral-900 p-1.5 shadow-2xl min-[760px]:max-h-none min-[760px]:grid-rows-[minmax(0,1fr)_auto]">
+              <div className="grid min-h-0 grid-rows-[auto] gap-1.5 overflow-visible rounded-xl border border-white/20 bg-neutral-900 p-1.5 shadow-2xl landscape:min-[760px]:max-h-none landscape:min-[760px]:grid-rows-[minmax(0,1fr)_auto] landscape:min-[760px]:overflow-hidden">
 
 
-                <div className="grid content-start gap-1.5 overflow-y-auto pr-0.5">
+                <div className="grid content-start gap-1.5 overflow-visible pr-0.5 landscape:min-[760px]:overflow-y-auto">
                   {!isCurrentThrowerDummy && (
                     <div className="grid grid-cols-4 gap-2">
                       <button
@@ -1428,7 +1428,7 @@ export function DartEntry({
 
               </div>
 
-              <div className="mt-auto hidden shrink-0 grid-cols-2 gap-1 border-t border-white/10 pt-1.5 min-[760px]:grid">
+              <div className="mt-auto hidden shrink-0 grid-cols-2 gap-1 border-t border-white/10 pt-1.5 landscape:min-[760px]:grid">
                 <label className="flex min-h-9 cursor-pointer items-center justify-center gap-1 rounded-md border border-white/15 bg-white/5 px-2 py-1 text-[0.7rem] font-bold text-white/80 hover:bg-white/10">
                   <input
                     type="checkbox"
@@ -1488,7 +1488,7 @@ export function DartEntry({
               </div>
             </div>
 
-            <div className="flex shrink-0 flex-wrap items-center gap-1 rounded-lg border border-white/20 bg-neutral-900 p-1 shadow-2xl min-[760px]:hidden">
+            <div className="flex shrink-0 flex-wrap items-center gap-1 rounded-lg border border-white/20 bg-neutral-900 p-1 shadow-2xl landscape:min-[760px]:hidden">
               <label className="flex min-h-9 cursor-pointer items-center justify-center gap-1 rounded-md border border-white/15 bg-white/5 px-2 py-1 text-xs font-bold text-white/80 hover:bg-white/10">
                 <input
                   type="checkbox"
