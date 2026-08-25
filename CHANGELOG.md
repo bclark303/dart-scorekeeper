@@ -63,6 +63,7 @@
 - Sync uploads enforce request-size, batch-size, and archive-shape/range validation.
 
 ### Fixed
+- Scoring View is now orientation-aware: portrait mode gives the dartboard the full available width and stacks scoring controls underneath, while landscape keeps the compact right-hand control rail.
 - Rebalanced Scoring View to prioritize dartboard size: landscape utility controls are pinned in a narrow side rail instead of consuming dartboard height, with a tighter header and control rail.
 - Scoring View now reserves an always-visible bottom control bar and switches to the side-by-side tablet layout at narrower widths so App View and Exit Game stay on-screen.
 - Full-screen board Exit now remains exited when Auto full screen is enabled.

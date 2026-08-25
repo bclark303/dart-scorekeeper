@@ -1,6 +1,6 @@
 {
   "name": "dart-scorekeeper",
-  "version": "0.4.0-alpha.5",
+  "version": "0.4.0-alpha.6",
   "private": true,
   "scripts": {
     "dev": "next dev",
