@@ -11,6 +11,8 @@ import {
   TeamSize,
   ScoreEntryMode,
 } from "@/lib/types";
+import type { PausedCasualGame } from "@/lib/persistence/casualSavedGames";
+import { PausedCasualGamesPanel } from "@/components/PausedCasualGamesPanel";
 
 type GameSetupProps = {
   competitionFormat: CompetitionFormat;
@@ -49,6 +51,9 @@ type GameSetupProps = {
   dummyScore: number;
   setRotationMode: (rotationMode: RotationMode) => void;
   setDummyScore: (dummyScore: number) => void;
+  pausedGames: PausedCasualGame[];
+  resumePausedGame: (id: string) => void;
+  deletePausedGame: (id: string) => void;
 };
 
 export function GameSetup({
@@ -88,6 +93,9 @@ export function GameSetup({
   dummyScore,
   setRotationMode,
   setDummyScore,
+  pausedGames,
+  resumePausedGame,
+  deletePausedGame,
 }: GameSetupProps) {
   const isIndividual = competitionFormat === "individual";
 
@@ -114,6 +122,16 @@ export function GameSetup({
   return (
     <section className="rounded-2xl bg-[var(--color-panel)] border border-[var(--color-panel-border)] p-6 mb-8">
       <h2 className="text-2xl font-bold mb-6">Game Setup</h2>
+
+      {pausedGames.length > 0 && (
+        <div className="mb-8">
+          <PausedCasualGamesPanel
+            games={pausedGames}
+            onResume={resumePausedGame}
+            onDelete={deletePausedGame}
+          />
+        </div>
+      )}
 
       <div className="mb-8">
         <h3 className="text-lg font-bold mb-3 text-[var(--color-text-main)]">

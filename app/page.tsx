@@ -16,9 +16,11 @@ import {
   RefreshBehavior,
   DefaultScoreLayout,
   ScoreEntryMode,
+  ScoringViewSessionState,
 } from "@/lib/types";
 
 import { FeedbackModal } from "@/components/FeedbackModal";
+import { CasualExitGameDialog } from "@/components/CasualExitGameDialog";
 import { APP_VERSION } from "@/lib/appInfo";
 import {
   buildCompletedX01MatchArchive,
@@ -39,6 +41,7 @@ import { CurrentTurnBanner } from "@/components/CurrentTurnBanner";
 import { AppSettings } from "@/components/AppSettings";
 import { AccountSyncPanel } from "@/components/AccountSyncPanel";
 import { SyncCoordinator } from "@/components/SyncCoordinator";
+import { deletePausedCasualGame, listPausedCasualGames, savePausedCasualGame, type PausedCasualGame } from "@/lib/persistence/casualSavedGames";
 import {
   DartThrow,
   FinishRule,
@@ -194,6 +197,9 @@ export default function Home() {
   const [pendingDartsUsedTurn, setPendingDartsUsedTurn] = useState<Turn | null>(
     null,
   );
+  const [scoringViewSession, setScoringViewSession] = useState<ScoringViewSessionState | null>(null);
+  const [pausedGames, setPausedGames] = useState<PausedCasualGame[]>([]);
+  const [isExitGameOpen, setIsExitGameOpen] = useState(false);
 
   const legsNeededToWin = Math.ceil(bestOfLegs / 2);
 
@@ -367,12 +373,18 @@ export default function Home() {
       setIsLegComplete(parsedMatch.isLegComplete ?? false);
       setIsMatchComplete(parsedMatch.isMatchComplete ?? false);
       setMessage(parsedMatch.message ?? "Player 1 to throw");
+      setScoreInput(parsedMatch.scoreInput ?? "");
+      setPendingCheckoutTurn(parsedMatch.pendingCheckoutTurn ?? null);
+      setPendingDartsUsedTurn(parsedMatch.pendingDartsUsedTurn ?? null);
+      setScoringViewSession(parsedMatch.scoringViewSession ?? null);
     } catch {
       localStorage.removeItem(savedMatchKey);
     } finally {
       setHasLoadedSavedMatch(true);
     }
   }, []);
+
+  useEffect(() => { setPausedGames(listPausedCasualGames()); }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
@@ -413,6 +425,10 @@ export default function Home() {
       isLegComplete,
       isMatchComplete,
       message,
+      scoreInput,
+      pendingCheckoutTurn,
+      pendingDartsUsedTurn,
+      scoringViewSession,
     };
     localStorage.setItem(savedMatchKey, JSON.stringify(matchState));
   }, [
@@ -455,6 +471,10 @@ export default function Home() {
     isLegComplete,
     isMatchComplete,
     message,
+    scoreInput,
+    pendingCheckoutTurn,
+    pendingDartsUsedTurn,
+    scoringViewSession,
   ]);
 
   // Completed matches are copied into a separate IndexedDB archive queue.
@@ -805,6 +825,59 @@ export default function Home() {
   function cancelClearSavedMatch() {
     setIsClearSavedConfirmationVisible(false);
   }
+
+  function getPausedParticipantNames() {
+    if (competitionFormat === "individual") return sides.map((side) => side.name);
+    const names = sides.flatMap((side) => side.members.filter((member) => !member.isDummy).map((member) => member.name));
+    return names.length > 0 ? names : sides.map((side) => side.name);
+  }
+
+  function getPausedGameLabel() {
+    return `${startingScore} X01 · ${finishRule === "double_out" ? "Double Out" : "Straight Out"} · Best of ${bestOfLegs}`;
+  }
+
+  function getSuggestedPausedGameName() {
+    const matchup = sides.map((side) => side.name).slice(0, 3).join(" vs ") || "Casual Game";
+    return `${matchup} · ${startingScore} · ${new Date().toLocaleDateString()}`;
+  }
+
+  function getCurrentSavedMatchState(): SavedMatchState {
+    return { matchId: matchId || undefined, matchCreatedAt: matchCreatedAt ?? undefined, startingScore, competitionFormat, individualPlayerNames, finishRule, bestOfLegs, scoreEntryMode, themeName, brandName, refreshBehavior, activeView: "score", isGameModeActive: true, defaultScoreLayout, rotationMode, dummyScore, sideOneSize, sideTwoSize, teamOneName, teamTwoName, teamOneMemberNames, teamTwoMemberNames, sides, currentSideIndex, startingSideIndex, currentLegNumber, startingMemberIndexBySide, turnHistory, completedLegs, isLegComplete, isMatchComplete, message, scoreInput, pendingCheckoutTurn, pendingDartsUsedTurn, scoringViewSession };
+  }
+
+  function clearActiveCasualGame(status: string) {
+    localStorage.removeItem(savedMatchKey);
+    sessionStorage.removeItem("dart-scorekeeper-fullscreen-board-active");
+    setMatchId(""); setMatchCreatedAt(null);
+    setSides([createTeamSide("side-1", "Player 1", ["Player 1"], startingScore), createTeamSide("side-2", "Player 2", ["Player 2"], startingScore)]);
+    setCurrentSideIndex(0); setStartingSideIndex(0); setCurrentLegNumber(1); setStartingMemberIndexBySide({ "side-1": 0, "side-2": 0 });
+    setTurnHistory([]); setCompletedLegs([]); setScoreInput(""); setPendingCheckoutTurn(null); setPendingDartsUsedTurn(null); setScoringViewSession(null);
+    setIsLegComplete(false); setIsMatchComplete(false); setIsGameModeActive(false); setIsGameMenuOpen(false); setIsExitGameOpen(false); setActiveView("game"); setMessage(status);
+  }
+
+  function pauseCurrentGame(name: string) {
+    if (isMatchComplete) return;
+    const pausedId = matchId || createMatchId();
+    try {
+      const next = savePausedCasualGame({ schemaVersion: 1, id: pausedId, name, gameType: "x01", gameLabel: getPausedGameLabel(), participantNames: getPausedParticipantNames(), pausedAt: Date.now(), state: { ...getCurrentSavedMatchState(), matchId: pausedId } });
+      setPausedGames(next); clearActiveCasualGame(`Paused “${name}”.`);
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Could not pause this game."); }
+  }
+
+  function discardCurrentGame() { clearActiveCasualGame("Game discarded. No result or statistics were recorded."); }
+
+  function resumePausedGame(id: string) {
+    const game = pausedGames.find((item) => item.id === id);
+    if (!game || game.gameType !== "x01") return;
+    const state = game.state as SavedMatchState;
+    if (!state || typeof state !== "object" || !Array.isArray(state.sides)) { setMessage("This saved game could not be restored."); return; }
+    localStorage.setItem(savedMatchKey, JSON.stringify({ ...state, activeView: "score", isGameModeActive: true }));
+    sessionStorage.setItem("dart-scorekeeper-fullscreen-board-active", String(state.scoringViewSession?.isScoringView === true));
+    setPausedGames(deletePausedCasualGame(id));
+    window.location.href = "/";
+  }
+
+  function deletePausedGame(id: string) { setPausedGames(deletePausedCasualGame(id)); }
 
   function getCurrentThrowerName(side: MatchSide): string {
     return side.members[side.currentMemberIndex]?.name ?? side.name;
@@ -1641,6 +1714,9 @@ export default function Home() {
         isCurrentThrowerDummy={isCurrentThrowerDummy()}
         dummyScore={dummyScore}
         submitDummyScore={submitDummyScore}
+        initialSessionState={scoringViewSession}
+        onSessionStateChange={setScoringViewSession}
+        onExitGame={() => setIsExitGameOpen(true)}
       />
     );
   }
@@ -2051,6 +2127,9 @@ export default function Home() {
             isClearSavedConfirmationVisible={isClearSavedConfirmationVisible}
             confirmClearSavedMatch={confirmClearSavedMatch}
             cancelClearSavedMatch={cancelClearSavedMatch}
+            pausedGames={pausedGames}
+            resumePausedGame={resumePausedGame}
+            deletePausedGame={deletePausedGame}
           />
         )}
 
@@ -2117,6 +2196,12 @@ export default function Home() {
                 {renderScoreCards()}
               </div>
             </div>
+
+            {!isMatchComplete && (
+              <div className="mt-2 flex justify-end">
+                <button type="button" onClick={() => setIsExitGameOpen(true)} className="rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel)] px-3 py-2 text-xs font-bold text-[var(--color-text-muted)] hover:bg-[var(--color-panel-soft)] hover:text-[var(--color-text-main)]">Exit Game</button>
+              </div>
+            )}
           </>
         )}
 
@@ -2138,6 +2223,9 @@ export default function Home() {
             <TurnHistory turns={turnHistory} />
             <CompletedLegs completedLegs={completedLegs} />
           </>
+        )}
+        {isExitGameOpen && !isMatchComplete && (
+          <CasualExitGameDialog games={pausedGames} suggestedName={getSuggestedPausedGameName()} onCancel={() => setIsExitGameOpen(false)} onPause={pauseCurrentGame} onDiscard={discardCurrentGame} onDeleteSavedGame={deletePausedGame} />
         )}
         <FeedbackModal
           isOpen={isFeedbackModalOpen}
