@@ -1,6 +1,6 @@
 {
   "name": "dart-scorekeeper",
-  "version": "0.5.0-alpha.18",
+  "version": "0.5.0-alpha.19",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -11,6 +11,7 @@
     "db:migrate": "node scripts/migrate.mjs",
     "db:test": "tsx scripts/db-contract-test.ts",
     "local:test": "tsx scripts/local-archive-contract-test.ts",
+    "casual-saves:test": "tsx scripts/casual-saved-games-contract-test.ts",
     "auth:test": "tsx scripts/auth-sync-contract-test.ts",
     "setup:test": "tsx scripts/database-setup-contract-test.ts",
     "league:test": "tsx scripts/league-framework-contract-test.ts",
