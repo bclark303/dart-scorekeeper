@@ -1,0 +1,57 @@
+name: Apply Scoring View board-priority fix
+
+on:
+  push:
+    branches:
+      - agent/scoring-view-board-priority
+    paths:
+      - .github/workflows/apply-scoring-view-board-priority.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-latest
+    env:
+      DB_PROVIDER: libsql
+      DATABASE_URL: file:./data/ci.db
+      DATABASE_AUTH_TOKEN: ""
+      BETTER_AUTH_SECRET: ci-only-dart-scorekeeper-auth-secret-123456789
+      BETTER_AUTH_URL: http://localhost:3000
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/scoring-view-board-priority
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply layout fix
+        run: python scripts/apply-scoring-view-board-priority.py
+      - name: Refresh lockfile
+        run: npm install --package-lock-only --ignore-scripts
+      - name: Install
+        run: npm ci
+      - name: Type check
+        run: npx tsc --noEmit
+      - name: Lint
+        run: npm run lint
+      - name: Prepare smoke-test database
+        run: |
+          mkdir -p data
+          npm run db:migrate
+      - name: Shared scoring smoke tests
+        run: |
+          npm run league-match:test
+          npm run game-night:test
+      - name: Build
+        run: npm run build
+      - name: Commit verified fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add components/DartEntry.tsx package.json package-lock.json lib/appInfo.ts CHANGELOG.md
+          git commit -m "Prioritize dartboard size in Scoring View"
+          git push origin HEAD:agent/scoring-view-board-priority
