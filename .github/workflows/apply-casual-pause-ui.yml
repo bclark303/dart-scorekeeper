@@ -34,7 +34,7 @@ jobs:
           cache: npm
 
       - name: Apply source changes
-        run: python scripts/apply-casual-pause-ui.py
+        run: python scripts/fix-and-apply-casual-pause-ui.py
 
       - name: Refresh lockfile metadata
         run: npm install --package-lock-only --ignore-scripts
