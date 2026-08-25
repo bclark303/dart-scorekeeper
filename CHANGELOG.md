@@ -97,6 +97,7 @@
 - Sync uploads enforce request-size, batch-size, and archive-shape/range validation.
 
 ### Fixed
+- Rebalanced Scoring View to prioritize dartboard size: landscape utility controls are pinned in a narrow side rail instead of consuming dartboard height, with a tighter header and control rail.
 - Scoring View now reserves an always-visible bottom control bar and switches to the side-by-side tablet layout at narrower widths so App View and Exit Game stay on-screen.
 - Full-screen board Exit now remains exited when Auto full screen is enabled.
 - Duplicate player name display on full-screen score cards.
