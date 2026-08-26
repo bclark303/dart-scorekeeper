@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DartThrow, FinishRule, Turn, getCheckoutSuggestion } from "@/lib/scoring";
 import { getDartLabel } from "@/lib/darts";
 import { evaluateX01Turn } from "@/lib/x01Engine";
@@ -327,6 +327,7 @@ export function DartEntry({
   const [currentDarts, setCurrentDarts] = useState<DartThrow[]>(
     initialSessionState?.currentDarts ?? [],
   );
+  const hasAppliedInitialSessionState = useRef(initialSessionState != null);
   const [isBoardFullscreen, setIsBoardFullscreen] = useState(() => {
     if (initialSessionState) {
       return initialSessionState.isScoringView;
@@ -400,6 +401,16 @@ export function DartEntry({
     isBoardFullscreen &&
     ((!isLegComplete && !isMatchComplete) || showFullscreenScorecard);
 
+
+  useEffect(() => {
+    if (!initialSessionState || hasAppliedInitialSessionState.current) return;
+    hasAppliedInitialSessionState.current = true;
+    setCurrentDarts(initialSessionState.currentDarts);
+    setDartInputStyle(initialSessionState.dartInputStyle);
+    setNumericMultiplier(initialSessionState.numericMultiplier);
+    setIsBoardFullscreen(initialSessionState.isScoringView);
+    setShowFullscreenScorecard(initialSessionState.showScorecard);
+  }, [initialSessionState]);
 
   useEffect(() => {
     if (!shouldAutoOpenBoard || hasAutoOpenedBoard || isBoardFullscreen) {
@@ -907,8 +918,8 @@ export function DartEntry({
       : "";
 
     return (
-      <div className="flex h-full min-h-0 items-center justify-center rounded-2xl border border-white/20 bg-neutral-900 p-4 shadow-2xl">
-        <div className="grid w-full max-w-[820px] gap-4 text-center">
+      <div className="h-full min-h-0 overflow-y-auto rounded-2xl border border-white/20 bg-neutral-900 p-3 shadow-2xl sm:p-4">
+        <div className="mx-auto grid w-full max-w-[1120px] gap-3 text-center sm:gap-4">
           <div className="rounded-2xl border border-white/20 bg-white/5 p-4">
             <div className="text-xs font-bold uppercase tracking-[0.2em] text-white/55">
               What happened
@@ -928,7 +939,7 @@ export function DartEntry({
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
             {fullscreenScoreCards.map((scoreCard) => (
               <div
                 key={scoreCard.id}
@@ -962,7 +973,7 @@ export function DartEntry({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="sticky bottom-0 grid grid-cols-2 gap-3 rounded-2xl border border-white/15 bg-neutral-950/95 p-2 shadow-2xl backdrop-blur">
             <button
               type="button"
               onClick={() => setShowFullscreenScorecard(false)}

@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Source materialization cleanup (v0.5.0-alpha.24)
+- Materialized the approved unified application directly into the repository so local, CI, Preview, Production, and Docker builds all compile the same source.
+- Removed the temporary build-time Python source transform and the Docker Python dependency it required.
+- Updated the README and unified-app documentation to match the actual v0.5 architecture.
+
+### Multiplayer Scoring View hotfix (v0.5.0-alpha.24)
+- Fixed the post-turn Scoring View recap being clipped on landscape laptops when several individual players are in a match.
+- Player totals now use additional columns on wide displays, the recap can scroll when necessary, and Next Turn / Undo controls remain reachable.
+
+### Unified app release (v0.5.0-alpha.23)
+- Collapsed Casual Play, League / Game Night, and scoring-device administration into one shared application and codebase.
+- The root page now opens directly into Casual Play instead of presenting a mode-selection landing page.
+- Casual Play exposes a hamburger menu before and during matches, with League / Game Night marked Preview and Scoring Devices available without dominating the casual experience.
+- Reconciled the production Scoring View paused-session restore guard so no casual resume behavior was lost in the collapse.
+
 ### Player check-in workflow (v0.5.0-alpha.5)
 - Added a dedicated Game Night Player Check-in screen backed by the existing authoritative attendance mutation.
 - Check-in is explicitly tied to a selected Game Night; league membership and season roster membership remain persistent and independent.
