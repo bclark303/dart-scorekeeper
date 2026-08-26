@@ -1,10 +1,10 @@
 {
   "name": "dart-scorekeeper",
-  "version": "0.5.0-alpha.22",
+  "version": "0.5.0-alpha.24",
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "python scripts/apply-unified-app-preview.py && npm run commercial:test",
+    "prebuild": "npm run commercial:test",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
