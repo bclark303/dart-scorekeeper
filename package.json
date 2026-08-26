@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "npm run commercial:test",
+    "prebuild": "python scripts/apply-unified-app-preview.py && npm run commercial:test",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
