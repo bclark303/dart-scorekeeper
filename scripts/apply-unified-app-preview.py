@@ -168,10 +168,55 @@ if restore_effect not in dart_text:
         restore_effect + auto_open_anchor,
         1,
     )
+
+# Large individual matches can make the post-turn Scoring View recap taller
+# than a landscape laptop viewport. Keep the recap scrollable, spread player
+# totals across more columns on wide screens, and keep the primary Next Turn
+# action reachable at the bottom of the recap.
+scorecard_root_old = '      <div className="flex h-full min-h-0 items-center justify-center rounded-2xl border border-white/20 bg-neutral-900 p-4 shadow-2xl">'
+scorecard_root_new = '      <div className="h-full min-h-0 overflow-y-auto rounded-2xl border border-white/20 bg-neutral-900 p-3 shadow-2xl sm:p-4">'
+if scorecard_root_old in dart_text:
+    dart_text = dart_text.replace(scorecard_root_old, scorecard_root_new, 1)
+elif scorecard_root_new not in dart_text:
+    raise RuntimeError("Could not recognize Scoring View scorecard root")
+
+scorecard_inner_old = '        <div className="grid w-full max-w-[820px] gap-4 text-center">'
+scorecard_inner_new = '        <div className="mx-auto grid w-full max-w-[1120px] gap-3 text-center sm:gap-4">'
+if scorecard_inner_old in dart_text:
+    dart_text = dart_text.replace(scorecard_inner_old, scorecard_inner_new, 1)
+elif scorecard_inner_new not in dart_text:
+    raise RuntimeError("Could not recognize Scoring View scorecard content")
+
+scorecard_players_old = '''          <div className="grid grid-cols-2 gap-3">
+            {fullscreenScoreCards.map((scoreCard) => (
+'''
+scorecard_players_new = '''          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+            {fullscreenScoreCards.map((scoreCard) => (
+'''
+if scorecard_players_old in dart_text:
+    dart_text = dart_text.replace(scorecard_players_old, scorecard_players_new, 1)
+elif scorecard_players_new not in dart_text:
+    raise RuntimeError("Could not recognize Scoring View player totals grid")
+
+scorecard_actions_old = '''          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setShowFullscreenScorecard(false)}
+'''
+scorecard_actions_new = '''          <div className="sticky bottom-0 grid grid-cols-2 gap-3 rounded-2xl border border-white/15 bg-neutral-950/95 p-2 shadow-2xl backdrop-blur">
+            <button
+              type="button"
+              onClick={() => setShowFullscreenScorecard(false)}
+'''
+if scorecard_actions_old in dart_text:
+    dart_text = dart_text.replace(scorecard_actions_old, scorecard_actions_new, 1)
+elif scorecard_actions_new not in dart_text:
+    raise RuntimeError("Could not recognize Scoring View scorecard actions")
+
 dart_path.write_text(dart_text)
 
 old_version = "0.5.0-alpha.22"
-new_version = "0.5.0-alpha.23"
+new_version = "0.5.0-alpha.24"
 for relative in ["package.json", "package-lock.json", "lib/appInfo.ts"]:
     target = ROOT / relative
     value = target.read_text()
@@ -182,18 +227,21 @@ for relative in ["package.json", "package-lock.json", "lib/appInfo.ts"]:
 
 changelog_path = ROOT / "CHANGELOG.md"
 changelog = changelog_path.read_text()
-entry = '''### Unified app preview (v0.5.0-alpha.23)
-- Collapsed Casual Play, League / Game Night, and scoring-device administration into one preview application and one shared codebase.
+entry = '''### Multiplayer Scoring View hotfix (v0.5.0-alpha.24)
+- Fixed the post-turn Scoring View recap being clipped on landscape laptops when several individual players are in a match.
+- Player totals now use additional columns on wide displays, the recap can scroll when necessary, and Next Turn / Undo controls remain reachable.
+
+### Unified app release (v0.5.0-alpha.23)
+- Collapsed Casual Play, League / Game Night, and scoring-device administration into one shared application and codebase.
 - The root page now opens directly into Casual Play instead of presenting a mode-selection landing page.
-- Casual Play now exposes a hamburger menu before and during matches, with League / Game Night marked Preview and Scoring Devices available without dominating the casual experience.
-- Reconciled the production Scoring View paused-session restore guard so no casual resume behavior is lost in the collapse.
-- The production `main` branch remains unchanged until the unified preview is explicitly approved.
+- Casual Play exposes a hamburger menu before and during matches, with League / Game Night marked Preview and Scoring Devices available without dominating the casual experience.
+- Reconciled the production Scoring View paused-session restore guard so no casual resume behavior was lost in the collapse.
 
 '''
 marker = "## Unreleased\n\n"
-if "### Unified app preview (v0.5.0-alpha.23)" not in changelog:
+if "### Multiplayer Scoring View hotfix (v0.5.0-alpha.24)" not in changelog:
     if marker not in changelog:
         raise RuntimeError("Could not find Unreleased changelog section")
     changelog_path.write_text(changelog.replace(marker, marker + entry, 1))
 
-print(f"Unified app preview ready at {new_version}")
+print(f"Unified app build ready at {new_version}")
