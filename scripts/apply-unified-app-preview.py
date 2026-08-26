@@ -117,6 +117,59 @@ elif new_game_menu_tail not in text:
     raise RuntimeError("Could not recognize the active-game menu state")
 casual_path.write_text(text)
 
+# Production acquired a late-arriving paused-session restore guard after the
+# league branch split. Preserve that fix while retaining the preview branch's
+# newer shared X01 engine and responsive Scoring View implementation.
+dart_path = ROOT / "components/DartEntry.tsx"
+dart_text = dart_path.read_text()
+if 'import { useEffect, useRef, useState } from "react";' not in dart_text:
+    old_import = 'import { useEffect, useState } from "react";'
+    if old_import not in dart_text:
+        raise RuntimeError("Could not recognize DartEntry React import")
+    dart_text = dart_text.replace(
+        old_import,
+        'import { useEffect, useRef, useState } from "react";',
+        1,
+    )
+
+restore_ref = "  const hasAppliedInitialSessionState = useRef(initialSessionState != null);\n"
+if restore_ref not in dart_text:
+    current_darts_anchor = '''  const [currentDarts, setCurrentDarts] = useState<DartThrow[]>(
+    initialSessionState?.currentDarts ?? [],
+  );
+'''
+    if current_darts_anchor not in dart_text:
+        raise RuntimeError("Could not find DartEntry currentDarts state")
+    dart_text = dart_text.replace(
+        current_darts_anchor,
+        current_darts_anchor + restore_ref,
+        1,
+    )
+
+restore_effect = '''  useEffect(() => {
+    if (!initialSessionState || hasAppliedInitialSessionState.current) return;
+    hasAppliedInitialSessionState.current = true;
+    setCurrentDarts(initialSessionState.currentDarts);
+    setDartInputStyle(initialSessionState.dartInputStyle);
+    setNumericMultiplier(initialSessionState.numericMultiplier);
+    setIsBoardFullscreen(initialSessionState.isScoringView);
+    setShowFullscreenScorecard(initialSessionState.showScorecard);
+  }, [initialSessionState]);
+
+'''
+if restore_effect not in dart_text:
+    auto_open_anchor = '''  useEffect(() => {
+    if (!shouldAutoOpenBoard || hasAutoOpenedBoard || isBoardFullscreen) {
+'''
+    if auto_open_anchor not in dart_text:
+        raise RuntimeError("Could not find DartEntry auto-open effect")
+    dart_text = dart_text.replace(
+        auto_open_anchor,
+        restore_effect + auto_open_anchor,
+        1,
+    )
+dart_path.write_text(dart_text)
+
 old_version = "0.5.0-alpha.22"
 new_version = "0.5.0-alpha.23"
 for relative in ["package.json", "package-lock.json", "lib/appInfo.ts"]:
@@ -133,6 +186,7 @@ entry = '''### Unified app preview (v0.5.0-alpha.23)
 - Collapsed Casual Play, League / Game Night, and scoring-device administration into one preview application and one shared codebase.
 - The root page now opens directly into Casual Play instead of presenting a mode-selection landing page.
 - Casual Play now exposes a hamburger menu before and during matches, with League / Game Night marked Preview and Scoring Devices available without dominating the casual experience.
+- Reconciled the production Scoring View paused-session restore guard so no casual resume behavior is lost in the collapse.
 - The production `main` branch remains unchanged until the unified preview is explicitly approved.
 
 '''
