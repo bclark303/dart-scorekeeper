@@ -1,3 +1,5 @@
+import { evaluateX01Turn } from "./x01Engine";
+
 function createTurnId(): string {
     if (
         typeof crypto !== "undefined" &&
@@ -19,7 +21,28 @@ function createTurnId(): string {
  * "Given this player/side and this score, what happens?"
  */
 
-export type StartingScore = 301 | 501 | 701;
+export type StartingScore = number;
+
+export const X01_STARTING_SCORES = [
+    101,
+    201,
+    301,
+    401,
+    501,
+    601,
+    701,
+    801,
+    901,
+] as const;
+
+export function isSupportedX01StartingScore(score: number): boolean {
+    return (
+        Number.isInteger(score) &&
+        score >= 101 &&
+        score <= 901 &&
+        score % 100 === 1
+    );
+}
 
 export type FinishRule = "straight_out" | "double_out";
 
@@ -132,19 +155,11 @@ export function scoreTurn(
     scoreEntered: number,
     finishRule: FinishRule
 ): ScoreResult {
-    const calculatedScore = player.score - scoreEntered;
-
-    /**
-     * Double-out bust rule:
-     * - below zero is bust
-     * - landing on 1 is bust because you cannot finish from 1 with a double
-     */
-    const isBust =
-        calculatedScore < 0 ||
-        (finishRule === "double_out" && calculatedScore === 1);
-
-    const scoreAfter = isBust ? player.score : calculatedScore;
-    const isCheckout = scoreAfter === 0 && !isBust;
+    const evaluation = evaluateX01Turn({
+        scoreBefore: player.score,
+        scoreEntered,
+        finishRule,
+    });
 
     const turn: Turn = {
         id: createTurnId(),
@@ -152,19 +167,19 @@ export function scoreTurn(
         playerName: player.name,
         scoreEntered,
         scoreBefore: player.score,
-        scoreAfter,
+        scoreAfter: evaluation.scoreAfter,
         dartsThrown: 3,
-        isBust,
-        isCheckout,
+        isBust: evaluation.isBust,
+        isCheckout: evaluation.isCheckout,
         finishRule,
     };
 
     const updatedPlayer: Player = {
         ...player,
-        score: scoreAfter,
+        score: evaluation.scoreAfter,
     };
 
-    if (isBust) {
+    if (evaluation.isBust) {
         return {
             turn,
             updatedPlayer,
@@ -174,13 +189,7 @@ export function scoreTurn(
         };
     }
 
-    /**
-     * With total-score entry, the engine knows the score reached zero,
-     * but it does not know whether the final dart was actually a double.
-     *
-     * The UI asks for confirmation before declaring the leg complete.
-     */
-    if (isCheckout && finishRule === "double_out") {
+    if (evaluation.needsDoubleOutConfirmation) {
         return {
             turn,
             updatedPlayer,
@@ -190,7 +199,7 @@ export function scoreTurn(
         };
     }
 
-    if (isCheckout) {
+    if (evaluation.isCheckout) {
         return {
             turn,
             updatedPlayer,

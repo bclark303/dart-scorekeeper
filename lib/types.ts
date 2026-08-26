@@ -1,4 +1,4 @@
-import { FinishRule, Player, StartingScore, Turn } from "@/lib/scoring";
+import { DartThrow, FinishRule, Player, StartingScore, Turn } from "@/lib/scoring";
 
 /**
  * Match format options.
@@ -12,6 +12,9 @@ export type BestOfLegs = 1 | 3 | 5 | 7 | 9;
  * The newer setup uses sideOneSize/sideTwoSize instead.
  */
 export type MatchType = "singles" | "doubles";
+
+/** How competitors are organized for a casual match. */
+export type CompetitionFormat = "individual" | "team";
 
 /**
  * Number of active player slots on a side.
@@ -50,6 +53,15 @@ export type RefreshBehavior = "score" | "last";
 
 /** Preferred scoring layout when the app loads. */
 export type DefaultScoreLayout = "compact" | "full";
+
+/** Transient graphical-entry state required to resume a paused game exactly. */
+export type ScoringViewSessionState = {
+  currentDarts: DartThrow[];
+  dartInputStyle: "board" | "numeric";
+  numericMultiplier: 1 | 2 | 3 | null;
+  isScoringView: boolean;
+  showScorecard: boolean;
+};
 
 /** Older player-shaped match participant kept for saved-match compatibility. */
 export type MatchPlayer = Player & {
@@ -109,10 +121,14 @@ export type SavedMatchState = {
   brandName: string;
   refreshBehavior: RefreshBehavior;
   defaultScoreLayout: DefaultScoreLayout;
-  activeView?: "score" | "game" | "app" | "stats" | "history";
+  activeView?: "score" | "game" | "league" | "app" | "stats" | "history";
   isGameModeActive?: boolean;
   matchId?: string;
   matchCreatedAt?: number;
+
+  // Current casual competition setup.
+  competitionFormat?: CompetitionFormat;
+  individualPlayerNames?: string[];
 
   // Current team/side setup.
   sideOneSize: TeamSize;
@@ -135,6 +151,12 @@ export type SavedMatchState = {
   isLegComplete: boolean;
   isMatchComplete: boolean;
   message: string;
+
+  // Transient scoring input state. Optional for older browser saves.
+  scoreInput?: string;
+  pendingCheckoutTurn?: Turn | null;
+  pendingDartsUsedTurn?: Turn | null;
+  scoringViewSession?: ScoringViewSessionState | null;
 
   // Legacy compatibility fields from older saved matches.
   matchType?: MatchType;
