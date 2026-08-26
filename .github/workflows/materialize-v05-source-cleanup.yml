@@ -1,0 +1,75 @@
+name: Materialize v0.5 source cleanup
+
+on:
+  push:
+    branches:
+      - agent/v0.5-source-cleanup
+    paths:
+      - .github/workflows/materialize-v05-source-cleanup.yml
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    env:
+      DB_PROVIDER: libsql
+      DATABASE_URL: file:./data/cleanup.db
+      DATABASE_AUTH_TOKEN: ""
+      BETTER_AUTH_SECRET: cleanup-only-dart-scorekeeper-auth-secret-123456789
+      BETTER_AUTH_URL: http://localhost:3000
+      NEXT_TELEMETRY_DISABLED: "1"
+
+    steps:
+      - name: Check out cleanup branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/v0.5-source-cleanup
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Materialize deployed unified app
+        run: |
+          python scripts/apply-unified-app-preview.py
+          python scripts/finalize-v05-source-cleanup.py
+
+      - name: Verify temporary transform is gone
+        run: |
+          test ! -e scripts/apply-unified-app-preview.py
+          test ! -e scripts/finalize-v05-source-cleanup.py
+          test ! -e .github/workflows/materialize-v05-source-cleanup.yml
+          ! grep -R "apply-unified-app-preview" --exclude-dir=.git .
+          grep -q '"prebuild": "npm run commercial:test"' package.json
+          grep -q '"version": "0.5.0-alpha.24"' package.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Prepare validation database
+        run: mkdir -p data
+
+      - name: Apply migrations
+        run: npm run db:migrate
+
+      - name: Validate materialized source
+        run: |
+          npm run commercial:test
+          npm run x01:test
+          npm run casual-saves:test
+          npm run lint
+          npm run build
+
+      - name: Commit materialized source
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --stat
+          git commit -m "Materialize unified v0.5 application source"
+          git push origin HEAD:agent/v0.5-source-cleanup
