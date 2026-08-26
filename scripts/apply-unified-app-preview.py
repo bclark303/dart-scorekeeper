@@ -89,9 +89,10 @@ new_full_nav = '''  function renderFullNavigation() {
   }
 '''
 
-if old_full_nav not in text:
-    raise RuntimeError("Could not find the existing full casual navigation")
-text = text.replace(old_full_nav, new_full_nav, 1)
+if old_full_nav in text:
+    text = text.replace(old_full_nav, new_full_nav, 1)
+elif new_full_nav not in text:
+    raise RuntimeError("Could not recognize the casual navigation state")
 
 old_game_menu_tail = '''                <button onClick={() => openGameMenuView("history")} className={getGameMenuButtonClass("history")}>History</button>
                 <button onClick={() => openGameMenuView("app")} className={getGameMenuButtonClass("app")}>Settings</button>
@@ -110,9 +111,10 @@ new_game_menu_tail = '''                <button onClick={() => openGameMenuView(
                 <button type="button" onClick={() => { setIsGameMenuOpen(false); setIsExitGameOpen(true); }} className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-left font-bold text-slate-100 hover:bg-slate-800">Exit Game…</button>
 '''
 
-if old_game_menu_tail not in text:
-    raise RuntimeError("Could not find the existing active-game menu tail")
-text = text.replace(old_game_menu_tail, new_game_menu_tail, 1)
+if old_game_menu_tail in text:
+    text = text.replace(old_game_menu_tail, new_game_menu_tail, 1)
+elif new_game_menu_tail not in text:
+    raise RuntimeError("Could not recognize the active-game menu state")
 casual_path.write_text(text)
 
 old_version = "0.5.0-alpha.22"
@@ -120,9 +122,10 @@ new_version = "0.5.0-alpha.23"
 for relative in ["package.json", "package-lock.json", "lib/appInfo.ts"]:
     target = ROOT / relative
     value = target.read_text()
-    if old_version not in value:
-        raise RuntimeError(f"Expected {old_version} in {relative}")
-    target.write_text(value.replace(old_version, new_version))
+    if old_version in value:
+        target.write_text(value.replace(old_version, new_version))
+    elif new_version not in value:
+        raise RuntimeError(f"Could not recognize version state in {relative}")
 
 changelog_path = ROOT / "CHANGELOG.md"
 changelog = changelog_path.read_text()
@@ -134,8 +137,9 @@ entry = '''### Unified app preview (v0.5.0-alpha.23)
 
 '''
 marker = "## Unreleased\n\n"
-if marker not in changelog:
-    raise RuntimeError("Could not find Unreleased changelog section")
-changelog_path.write_text(changelog.replace(marker, marker + entry, 1))
+if "### Unified app preview (v0.5.0-alpha.23)" not in changelog:
+    if marker not in changelog:
+        raise RuntimeError("Could not find Unreleased changelog section")
+    changelog_path.write_text(changelog.replace(marker, marker + entry, 1))
 
-print(f"Applied unified app preview and bumped {old_version} -> {new_version}")
+print(f"Unified app preview ready at {new_version}")
