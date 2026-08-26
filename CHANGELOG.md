@@ -2,11 +2,43 @@
 
 ## Unreleased
 
+### Player check-in workflow (v0.5.0-alpha.5)
+- Added a dedicated Game Night Player Check-in screen backed by the existing authoritative attendance mutation.
+- Check-in is explicitly tied to a selected Game Night; league membership and season roster membership remain persistent and independent.
+- The check-in screen automatically selects the active or nearest open Game Night for the active league, while allowing administrators to switch leagues and nights.
+- Added search, checked-in/roster counts, dues status controls, and Check In / Check Out actions.
+- Completed and cancelled Game Nights are shown read-only.
+- Added a direct Game Night Check-in shortcut above the Player Directory so administrators can move from assigning league/season membership into attendance without hunting through the older setup page.
+- No database migration was required because Game Night attendance already existed and remains the single source of truth.
+
+### Master player directory (v0.5.0-alpha.4)
+- Replaced league-local player creation with one canonical Player Directory shared across the leagues an administrator can access.
+- Existing players can be added to another league with one action; repeated assignment reuses the existing league membership instead of duplicating the master player.
+- Kept league membership separate from season-roster participation so one player can participate in different leagues and seasons independently.
+- Added search-first player creation so existing identities are reused by default and exact-name matches are surfaced before a new player is created.
+- Added overall, per-league, and per-season scoring statistics derived from authoritative central turn history, including turns, points, average per turn, 100+, 140+, 180s, highest turn, double outs, and highest checkout.
+- Added a dedicated cross-league contract proving one master player can belong to two leagues and independent seasons without duplicate identities.
+- Restricted reuse of an existing player to identities visible through leagues the signed-in administrator can access.
+- No database migration was required because the existing `players`, `league_players`, and `season_roster_entries` hierarchy already supported the model.
+
+### Redesign validation (v0.5.0-alpha.3)
+- Rebuilt the app hierarchy around a two-choice Home screen: Casual Play or League Play.
+- Moved local scoring into a focused Casual Play setup → scoring flow with Match Options, Help, Settings, and a clear Home exit.
+- Added a League Play login/device gate and a five-area league menu: League Setup, Game Night, Players, Devices, and Play.
+- Added a state-aware Game Night Control dashboard for readiness, live room status, next actions, and completion, while preserving the existing detailed setup and fixture workspaces.
+- Added active-league context shared across the redesigned league entry points.
+- Simplified paired board devices to an appliance-style Casual Play / League Play experience with device Settings and Help.
+- Added contextual Help / Feedback with searchable help topics.
+- Kept scoring, fixture, persistence, authentication, offline queue, pairing, and league API contracts unchanged beneath the new navigation shell.
+
+
 ### Added
-- Casual games can be paused into up to five named local save slots and resumed with exact score, turn, leg, history, checkout-prompt, and in-progress dart-entry state preserved.
-- Active casual games now have an Exit Game action with Pause Game and confirmed Discard Game paths; paused/discarded games never enter completed-match statistics.
-- Casual X01 now supports any number of individual players, with turn order rotating across every participant.
-- X01 starting scores can now be selected from 101 through 901 in 100-point increments.
+- Casual games can now be paused into up to five named local save slots and resumed later with exact score, turn, leg, history, checkout-prompt, and in-progress dart-entry state preserved.
+- Active casual games now have a small Exit Game action with explicit Pause Game and confirmed Discard Game paths; paused/discarded games never enter completed-match statistics.
+- Casual X01 now supports any number of individual players, with independent scores and circular turn order.
+- X01 starting scores can now be selected from 101 through 901 in 100-point increments in both casual and league rule setup.
+- Shared League Workspace navigation across league administration pages.
+- Complete League landing shortcuts for Game Nights, league/season setup, players/rosters, rules templates, and board devices.
 - Portable persistence foundation for v0.4.0.
 - SQLite-compatible Drizzle schema and migration tooling.
 - Provider boundary under `lib/db/adapters/` and repository boundary under `lib/db/repositories/`.
@@ -36,9 +68,11 @@
 - Session storage persistence for full-screen board state across dummy turns.
 
 ### Changed
-- Renamed the dedicated dart-entry interface to Scoring View and its presentation-only return control to App View.
-- Updated production version to v0.4.0-alpha.3.
-- Updated development version to v0.4.0-alpha.2.
+- Renamed the dedicated dart-entry interface to Scoring View and its presentation-only return control to App View across casual and league scoring.
+- Updated preview version to v0.5.0-alpha.19 for casual pause/discard handling and scoring-view terminology.
+- Grouped the scorer navigation into Play and Manage areas; renamed Game to New Match, App to Settings, and Game Mode to Focused Play.
+- Updated preview version to v0.5.0-alpha.2 for the cursory navigation pass.
+- Updated development version to v0.4.0-alpha.1.
 - Enabled Next.js standalone output so the same app can run as a normal Node/Docker deployment.
 - Production database configuration now requires an explicit `DATABASE_URL`; local-file fallback is development-only.
 - Historical match participants are modeled separately from optional long-lived player profiles so guest/dummy play and name snapshots remain valid.

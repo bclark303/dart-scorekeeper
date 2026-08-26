@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - main
+      - agent/game-night-framework
   pull_request:
     branches:
       - main
+      - agent/game-night-framework
   workflow_dispatch:
 
 permissions:
@@ -43,6 +45,7 @@ jobs:
         run: |
           npm run db:generate
           git diff --exit-code -- drizzle/
+          test -z "$(git status --porcelain -- drizzle/)"
 
       - name: Apply migrations to local SQLite/libSQL
         run: npm run db:migrate
@@ -58,6 +61,58 @@ jobs:
 
       - name: Exercise authentication and sync ownership contract
         run: npm run auth:test
+
+      - name: Exercise commercial entitlement contract
+        if: ${{ hashFiles('scripts/commercial-entitlements-contract-test.ts') != '' }}
+        run: npm run commercial:test
+
+      - name: Exercise self-hosted database setup contract
+        run: npm run setup:test
+
+      - name: Exercise shared X01 rules contract
+        run: npm run x01:test
+
+      - name: Exercise league framework contract
+        run: npm run league:test
+
+      - name: Exercise league player and roster contract
+        run: npm run league:roster:test
+
+      - name: Exercise game-night lifecycle contract
+        run: npm run game-night:test
+
+      - name: Exercise Game Night template contract
+        run: npm run game-night:templates:test
+
+      - name: Exercise Game Night stats and Best-of contract
+        run: npm run game-night:stats:test
+
+      - name: Exercise multi-board Game Night completion contract
+        run: npm run game-night:multi-board:test
+
+      - name: Exercise fixture and rotation engine contract
+        run: npm run game-night:fixtures:test
+
+      - name: Exercise automatic Game Night layout contract
+        run: npm run game-night:layout:test
+
+      - name: Exercise dummy scoring rules contract
+        run: npm run dummy-scoring:test
+
+      - name: Exercise dummy team balancing contract
+        run: npm run dummy-team-balance:test
+
+      - name: Exercise central league match contract
+        run: npm run league-match:test
+
+      - name: Exercise board device connector contract
+        run: npm run board-device:test
+
+      - name: Exercise board offline queue contract
+        run: npm run board-device:offline:test
+
+      - name: Exercise board device pairing contract
+        run: npm run board-device:pairing:test
 
       - name: Lint
         run: npm run lint

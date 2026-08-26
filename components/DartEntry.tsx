@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { DartThrow, FinishRule, Turn, getCheckoutSuggestion } from "@/lib/scoring";
 import { getDartLabel } from "@/lib/darts";
+import { evaluateX01Turn } from "@/lib/x01Engine";
 import type { ScoringViewSessionState } from "@/lib/types";
 
 type DartEntryProps = {
@@ -15,7 +16,7 @@ type DartEntryProps = {
   finishRule: FinishRule;
   fullscreenScoreCards: FullscreenScoreCard[];
   lastTurn: Turn | null;
-  submitDartTurn: (darts: DartThrow[]) => void;
+  submitDartTurn: (darts: DartThrow[]) => void | boolean | Promise<void | boolean>;
   undoLastTurn: () => void;
   startNextLeg: () => void;
   replayMatch: () => void;
@@ -211,10 +212,6 @@ function specialDartIsSelected(
   return darts.some((dart) => dart.segment === segment);
 }
 
-function isDoubleOutDart(dart: DartThrow | undefined) {
-  return dart?.segment === "bull" || dart?.multiplier === 2;
-}
-
 function getPreviewToneClass(tone: TurnPreview["tone"]) {
   if (tone === "good") {
     return "border-[var(--color-success)] bg-[var(--color-panel)]";
@@ -239,46 +236,33 @@ function getTurnPreview(
 ): TurnPreview {
   if (darts.length === 0) {
     const checkout = getCheckoutSuggestion(currentScore);
-
     return {
       label: `${currentScore} remaining`,
-      detail: checkout
-        ? `Checkout: ${checkout}`
-        : "Tap the board to build this turn.",
+      detail: checkout ? `Checkout: ${checkout}` : "Tap the board to build this turn.",
       tone: "neutral",
     };
   }
 
-  const remaining = currentScore - turnTotal;
+  const evaluation = evaluateX01Turn({
+    scoreBefore: currentScore,
+    scoreEntered: turnTotal,
+    finishRule,
+    dartsThrown: darts.length as 1 | 2 | 3,
+    darts,
+  });
 
-  if (remaining < 0) {
+  if (evaluation.isBust) {
+    const reachedZero = currentScore - turnTotal === 0;
     return {
-      label: "Bust if submitted",
-      detail: `${turnTotal} scored from ${currentScore}.`,
+      label: reachedZero ? "Invalid checkout" : "Bust if submitted",
+      detail: reachedZero
+        ? "Final dart must be a double or bull."
+        : `${turnTotal} scored from ${currentScore}.`,
       tone: "danger",
     };
   }
 
-  if (finishRule === "double_out" && remaining === 1) {
-    return {
-      label: "Bust if submitted",
-      detail: "Double-out cannot leave 1.",
-      tone: "danger",
-    };
-  }
-
-  if (remaining === 0) {
-    if (
-      finishRule === "double_out" &&
-      !isDoubleOutDart(darts[darts.length - 1])
-    ) {
-      return {
-        label: "Invalid checkout",
-        detail: "Final dart must be a double or bull.",
-        tone: "danger",
-      };
-    }
-
+  if (evaluation.isCheckout) {
     return {
       label: "Checkout ready",
       detail: `Submit to finish the leg in ${darts.length} dart${darts.length === 1 ? "" : "s"}.`,
@@ -286,10 +270,9 @@ function getTurnPreview(
     };
   }
 
-  const checkout = getCheckoutSuggestion(remaining);
-
+  const checkout = getCheckoutSuggestion(evaluation.scoreAfter);
   return {
-    label: `${remaining} remaining`,
+    label: `${evaluation.scoreAfter} remaining`,
     detail: checkout ? `Next checkout: ${checkout}` : `${turnTotal} this turn.`,
     tone: checkout ? "good" : "neutral",
   };
@@ -341,10 +324,14 @@ export function DartEntry({
   onSessionStateChange,
   onExitGame,
 }: DartEntryProps) {
-  const [currentDarts, setCurrentDarts] = useState<DartThrow[]>(initialSessionState?.currentDarts ?? []);
-  const hasAppliedInitialSessionState = useRef(initialSessionState != null);
+  const [currentDarts, setCurrentDarts] = useState<DartThrow[]>(
+    initialSessionState?.currentDarts ?? [],
+  );
   const [isBoardFullscreen, setIsBoardFullscreen] = useState(() => {
-    if (initialSessionState) return initialSessionState.isScoringView;
+    if (initialSessionState) {
+      return initialSessionState.isScoringView;
+    }
+
     if (typeof window === "undefined") {
       return false;
     }
@@ -364,9 +351,15 @@ export function DartEntry({
     );
   });
   const [hasAutoOpenedBoard, setHasAutoOpenedBoard] = useState(false);
-  const [dartInputStyle, setDartInputStyle] = useState<DartInputStyle>(initialSessionState?.dartInputStyle ?? "board");
-  const [numericMultiplier, setNumericMultiplier] = useState<1 | 2 | 3 | null>(initialSessionState?.numericMultiplier ?? null);
-  const [showFullscreenScorecard, setShowFullscreenScorecard] = useState(initialSessionState?.showScorecard ?? false);
+  const [dartInputStyle, setDartInputStyle] = useState<DartInputStyle>(
+    initialSessionState?.dartInputStyle ?? "board",
+  );
+  const [numericMultiplier, setNumericMultiplier] = useState<1 | 2 | 3 | null>(
+    initialSessionState?.numericMultiplier ?? null,
+  );
+  const [showFullscreenScorecard, setShowFullscreenScorecard] = useState(
+    initialSessionState?.showScorecard ?? false,
+  );
   const turnTotal = currentDarts.reduce((total, dart) => total + dart.score, 0);
   const remainingAfterCurrentDarts = currentScore - turnTotal;
   const activeCheckoutSuggestion =
@@ -407,16 +400,6 @@ export function DartEntry({
     isBoardFullscreen &&
     ((!isLegComplete && !isMatchComplete) || showFullscreenScorecard);
 
-
-  useEffect(() => {
-    if (!initialSessionState || hasAppliedInitialSessionState.current) return;
-    hasAppliedInitialSessionState.current = true;
-    setCurrentDarts(initialSessionState.currentDarts);
-    setDartInputStyle(initialSessionState.dartInputStyle);
-    setNumericMultiplier(initialSessionState.numericMultiplier);
-    setIsBoardFullscreen(initialSessionState.isScoringView);
-    setShowFullscreenScorecard(initialSessionState.showScorecard);
-  }, [initialSessionState]);
 
   useEffect(() => {
     if (!shouldAutoOpenBoard || hasAutoOpenedBoard || isBoardFullscreen) {
@@ -461,7 +444,14 @@ export function DartEntry({
       isScoringView: isBoardFullscreen,
       showScorecard: showFullscreenScorecard,
     });
-  }, [currentDarts, dartInputStyle, isBoardFullscreen, numericMultiplier, onSessionStateChange, showFullscreenScorecard]);
+  }, [
+    currentDarts,
+    dartInputStyle,
+    isBoardFullscreen,
+    numericMultiplier,
+    onSessionStateChange,
+    showFullscreenScorecard,
+  ]);
 
   function setAutoFullscreenPreference(enabled: boolean) {
     setAutoFullscreenBoard(enabled);
@@ -624,12 +614,13 @@ export function DartEntry({
     );
   }
 
-  function handleSubmitTurn() {
+  async function handleSubmitTurn() {
     if (currentDarts.length === 0) {
       return;
     }
 
-    submitDartTurn(currentDarts);
+    const submitted = await submitDartTurn(currentDarts);
+    if (submitted === false) return;
     setCurrentDarts([]);
 
     if (isBoardFullscreen && dartInputStyle === "board") {
@@ -1439,13 +1430,61 @@ export function DartEntry({
 
               <div className="mt-auto hidden shrink-0 grid-cols-2 gap-1 border-t border-white/10 pt-1.5 landscape:min-[760px]:grid">
                 <label className="flex min-h-9 cursor-pointer items-center justify-center gap-1 rounded-md border border-white/15 bg-white/5 px-2 py-1 text-[0.7rem] font-bold text-white/80 hover:bg-white/10">
-                  <input type="checkbox" checked={autoFullscreenBoard} onChange={(event) => setAutoFullscreenPreference(event.target.checked)} className="h-4 w-4 accent-[var(--color-primary)]" />
+                  <input
+                    type="checkbox"
+                    checked={autoFullscreenBoard}
+                    onChange={(event) => setAutoFullscreenPreference(event.target.checked)}
+                    className="h-4 w-4 accent-[var(--color-primary)]"
+                  />
                   Auto
                 </label>
-                <button type="button" onClick={() => { setDartInputStyle("board"); setHasAutoOpenedBoard(false); }} className={`min-h-9 rounded-md border px-2 py-1 text-[0.7rem] font-bold ${dartInputStyle === "board" ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white" : "border-white/15 bg-white/5 text-white/75 hover:bg-white/10"}`}>Board</button>
-                <button type="button" onClick={() => setDartInputStyle("numeric")} className={`min-h-9 rounded-md border px-2 py-1 text-[0.7rem] font-bold ${dartInputStyle === "numeric" ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white" : "border-white/15 bg-white/5 text-white/75 hover:bg-white/10"}`}>Numeric</button>
-                <button type="button" onClick={() => { setShowFullscreenScorecard(false); setIsBoardFullscreen(false); setHasAutoOpenedBoard(true); }} className="min-h-9 rounded-md border border-white/15 bg-white/5 px-2 py-1 text-[0.7rem] font-bold text-white/75 hover:bg-white/10">App View</button>
-                {onExitGame && (<button type="button" onClick={onExitGame} className="col-span-2 min-h-9 rounded-md border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 px-2 py-1 text-[0.7rem] font-bold text-white/80 hover:bg-[var(--color-danger)]/20">Exit Game</button>)}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDartInputStyle("board");
+                    setHasAutoOpenedBoard(false);
+                  }}
+                  className={`min-h-9 rounded-md border px-2 py-1 text-[0.7rem] font-bold ${dartInputStyle === "board"
+                    ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
+                    : "border-white/15 bg-white/5 text-white/75 hover:bg-white/10"
+                    }`}
+                >
+                  Board
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setDartInputStyle("numeric")}
+                  className={`min-h-9 rounded-md border px-2 py-1 text-[0.7rem] font-bold ${dartInputStyle === "numeric"
+                    ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
+                    : "border-white/15 bg-white/5 text-white/75 hover:bg-white/10"
+                    }`}
+                >
+                  Numeric
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowFullscreenScorecard(false);
+                    setIsBoardFullscreen(false);
+                    setHasAutoOpenedBoard(true);
+                  }}
+                  className="min-h-9 rounded-md border border-white/15 bg-white/5 px-2 py-1 text-[0.7rem] font-bold text-white/75 hover:bg-white/10"
+                >
+                  App View
+                </button>
+
+                {onExitGame && (
+                  <button
+                    type="button"
+                    onClick={onExitGame}
+                    className="col-span-2 min-h-9 rounded-md border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 px-2 py-1 text-[0.7rem] font-bold text-white/80 hover:bg-[var(--color-danger)]/20"
+                  >
+                    Exit Game
+                  </button>
+                )}
               </div>
             </div>
 

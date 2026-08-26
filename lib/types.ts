@@ -22,10 +22,27 @@ export type CompetitionFormat = "individual" | "team";
  */
 export type TeamSize = 1 | 2 | 3 | 4 | 5;
 
-/** How uneven teams rotate. */
+/**
+ * How uneven teams rotate.
+ *
+ * independent:
+ *   Each side rotates only through its actual listed members.
+ *
+ * dummy:
+ *   The shorter side is padded with missing-player slots.
+ *   Those dummy slots get an automatic score.
+ */
 export type RotationMode = "independent" | "dummy";
 
-/** How scores are entered during a match. */
+/**
+ * How scores are entered during a match.
+ *
+ * turn:
+ *   Enter one total score for the full turn.
+ *
+ * dart:
+ *   Enter each dart individually on the graphical board.
+ */
 export type ScoreEntryMode = "turn" | "dart";
 
 /** Visual theme options. */
@@ -46,14 +63,19 @@ export type ScoringViewSessionState = {
   showScorecard: boolean;
 };
 
-export type MatchPlayer = Player & { legsWon: number };
+/** Older player-shaped match participant kept for saved-match compatibility. */
+export type MatchPlayer = Player & {
+  legsWon: number;
+};
 
+/** A person/slot on a side. */
 export type TeamMember = {
   id: string;
   name: string;
   isDummy?: boolean;
 };
 
+/** A side is what actually competes in a match. */
 export type MatchSide = {
   id: string;
   name: string;
@@ -63,6 +85,7 @@ export type MatchSide = {
   currentMemberIndex: number;
 };
 
+/** Calculated stats for a side. */
 export type PlayerStats = {
   pointsScored: number;
   dartsThrown: number;
@@ -74,6 +97,7 @@ export type PlayerStats = {
   busts: number;
 };
 
+/** A completed leg snapshot. */
 export type CompletedLeg = {
   legNumber: number;
   winnerId: string;
@@ -81,6 +105,13 @@ export type CompletedLeg = {
   turns: Turn[];
 };
 
+/**
+ * Local browser save shape.
+ *
+ * matchId/matchCreatedAt are optional for compatibility with saves created
+ * before persistent match identities were introduced. A future sync step can
+ * assign them to an older save before archiving it.
+ */
 export type SavedMatchState = {
   startingScore: StartingScore;
   finishRule: FinishRule;
@@ -90,14 +121,16 @@ export type SavedMatchState = {
   brandName: string;
   refreshBehavior: RefreshBehavior;
   defaultScoreLayout: DefaultScoreLayout;
-  activeView?: "score" | "game" | "app" | "stats" | "history";
+  activeView?: "score" | "game" | "league" | "app" | "stats" | "history";
   isGameModeActive?: boolean;
   matchId?: string;
   matchCreatedAt?: number;
 
+  // Current casual competition setup.
   competitionFormat?: CompetitionFormat;
   individualPlayerNames?: string[];
 
+  // Current team/side setup.
   sideOneSize: TeamSize;
   sideTwoSize: TeamSize;
   rotationMode: RotationMode;
@@ -107,6 +140,7 @@ export type SavedMatchState = {
   teamOneMemberNames?: string[];
   teamTwoMemberNames?: string[];
 
+  // Current match state.
   sides: MatchSide[];
   currentSideIndex: number;
   startingSideIndex: number;
@@ -118,11 +152,13 @@ export type SavedMatchState = {
   isMatchComplete: boolean;
   message: string;
 
+  // Transient scoring input state. Optional for older browser saves.
   scoreInput?: string;
   pendingCheckoutTurn?: Turn | null;
   pendingDartsUsedTurn?: Turn | null;
   scoringViewSession?: ScoringViewSessionState | null;
 
+  // Legacy compatibility fields from older saved matches.
   matchType?: MatchType;
   teamSize?: TeamSize;
   playerOneName?: string;
@@ -134,6 +170,7 @@ export type SavedMatchState = {
   startingPlayerIndex?: number;
 };
 
+/** Creates a match side from a side name and a list of member names. */
 export function createTeamSide(
   sideId: string,
   sideName: string,

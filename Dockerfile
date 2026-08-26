@@ -4,6 +4,14 @@ WORKDIR /app
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# The unified build step is intentionally idempotent and currently uses a
+# small Python helper. Install Python only so self-hosted/Docker builds follow
+# the same build path as Vercel and CI.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends python3 \
+  && ln -s /usr/bin/python3 /usr/local/bin/python \
+  && rm -rf /var/lib/apt/lists/*
+
 COPY package.json package-lock.json ./
 RUN npm ci
 

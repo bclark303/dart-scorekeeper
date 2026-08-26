@@ -4,6 +4,8 @@ services:
     ports:
       - "3000:3000"
     environment:
+      DART_SCOREKEEPER_SELF_HOSTED: "1"
+      DART_SCOREKEEPER_CONFIG_FILE: /data/dart-scorekeeper.config.json
       DB_PROVIDER: libsql
       DATABASE_URL: file:/data/dart-scorekeeper.db
       DATABASE_AUTH_TOKEN: ""
