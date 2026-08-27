@@ -235,7 +235,7 @@ function boardUseCounts(history: FixtureHistoryPairing[]) {
   for (const pairing of history) {
     for (const teamId of [pairing.teamAId, pairing.teamBId]) {
       const map = result.get(teamId) ?? new Map<string, number>();
-      map.set(pairing.boardId, (map.get(boardId) ?? 0) + 1);
+      map.set(pairing.boardId, (map.get(pairing.boardId) ?? 0) + 1);
       result.set(teamId, map);
     }
   }
