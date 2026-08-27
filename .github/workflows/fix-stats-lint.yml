@@ -10,17 +10,18 @@ permissions:
 
 jobs:
   fix:
-    if: ${{ github.actor != 'github-actions[bot]' }}
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: agent/v05-stats-v1
       - name: Refactor season selector effects
+        shell: bash
         run: |
-          python3 - <<'PY'
+          python3 <<'PY'
           from pathlib import Path
-          p = Path('components/SeasonAnalyticsHub.tsx')
+          p = Path("components/SeasonAnalyticsHub.tsx")
           s = p.read_text()
           old = '''  useEffect(() => {
     if (!league) {
@@ -60,9 +61,9 @@ jobs:
     fetch(`/api/leagues/season-analytics?seasonId=${encodeURIComponent(resolvedSeasonId)}`, {
 '''
           if old not in s:
-              raise SystemExit('selector effect pattern not found')
+              raise SystemExit("selector effect pattern not found")
           s = s.replace(old, new)
-          s = s.replace('  }, [seasonId]);\n\n  const sortedPlayers', '  }, [resolvedSeasonId]);\n\n  const sortedPlayers', 1)
+          s = s.replace("  }, [seasonId]);\n\n  const sortedPlayers", "  }, [resolvedSeasonId]);\n\n  const sortedPlayers", 1)
           s = s.replace('''              onChange={(event) => {
                 setLeagueId(event.target.value);
                 window.localStorage.setItem(ACTIVE_LEAGUE_KEY, event.target.value);
@@ -86,8 +87,8 @@ jobs:
         run: rm .github/workflows/fix-stats-lint.yml
       - name: Commit refactor
         run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add components/SeasonAnalyticsHub.tsx .github/workflows/fix-stats-lint.yml
-          git commit -m "Refactor stats selectors for React lint"
+          git commit -m 'Refactor stats selectors for React lint'
           git push origin HEAD:agent/v05-stats-v1
