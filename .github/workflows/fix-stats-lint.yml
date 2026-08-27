@@ -1,0 +1,93 @@
+name: Fix stats lint
+
+on:
+  push:
+    branches:
+      - agent/v05-stats-v1
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/v05-stats-v1
+      - name: Refactor season selector effects
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('components/SeasonAnalyticsHub.tsx')
+          s = p.read_text()
+          old = '''  useEffect(() => {
+    if (!league) {
+      setSeasonId("");
+      return;
+    }
+    const preferred =
+      league.seasons.find((season) => season.status === "active") ??
+      [...league.seasons].sort((a, b) => (b.startsAt ?? b.createdAt) - (a.startsAt ?? a.createdAt))[0];
+    setSeasonId((current) => league.seasons.some((season) => season.id === current) ? current : preferred?.id ?? "");
+  }, [league]);
+
+  useEffect(() => {
+    if (!seasonId) {
+      setAnalytics(null);
+      return;
+    }
+    const controller = new AbortController();
+    setLoading(true);
+    fetch(`/api/leagues/season-analytics?seasonId=${encodeURIComponent(seasonId)}`, {
+'''
+          new = '''  const resolvedSeasonId = useMemo(() => {
+    if (!league) return "";
+    if (league.seasons.some((season) => season.id === seasonId)) return seasonId;
+    const preferred =
+      league.seasons.find((season) => season.status === "active") ??
+      [...league.seasons].sort(
+        (a, b) => (b.startsAt ?? b.createdAt) - (a.startsAt ?? a.createdAt),
+      )[0];
+    return preferred?.id ?? "";
+  }, [league, seasonId]);
+
+  useEffect(() => {
+    if (!resolvedSeasonId) return;
+    const controller = new AbortController();
+    setLoading(true);
+    fetch(`/api/leagues/season-analytics?seasonId=${encodeURIComponent(resolvedSeasonId)}`, {
+'''
+          if old not in s:
+              raise SystemExit('selector effect pattern not found')
+          s = s.replace(old, new)
+          s = s.replace('  }, [seasonId]);\n\n  const sortedPlayers', '  }, [resolvedSeasonId]);\n\n  const sortedPlayers', 1)
+          s = s.replace('''              onChange={(event) => {
+                setLeagueId(event.target.value);
+                window.localStorage.setItem(ACTIVE_LEAGUE_KEY, event.target.value);
+              }}''', '''              onChange={(event) => {
+                setLeagueId(event.target.value);
+                setSeasonId("");
+                setAnalytics(null);
+                setSelectedPlayerId("");
+                window.localStorage.setItem(ACTIVE_LEAGUE_KEY, event.target.value);
+              }}''')
+          s = s.replace('''              value={seasonId}
+              onChange={(event) => setSeasonId(event.target.value)}''', '''              value={resolvedSeasonId}
+              onChange={(event) => {
+                setSeasonId(event.target.value);
+                setAnalytics(null);
+                setSelectedPlayerId("");
+              }}''')
+          p.write_text(s)
+          PY
+      - name: Remove one-time workflow
+        run: rm .github/workflows/fix-stats-lint.yml
+      - name: Commit refactor
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add components/SeasonAnalyticsHub.tsx .github/workflows/fix-stats-lint.yml
+          git commit -m "Refactor stats selectors for React lint"
+          git push origin HEAD:agent/v05-stats-v1
