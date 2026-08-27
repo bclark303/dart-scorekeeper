@@ -38,7 +38,13 @@ function chooseAutomaticTeamCount(
 ) {
   if (playerCount < 2) return 2;
 
-  const maximumTeams = Math.min(64, playerCount);
+  // A manually fixed board count represents venue capacity. Auto Teams must
+  // fit one simultaneous pairing per board instead of inventing extra boards.
+  const boardLimitedMaximum =
+    settings.boardCountMode === "manual"
+      ? Math.max(2, settings.boardCount * 2)
+      : 64;
+  const maximumTeams = Math.min(64, playerCount, boardLimitedMaximum);
   let candidates = Array.from(
     { length: maximumTeams - 1 },
     (_, index) => index + 2,
@@ -81,8 +87,8 @@ function chooseAutomaticTeamCount(
       if (sizes.uneven) score += 0.55;
 
       // Automatic sizing targets small, practical darts teams (2-3 players)
-      // and only expands outside that range when the checked-in count makes it
-      // necessary.
+      // when capacity allows, then expands teams as needed to stay within a
+      // fixed venue board limit.
       if (settings.teamSizeMode === "automatic") {
         if (sizes.minimum < 2) score += (2 - sizes.minimum) * 8;
         if (sizes.maximum > 3) score += (sizes.maximum - 3) * 2.5;
@@ -145,6 +151,10 @@ export function optimizeGameNightLayout(
       ? `${minTeamPlayers} player${minTeamPlayers === 1 ? "" : "s"} per team`
       : `${minTeamPlayers}-${maxTeamPlayers} players per team`;
   const hasBye = targetTeamCount % 2 !== 0;
+  const capacityText =
+    settings.teamCountMode === "automatic" && settings.boardCountMode === "manual"
+      ? " · venue-cap fit"
+      : "";
 
   return {
     settings: optimized,
@@ -157,7 +167,7 @@ export function optimizeGameNightLayout(
       hasBye,
       description:
         playerCount > 0
-          ? `${playerCount} checked in → ${targetTeamCount} teams · ${teamSizeText} · ${boardCount} board${boardCount === 1 ? "" : "s"}${hasBye ? " · one rotating bye per round" : ""}`
+          ? `${playerCount} checked in → ${targetTeamCount} teams · ${teamSizeText} · ${boardCount} board${boardCount === 1 ? "" : "s"}${capacityText}${hasBye ? " · one rotating bye per round" : ""}`
           : "Check players in to calculate an automatic layout.",
     },
   };

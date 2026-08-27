@@ -20,6 +20,7 @@ import {
 type FixtureAction = (body: object, message?: string) => Promise<void> | void;
 
 function strategyLabel(strategy: FixturePairingStrategy) {
+  if (strategy === "fixed") return "Fixed matchups · repeat Round 1";
   if (strategy === "round_robin") return "Round robin";
   if (strategy === "swiss") return "Swiss · current-night record";
   if (strategy === "manual") return "Manual coordinator draft";
@@ -117,6 +118,33 @@ export function GameNightFixturePanel({
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
         <div className="rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-4">
           <h3 className="font-bold">Round Rules</h3>
+          <div className="mt-3 rounded-xl border border-[var(--color-primary)]/40 bg-[var(--color-panel)] p-3">
+            <div className="text-sm font-black">Common league format</div>
+            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+              Three rounds can represent three individual legs while keeping the same opponents.
+              A scheduled round break then doubles as the between-leg intermission.
+            </p>
+            <button
+              type="button"
+              disabled={disabled || !canEditRules}
+              onClick={() =>
+                setSettings((current) => ({
+                  ...current,
+                  roundCount: 3,
+                  pairingStrategy: "fixed",
+                  legsPerMatch: 1,
+                  intermissionAfterRounds: [2],
+                  intermissionDurationMinutes: 10,
+                }))
+              }
+              className="mt-3 rounded-lg border border-[var(--color-primary)] px-3 py-2 text-sm font-black text-[var(--color-primary)] disabled:opacity-50"
+            >
+              Use 3 rounds × 1 leg · same matchups
+            </button>
+            <div className="mt-2 text-xs text-[var(--color-text-muted)]">
+              Sets a 10-minute break after Round 2. Save Fixture Rules to apply it.
+            </div>
+          </div>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <label className="text-sm">
               Rounds per Game Night
@@ -147,6 +175,7 @@ export function GameNightFixturePanel({
                 className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-2.5"
               >
                 <option value="random">Random · avoid rematches</option>
+                <option value="fixed">Fixed matchups · repeat Round 1</option>
                 <option value="round_robin">Round robin</option>
                 <option value="swiss">Swiss · current-night record</option>
                 <option value="manual">Manual coordinator</option>

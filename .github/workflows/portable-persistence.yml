@@ -78,6 +78,9 @@ jobs:
       - name: Exercise league player and roster contract
         run: npm run league:roster:test
 
+      - name: Exercise board-constrained league round model
+        run: npm run league:round-model:test
+
       - name: Exercise game-night lifecycle contract
         run: npm run game-night:test
 

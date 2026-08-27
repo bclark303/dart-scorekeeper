@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### League round model (v0.5.0-alpha.25)
+- Added Fixed Matchups so randomly created Round 1 opponents can remain paired across later Game Night rounds.
+- Fixed venue board counts now constrain automatic team count; Auto Team Sizes expands balanced teams as needed instead of requiring extra boards.
+- Clarified league setup around rounds versus legs and added a 3 rounds × 1 leg same-matchup preset using the existing 10-minute round intermission after Round 2.
+- Added individual season leg standings derived from authoritative non-voided checkout results, so rotating weekly teams still produce stable player standings.
+- Fixed Game Night API validation so all supported X01 starting scores, including 601, can be saved consistently with the UI.
+- Added a permanent 22-week, 10–28 player, four-board structural acceptance regression.
+
 ### Source materialization cleanup (v0.5.0-alpha.24)
 - Materialized the approved unified application directly into the repository so local, CI, Preview, Production, and Docker builds all compile the same source.
 - Removed the temporary build-time Python source transform and the Docker Python dependency it required.
