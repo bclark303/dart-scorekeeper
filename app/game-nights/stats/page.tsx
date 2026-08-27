@@ -1,18 +1,14 @@
 "use client";
 
-import { GameNightStatsPanel } from "@/components/GameNightStatsPanel";
-import { GameNightWorkspacePicker } from "@/components/GameNightWorkspacePicker";
-import { SeasonLegStandingsPanel } from "@/components/SeasonLegStandingsPanel";
+import { SeasonAnalyticsHub } from "@/components/SeasonAnalyticsHub";
 import { authClient } from "@/lib/auth/client";
-import { useGameNightWorkspace } from "@/lib/league/useGameNightWorkspace";
 
 export default function GameNightStatsPage() {
   const { data: session, isPending } = authClient.useSession();
-  const workspace = useGameNightWorkspace(Boolean(session?.user));
 
   if (isPending) {
     return (
-      <main className="mx-auto max-w-6xl p-6 text-[var(--color-text-muted)]">
+      <main className="mx-auto max-w-7xl p-6 text-[var(--color-text-muted)]">
         Loading account…
       </main>
     );
@@ -21,7 +17,7 @@ export default function GameNightStatsPage() {
   if (!session?.user) {
     return (
       <main className="mx-auto max-w-3xl p-6">
-        <h1 className="text-3xl font-black">Standings & Stats</h1>
+        <h1 className="text-3xl font-black">League Stats</h1>
         <p className="mt-2 text-[var(--color-text-muted)]">
           Sign in before viewing connected league statistics.
         </p>
@@ -31,46 +27,21 @@ export default function GameNightStatsPage() {
 
   return (
     <main className="min-h-screen bg-[var(--color-app-bg)] p-4 text-[var(--color-text-main)] sm:p-6">
-      <div className="mx-auto max-w-6xl space-y-5">
+      <div className="mx-auto max-w-7xl space-y-5">
         <header>
           <div className="text-xs font-black uppercase tracking-[0.14em] text-[var(--color-primary)]">
-            League Results
+            League Analytics · X01
           </div>
-          <h1 className="mt-1 text-3xl font-black">Standings & Stats</h1>
-          <p className="mt-1 max-w-3xl text-sm text-[var(--color-text-muted)]">
-            Season standings are calculated from completed legs. Select a Game
-            Night to see that night&apos;s scoring highlights below the season table.
+          <h1 className="mt-1 text-3xl font-black">League Stats</h1>
+          <p className="mt-1 max-w-4xl text-sm text-[var(--color-text-muted)]">
+            Explore standings, true three-dart averages, form, attendance,
+            partnerships, head-to-head records and scoring detail. Every number
+            is derived from authoritative league scoring and remains scoped to
+            the selected season and game type.
           </p>
         </header>
 
-        {workspace.errorMessage && (
-          <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-100">
-            {workspace.errorMessage}
-          </div>
-        )}
-
-        <GameNightWorkspacePicker
-          leagues={workspace.leagues}
-          leagueId={workspace.leagueId}
-          nights={workspace.nights}
-          nightId={workspace.nightId}
-          onLeagueChange={workspace.selectLeague}
-          onNightChange={workspace.selectNight}
-        />
-
-        {workspace.night ? (
-          <>
-            <SeasonLegStandingsPanel seasonId={workspace.night.seasonId} />
-            <GameNightStatsPanel
-              gameNightId={workspace.night.id}
-              status={workspace.night.status}
-            />
-          </>
-        ) : !workspace.loading ? (
-          <section className="rounded-2xl border border-dashed border-[var(--color-panel-border)] bg-[var(--color-panel)] p-6 text-sm text-[var(--color-text-muted)]">
-            Select or create a Game Night from the Hub first.
-          </section>
-        ) : null}
+        <SeasonAnalyticsHub />
       </div>
     </main>
   );
