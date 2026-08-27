@@ -36,7 +36,7 @@ export function isValidResolvedGameNightSettings(
     Number.isInteger(settings.roundCount) &&
     settings.roundCount >= 1 &&
     settings.roundCount <= 32 &&
-    ["random", "round_robin", "swiss", "manual"].includes(
+    ["random", "fixed", "round_robin", "swiss", "manual"].includes(
       settings.pairingStrategy,
     ) &&
     ["manual", "automatic"].includes(settings.roundAdvanceMode) &&
