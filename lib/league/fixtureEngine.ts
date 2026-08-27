@@ -125,6 +125,36 @@ function randomPairings(
   return best;
 }
 
+function fixedPairings(
+  teamIds: string[],
+  history: FixtureHistoryPairing[],
+  random: RandomSource,
+) {
+  const available = new Set(teamIds);
+  const firstRound = history.filter((pairing) => pairing.roundNumber === 1);
+  if (firstRound.length) {
+    const pairs: Array<[string, string]> = [];
+    const used = new Set<string>();
+    for (const pairing of firstRound) {
+      if (!available.has(pairing.teamAId) || !available.has(pairing.teamBId)) continue;
+      if (used.has(pairing.teamAId) || used.has(pairing.teamBId)) continue;
+      pairs.push([pairing.teamAId, pairing.teamBId]);
+      used.add(pairing.teamAId);
+      used.add(pairing.teamBId);
+    }
+    return {
+      pairings: pairs,
+      byeTeamIds: teamIds.filter((teamId) => !used.has(teamId)),
+    };
+  }
+
+  const byePlan = chooseFairBye(teamIds, history, random);
+  return {
+    pairings: randomPairings(byePlan.playing, [], random),
+    byeTeamIds: byePlan.byeTeamIds,
+  };
+}
+
 function roundRobinPairings(teamIds: string[], roundNumber: number) {
   const participants: Array<string | null> = [...teamIds];
   if (participants.length % 2 === 1) participants.push(null);
@@ -205,7 +235,7 @@ function boardUseCounts(history: FixtureHistoryPairing[]) {
   for (const pairing of history) {
     for (const teamId of [pairing.teamAId, pairing.teamBId]) {
       const map = result.get(teamId) ?? new Map<string, number>();
-      map.set(pairing.boardId, (map.get(pairing.boardId) ?? 0) + 1);
+      map.set(pairing.boardId, (map.get(boardId) ?? 0) + 1);
       result.set(teamId, map);
     }
   }
@@ -269,7 +299,11 @@ export function generateFixtureRound(input: {
   let pairs: Array<[string, string]>;
   let byeTeamIds: string[];
 
-  if (input.strategy === "round_robin") {
+  if (input.strategy === "fixed") {
+    const plan = fixedPairings(uniqueTeams, input.history, random);
+    pairs = plan.pairings;
+    byeTeamIds = plan.byeTeamIds;
+  } else if (input.strategy === "round_robin") {
     const plan = roundRobinPairings(uniqueTeams, input.roundNumber);
     pairs = plan.pairings;
     byeTeamIds = plan.byeTeamIds;
