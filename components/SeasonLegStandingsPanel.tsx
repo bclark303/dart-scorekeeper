@@ -21,13 +21,12 @@ function formatPercent(value: number) {
 
 export function SeasonLegStandingsPanel({ seasonId }: { seasonId: string }) {
   const [data, setData] = useState<SeasonStandingsResponse["standings"] | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loadedSeasonId, setLoadedSeasonId] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const loading = loadedSeasonId !== seasonId;
 
   useEffect(() => {
     const controller = new AbortController();
-    setLoading(true);
-    setErrorMessage("");
     fetch(`/api/leagues/season-standings?seasonId=${encodeURIComponent(seasonId)}`, {
       cache: "no-store",
       signal: controller.signal,
@@ -40,17 +39,18 @@ export function SeasonLegStandingsPanel({ seasonId }: { seasonId: string }) {
         return result.standings;
       })
       .then((standings) => {
-        if (!controller.signal.aborted) setData(standings);
+        if (controller.signal.aborted) return;
+        setData(standings);
+        setErrorMessage("");
+        setLoadedSeasonId(seasonId);
       })
       .catch((error: unknown) => {
-        if (!controller.signal.aborted) {
-          setErrorMessage(
-            error instanceof Error ? error.message : "Could not load season standings.",
-          );
-        }
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
+        if (controller.signal.aborted) return;
+        setData(null);
+        setErrorMessage(
+          error instanceof Error ? error.message : "Could not load season standings.",
+        );
+        setLoadedSeasonId(seasonId);
       });
 
     return () => controller.abort();
@@ -70,7 +70,7 @@ export function SeasonLegStandingsPanel({ seasonId }: { seasonId: string }) {
             from week to week without losing the individual season table.
           </p>
         </div>
-        {data && (
+        {!loading && data && (
           <div className="rounded-full border border-[var(--color-panel-border)] px-3 py-1 text-xs font-bold uppercase text-[var(--color-text-muted)]">
             {data.totalLegs} legs recorded
           </div>
