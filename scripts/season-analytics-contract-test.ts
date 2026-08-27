@@ -93,7 +93,8 @@ const ad = analytics.headToHead.find((pair) =>
 assert.ok(ad);
 assert.equal(ad.legs, 2);
 
-assert.equal(analytics.segments[0]?.label, "T20");
+assert.ok(analytics.segments.some((segment) => segment.label === "T20" && segment.count === 1));
+assert.ok(analytics.segments.some((segment) => segment.label === "MISS" && segment.count === 1));
 assert.ok(analytics.scoreBuckets.some((bucket) => bucket.label === "0–20" && bucket.count === 1));
 
 console.log("Season analytics contract test passed.");
