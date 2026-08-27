@@ -39,7 +39,7 @@ import {
 import { LeaguePermissionError } from "./leagues";
 
 function asPairingStrategy(value: string): FixturePairingStrategy {
-  if (value === "round_robin" || value === "swiss" || value === "manual") return value;
+  if (value === "fixed" || value === "round_robin" || value === "swiss" || value === "manual") return value;
   return "random";
 }
 

@@ -217,7 +217,11 @@ export default function GameNightSetupPage() {
                 </div>
                 <div className="rounded-xl bg-[var(--color-panel-soft)] p-3">
                   <div className="text-xs font-black uppercase tracking-wide text-[var(--color-text-muted)]">Match</div>
-                  <div className="mt-1 text-lg font-black">Best of {settingsDraft.legsPerMatch}</div>
+                  <div className="mt-1 text-lg font-black">
+                    {settingsDraft.legsPerMatch === 1
+                      ? "1 leg / round"
+                      : `Best of ${settingsDraft.legsPerMatch}`}
+                  </div>
                 </div>
                 <div className="rounded-xl bg-[var(--color-panel-soft)] p-3">
                   <div className="text-xs font-black uppercase tracking-wide text-[var(--color-text-muted)]">Rounds</div>

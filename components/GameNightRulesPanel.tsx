@@ -61,10 +61,10 @@ export function GameNightRulesPanel({
 
           <div className="mt-4 rounded-xl border border-[var(--color-primary)]/40 bg-[var(--color-panel)] p-3 text-xs text-[var(--color-text-muted)]">
             <span className="font-bold text-[var(--color-text)]">Automatic layout:</span>{" "}
-            Auto modes recalculate from the checked-in headcount. Team sizing
-            prefers balanced 2-3 player teams where practical, team count avoids
-            a bye when a similarly good even-team layout exists, and Auto Boards
-            provides one board per simultaneous matchup.
+            Auto modes recalculate from the checked-in headcount. With a fixed
+            board count, Auto Teams creates no more than two teams per board and
+            Auto Team Sizes expands teams as needed to fit venue capacity. Auto
+            Boards still provides one board per simultaneous matchup.
           </div>
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
@@ -254,7 +254,8 @@ export function GameNightRulesPanel({
         <div className="rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-4">
           <h3 className="text-lg font-bold">Match Rules</h3>
           <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-            Uses the same X01 formats and Best-of semantics as casual scoring.
+            Each round schedules one pairing. Use 1 leg when rounds themselves
+            represent the legs; longer Best-of formats play multiple legs inside each round.
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
             <label className="text-sm">
@@ -283,14 +284,14 @@ export function GameNightRulesPanel({
               </select>
             </label>
             <label className="text-sm">
-              Legs
+              Legs per pairing
               <select
                 value={settings.legsPerMatch}
                 onChange={(event) => patch("legsPerMatch", Number(event.target.value))}
                 className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-2.5"
               >
                 {X01_BEST_OF_OPTIONS.map((legs) => (
-                  <option key={legs} value={legs}>Best of {legs}</option>
+                  <option key={legs} value={legs}>{legs === 1 ? "1 leg" : `Best of ${legs}`}</option>
                 ))}
               </select>
             </label>
@@ -316,7 +317,7 @@ export function GameNightRulesPanel({
                 onChange={(event) => patch("boardCountMode", modeValue(event.target.value))}
                 className="mt-1 w-full rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-2.5"
               >
-                <option value="manual">Manual</option>
+                <option value="manual">Fixed venue capacity</option>
                 <option value="automatic">Auto from team count</option>
               </select>
               <input

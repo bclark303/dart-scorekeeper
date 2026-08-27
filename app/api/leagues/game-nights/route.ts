@@ -33,6 +33,7 @@ import {
 } from "@/lib/league/gameNightContracts";
 import type { FixtureRoundPairing } from "@/lib/league/fixtureEngine";
 import { isSupportedBestOfLegs } from "@/lib/league/matchFormat";
+import { isSupportedX01StartingScore } from "@/lib/scoring";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -89,7 +90,7 @@ function validSettings(settings: ResolvedGameNightSettings) {
     Number.isInteger(settings.roundCount) &&
     settings.roundCount >= 1 &&
     settings.roundCount <= 32 &&
-    ["random", "round_robin", "swiss", "manual"].includes(settings.pairingStrategy) &&
+    ["random", "fixed", "round_robin", "swiss", "manual"].includes(settings.pairingStrategy) &&
     ["manual", "automatic"].includes(settings.roundAdvanceMode) &&
     Number.isInteger(settings.roundAdvanceDelaySeconds) &&
     settings.roundAdvanceDelaySeconds >= 0 &&
@@ -102,7 +103,7 @@ function validSettings(settings: ResolvedGameNightSettings) {
     settings.intermissionDurationMinutes >= 0 &&
     settings.intermissionDurationMinutes <= 180 &&
     isSupportedBestOfLegs(settings.legsPerMatch) &&
-    [301, 501, 701].includes(settings.startingScore) &&
+    isSupportedX01StartingScore(settings.startingScore) &&
     ["straight", "double"].includes(settings.finishRule)
   );
 }
