@@ -18,6 +18,7 @@
     "setup:test": "tsx scripts/database-setup-contract-test.ts",
     "league:test": "tsx scripts/league-framework-contract-test.ts",
     "league:roster:test": "tsx scripts/league-roster-contract-test.ts",
+    "league:round-model:test": "tsx scripts/v05-league-round-model-contract-test.ts && tsx scripts/v05-season-round-acceptance-test.ts",
     "game-night:test": "tsx scripts/game-night-contract-test.ts",
     "game-night:readiness:test": "tsx scripts/game-night-readiness-contract-test.ts",
     "game-night:templates:test": "tsx scripts/game-night-template-contract-test.ts",
