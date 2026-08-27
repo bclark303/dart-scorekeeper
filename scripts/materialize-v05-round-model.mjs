@@ -15,6 +15,22 @@ patch(
 );
 
 patch(
+  "app/api/leagues/game-nights/route.ts",
+  'import { isSupportedBestOfLegs } from "@/lib/league/matchFormat";',
+  'import { isSupportedBestOfLegs } from "@/lib/league/matchFormat";\nimport { isSupportedX01StartingScore } from "@/lib/scoring";',
+);
+patch(
+  "app/api/leagues/game-nights/route.ts",
+  '["random", "round_robin", "swiss", "manual"].includes(settings.pairingStrategy)',
+  '["random", "fixed", "round_robin", "swiss", "manual"].includes(settings.pairingStrategy)',
+);
+patch(
+  "app/api/leagues/game-nights/route.ts",
+  '[301, 501, 701].includes(settings.startingScore)',
+  'isSupportedX01StartingScore(settings.startingScore)',
+);
+
+patch(
   "components/GameNightFixturePanel.tsx",
   'function strategyLabel(strategy: FixturePairingStrategy) {\n  if (strategy === "round_robin") return "Round robin";',
   'function strategyLabel(strategy: FixturePairingStrategy) {\n  if (strategy === "fixed") return "Fixed matchups · repeat Round 1";\n  if (strategy === "round_robin") return "Round robin";',
