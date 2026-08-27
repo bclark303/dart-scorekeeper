@@ -20,7 +20,7 @@ function formatPercent(value: number) {
 }
 
 export function SeasonLegStandingsPanel({ seasonId }: { seasonId: string }) {
-  const [data, setData] = useState<SeasonStandingsResponse["standings"]>(null);
+  const [data, setData] = useState<SeasonStandingsResponse["standings"] | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
