@@ -2,6 +2,7 @@
 
 import { GameNightStatsPanel } from "@/components/GameNightStatsPanel";
 import { GameNightWorkspacePicker } from "@/components/GameNightWorkspacePicker";
+import { SeasonLegStandingsPanel } from "@/components/SeasonLegStandingsPanel";
 import { authClient } from "@/lib/auth/client";
 import { useGameNightWorkspace } from "@/lib/league/useGameNightWorkspace";
 
@@ -20,7 +21,7 @@ export default function GameNightStatsPage() {
   if (!session?.user) {
     return (
       <main className="mx-auto max-w-3xl p-6">
-        <h1 className="text-3xl font-black">Game Night Stats</h1>
+        <h1 className="text-3xl font-black">Standings & Stats</h1>
         <p className="mt-2 text-[var(--color-text-muted)]">
           Sign in before viewing connected league statistics.
         </p>
@@ -33,12 +34,12 @@ export default function GameNightStatsPage() {
       <div className="mx-auto max-w-6xl space-y-5">
         <header>
           <div className="text-xs font-black uppercase tracking-[0.14em] text-[var(--color-primary)]">
-            Game Night
+            League Results
           </div>
-          <h1 className="mt-1 text-3xl font-black">Stats & Highlights</h1>
+          <h1 className="mt-1 text-3xl font-black">Standings & Stats</h1>
           <p className="mt-1 max-w-3xl text-sm text-[var(--color-text-muted)]">
-            Keep live side contests and player scoring statistics out of the
-            setup screens while preserving the same server-authoritative totals.
+            Season standings are calculated from completed legs. Select a Game
+            Night to see that night&apos;s scoring highlights below the season table.
           </p>
         </header>
 
@@ -58,10 +59,13 @@ export default function GameNightStatsPage() {
         />
 
         {workspace.night ? (
-          <GameNightStatsPanel
-            gameNightId={workspace.night.id}
-            status={workspace.night.status}
-          />
+          <>
+            <SeasonLegStandingsPanel seasonId={workspace.night.seasonId} />
+            <GameNightStatsPanel
+              gameNightId={workspace.night.id}
+              status={workspace.night.status}
+            />
+          </>
         ) : !workspace.loading ? (
           <section className="rounded-2xl border border-dashed border-[var(--color-panel-border)] bg-[var(--color-panel)] p-6 text-sm text-[var(--color-text-muted)]">
             Select or create a Game Night from the Hub first.
