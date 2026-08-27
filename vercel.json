@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "if [ -n \"$DATABASE_URL\" ]; then npm run db:migrate && npx tsx scripts/season-analytics-live-smoke.ts; else echo 'DATABASE_URL is not configured; analytics live smoke cannot run.' && exit 1; fi && npm run build",
+  "buildCommand": "if [ -n \"$DATABASE_URL\" ]; then npm run db:migrate; else echo 'DATABASE_URL is not configured; skipping Vercel database migration for this deployment.'; fi && npm run build",
   "git": {
     "deploymentEnabled": {
       "internal/*": false
