@@ -81,6 +81,9 @@ jobs:
       - name: Exercise board-constrained league round model
         run: npm run league:round-model:test
 
+      - name: Exercise season analytics contract
+        run: npm run season-analytics:test
+
       - name: Exercise game-night lifecycle contract
         run: npm run game-night:test
 
