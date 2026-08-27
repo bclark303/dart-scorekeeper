@@ -1,0 +1,37 @@
+name: v0.5 season acceptance simulation
+
+on:
+  push:
+    branches:
+      - agent/v05-season-simulation
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  simulate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Run 22-week season simulation
+        run: npx tsx scripts/season-acceptance-simulation.ts
+
+      - name: Upload simulation reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: v05-season-simulation-report
+          path: |
+            season-simulation-report.json
+            season-simulation-report.md
