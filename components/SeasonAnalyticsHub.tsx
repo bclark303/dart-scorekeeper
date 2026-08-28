@@ -171,7 +171,7 @@ function HeadTable({ rows }: { rows: SeasonAnalyticsHeadToHead[] }) {
       <ScrollHint />
       <div className={`mt-2 ${SCROLL_REGION}`} tabIndex={0} role="region" aria-label="Head-to-head table">
         <table className="w-full min-w-[800px] text-left text-sm">
-          <caption className="sr-only">Filtered opposing-player records with nights opposed, legs and each player's leg wins.</caption>
+          <caption className="sr-only">Filtered opposing-player records with nights opposed, legs and each player’s leg wins.</caption>
           <thead className="text-xs uppercase tracking-wide text-[var(--color-text-muted)]">
             <tr>
               <th className="pb-2">Players</th>
