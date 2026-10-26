@@ -12,10 +12,13 @@ SERVER_URL="${SERVER_URL%/}"
 APP_USER="dart-display"
 INSTALL_DIR="/opt/dart-board-kiosk"
 apt-get update
-DEBIAN_FRONTEND=noninteractive apt-get install -y chromium cage curl ca-certificates
+DEBIAN_FRONTEND=noninteractive apt-get install -y chromium cage seatd curl ca-certificates
 if ! id "$APP_USER" &>/dev/null; then
   useradd --system --create-home --shell /usr/sbin/nologin "$APP_USER"
 fi
+usermod -aG video,input "$APP_USER"
+if getent group seat >/dev/null; then usermod -aG seat "$APP_USER"; fi
+systemctl enable --now seatd.service
 install -d -m 0755 "$INSTALL_DIR"
 cat > "$INSTALL_DIR/start.sh" <<'EOF'
 #!/usr/bin/env bash
@@ -45,6 +48,7 @@ User=dart-display
 WorkingDirectory=/home/dart-display
 Environment=HOME=/home/dart-display
 Environment=XDG_RUNTIME_DIR=/run/dart-board-kiosk
+Environment=LIBSEAT_BACKEND=seatd
 RuntimeDirectory=dart-board-kiosk
 RuntimeDirectoryMode=0700
 ExecStart=/opt/dart-board-kiosk/start.sh
