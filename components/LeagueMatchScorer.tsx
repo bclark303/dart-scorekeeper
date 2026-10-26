@@ -43,7 +43,7 @@ export function LeagueMatchScorer({
   const { data: session, isPending: sessionPending } = authClient.useSession();
   const deviceMode = authMode === "device";
   const accessReady = deviceMode ? Boolean(deviceKey) : Boolean(session?.user);
-  const [inputMode, setInputMode] = useState<CentralInputMode>("graphical");
+  const [inputMode, setInputMode] = useState<CentralInputMode>(deviceMode ? "total" : "graphical");
   const [scoreInput, setScoreInput] = useState("");
   const [dartsThrown, setDartsThrown] = useState<1 | 2 | 3>(3);
   const [pendingCheckout, setPendingCheckout] = useState<PendingCheckout | null>(null);
@@ -191,6 +191,17 @@ export function LeagueMatchScorer({
       darts,
     );
     return Boolean(updated);
+  }
+
+  function pressKeypad(value: string) {
+    if (working || pendingCheckout) return;
+    setScoreInput((previous) => {
+      if (value === "Clear") return "";
+      if (value === "Backspace") return previous.slice(0, -1);
+      if (previous.length >= 3) return previous;
+      const next = previous + value;
+      return Number(next) <= 180 ? next : previous;
+    });
   }
 
   async function submitScore(event: FormEvent<HTMLFormElement>) {
@@ -506,29 +517,61 @@ export function LeagueMatchScorer({
             </div>
           ) : (
             <form onSubmit={submitScore} className="mt-5">
+              {deviceMode && (
+                <p className="mb-3 text-sm font-semibold text-[var(--color-text-muted)]">
+                  Enter the total scored this turn. Use 1–3 darts; the current scorer and remaining score are shown above.
+                </p>
+              )}
               <div className="grid gap-3 sm:grid-cols-[1fr_180px_auto]">
                 <input
-                  inputMode="numeric"
+                  inputMode={deviceMode ? "none" : "numeric"}
                   pattern="[0-9]*"
+                  readOnly={deviceMode}
+                  aria-label="Turn score"
                   value={scoreInput}
                   onChange={(event) => setScoreInput(event.target.value)}
                   placeholder="Turn score"
-                  className="rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] px-4 py-3 text-2xl font-bold"
+                  className={`rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] px-4 py-3 font-bold tabular-nums ${deviceMode ? "text-center text-5xl" : "text-2xl"}`}
                 />
                 <select value={dartsThrown} onChange={(event) => setDartsThrown(Number(event.target.value) as 1 | 2 | 3)} className="rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] px-3 py-3">
                   <option value={3}>3 darts</option>
                   <option value={2}>2 darts</option>
                   <option value={1}>1 dart</option>
                 </select>
-                <button disabled={working} className="rounded-xl bg-[var(--color-primary)] px-6 py-3 font-bold text-white disabled:opacity-50">Submit</button>
+                {!deviceMode && <button disabled={working || Boolean(pendingCheckout)} className="rounded-xl bg-[var(--color-primary)] px-6 py-3 font-bold text-white disabled:opacity-50">Submit</button>}
               </div>
+              {deviceMode && (
+                <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3" role="group" aria-label="Score keypad">
+                  {["1", "2", "3", "4", "5", "6", "7", "8", "9", "Clear", "0", "Backspace"].map((digit) => (
+                    <button
+                      key={digit}
+                      type="button"
+                      disabled={working || Boolean(pendingCheckout)}
+                      onClick={() => pressKeypad(digit)}
+                      aria-label={digit === "Backspace" ? "Delete last digit" : digit}
+                      className="min-h-16 rounded-xl border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-3 text-3xl font-black active:bg-[var(--color-primary)] disabled:opacity-50 sm:min-h-20"
+                    >
+                      {digit === "Backspace" ? "⌫" : digit === "Clear" ? "C" : digit}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="mt-3 flex flex-wrap gap-2">
                 {quickScores.map((score) => (
-                  <button key={score} type="button" onClick={() => setScoreInput(String(score))} className="rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] px-3 py-2 text-sm font-bold">
+                  <button key={score} type="button" disabled={working || Boolean(pendingCheckout)} onClick={() => setScoreInput(String(score))} className="rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] px-3 py-2 text-sm font-bold">
                     {score}
                   </button>
                 ))}
               </div>
+              {deviceMode && (
+                <button
+                  type="submit"
+                  disabled={working || Boolean(pendingCheckout) || !scoreInput}
+                  className="mt-4 min-h-16 w-full rounded-xl bg-[var(--color-primary)] px-6 py-3 text-2xl font-black text-white disabled:opacity-50"
+                >
+                  Enter Score
+                </button>
+              )}
             </form>
           )}
 
