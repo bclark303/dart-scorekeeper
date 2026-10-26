@@ -73,8 +73,9 @@ export async function claimDisplayEnrollment(input: { pin: string; userId: strin
     const [latest] = await tx.select({ value: appMetadata.value }).from(appMetadata).where(eq(appMetadata.key, pendingKey)).limit(1);
     if (!latest || latest.value !== JSON.stringify(entry)) throw new Error("Pairing was already claimed.");
     await tx.insert(appMetadata).values({ key: registrationKey(id), value: JSON.stringify(device), updatedAt: now });
-    await tx.update(appMetadata).set({ value: JSON.stringify({ ...entry, credential, deviceId: id }), updatedAt: now })
+    const claimed = await tx.update(appMetadata).set({ value: JSON.stringify({ ...entry, credential, deviceId: id }), updatedAt: now })
       .where(and(eq(appMetadata.key, pendingKey), eq(appMetadata.value, latest.value)));
+    if (claimed.rowsAffected !== 1) throw new Error("Pairing was already claimed.");
   });
   return { id, name, physicalBoardId: board.id };
 }
