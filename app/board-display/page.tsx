@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { authClient } from "@/lib/auth/client";
@@ -22,7 +22,7 @@ function statusText(status: string) {
   return status === "active" ? "LIVE MATCH" : status === "completed" ? "MATCH COMPLETE" : "UP NEXT";
 }
 
-export default function BoardDisplayPage() {
+function BoardDisplayContent() {
   const params = useSearchParams();
   const requestedBoard = Number(params.get("board") ?? "1");
   const boardNumber = Number.isInteger(requestedBoard) && requestedBoard > 0 ? requestedBoard : 1;
@@ -166,4 +166,8 @@ export default function BoardDisplayPage() {
       </div>
     </main>
   );
+}
+
+export default function BoardDisplayPage() {
+  return <Suspense fallback={<main className="min-h-screen bg-slate-950 p-8 text-white">Opening monitor…</main>}><BoardDisplayContent /></Suspense>;
 }
