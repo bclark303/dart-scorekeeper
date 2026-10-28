@@ -18,6 +18,6 @@ export async function POST(request:Request){
   if(!input.venueId)return json({error:"Venue is required."},400);
   if(input.action==="release"&&input.slotId){try{return json(await releaseVenueBoardAllocation({venueId:input.venueId,slotId:input.slotId,userId:session.user.id}));}catch(error){return json({error:error instanceof Error?error.message:"Cannot release board."},409);}}
   if(input.action!=="abandon"||!input.matchId)return json({error:"Invalid request."},400);
-  try{return json(await abandonVenueMatch({...input,userId:session.user.id}));}
+  try{return json(await abandonVenueMatch({venueId:input.venueId,matchId:input.matchId!,userId:session.user.id}));}
   catch(error){return json({error:error instanceof Error?error.message:"Cannot end match."},409);}
 }
