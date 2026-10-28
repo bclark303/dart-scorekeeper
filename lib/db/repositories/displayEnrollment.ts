@@ -85,7 +85,8 @@ export async function displayConnection(credential: string) {
   if (!match) throw new Error("Invalid display credential.");
   const device = await load<Registration>(registrationKey(match[1]));
   if (!device || device.status !== "active" || !equal(hash(credential), device.credentialHash)) throw new Error("Display not registered.");
-  if (!device.physicalBoardId) return { display: { id: device.id, name: device.name, boardNumber: null, boardName: null }, assignment: null, match: null };\n  const board = await getDatabase().select().from(physicalBoards).where(eq(physicalBoards.id, device.physicalBoardId)).limit(1);
+  if (!device.physicalBoardId) return { display: { id: device.id, name: device.name, boardNumber: null, boardName: null }, assignment: null, match: null };
+  const board = await getDatabase().select().from(physicalBoards).where(eq(physicalBoards.id, device.physicalBoardId)).limit(1);
   if (!board[0] || board[0].venueId !== device.venueId) throw new Error("Display board is unavailable.");
   // Existing assignment resolver accepts a board-bound device summary; this path performs reads only.
   const assignment = await getBoardDeviceAssignment({
