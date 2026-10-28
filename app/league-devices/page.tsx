@@ -12,6 +12,8 @@ import type {
   VenueSummary,
 } from "@/lib/league/boardDeviceContracts";
 
+type ManagedDisplay = { id: string; name: string; venueId: string; physicalBoardId: string | null; status: "active" | "disabled"; updatedAt: number };
+
 type Pairing = {
   deviceId: string;
   deviceName: string;
@@ -58,6 +60,11 @@ export default function VenueHardwarePage() {
   const [availableVenues, setAvailableVenues] = useState<VenueSummary[]>([]);
   const [boards, setBoards] = useState<PhysicalBoardSummary[]>([]);
   const [devices, setDevices] = useState<BoardDeviceSummary[]>([]);
+  const [displays,setDisplays]=useState<ManagedDisplay[]>([]);
+  const [displayPin,setDisplayPin]=useState("");
+  const [displayName,setDisplayName]=useState("OptiPlex Display");
+  const [pairDisplayBoard,setPairDisplayBoard]=useState<PhysicalBoardSummary|null>(null);
+  const [displayBusy,setDisplayBusy]=useState(false);
   const [deviceNames, setDeviceNames] = useState<Record<string, string>>({});
   const [boardNames, setBoardNames] = useState<Record<string, string>>({});
   const [newVenueName, setNewVenueName] = useState("");
@@ -144,6 +151,8 @@ export default function VenueHardwarePage() {
       setVenueNameDraft(nextVenue?.name ?? "");
       setBoards(nextBoards);
       setDevices(nextDevices);
+      const displayResponse=nextVenue ? await fetch(`/api/display-manager/devices?venueId=${encodeURIComponent(nextVenue.id)}`,{cache:"no-store"}) : null;
+      setDisplays(displayResponse?.ok ? ((await displayResponse.json()) as {displays:ManagedDisplay[]}).displays : []);
       setDeviceNames(Object.fromEntries(nextDevices.map((device) => [device.id, device.name])));
       setBoardNames(Object.fromEntries(nextBoards.map((board) => [board.id, board.name])));
       setNewBoardNumber(Math.max(0, ...nextBoards.map((board) => board.boardNumber)) + 1);
@@ -386,6 +395,38 @@ export default function VenueHardwarePage() {
     if (next) await assignDevice(next, board.id);
   }
 
+  async function updateDisplay(id:string,physicalBoardId:string|null) {
+    const response=await fetch("/api/display-manager/devices",{method:"PATCH",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({id,venueId,physicalBoardId})});
+    if(!response.ok)throw new Error("Could not update display.");
+  }
+  async function setBoardDisplay(board:PhysicalBoardSummary,id:string) {
+    const current=displays.find(d=>d.physicalBoardId===board.id);
+    const next=displays.find(d=>d.id===id);
+    if(next?.physicalBoardId && next.physicalBoardId!==board.id &&
+      !window.confirm(`Move ${next.name} from its current board to ${board.name}?`))return;
+    setDisplayBusy(true);clearNotices();
+    try {
+      if(current && current.id!==id)await updateDisplay(current.id,null);
+      if(id)await updateDisplay(id,board.id);
+      await loadHardware(leagueId,venueId);
+      setStatusMessage("Display assignment updated.");
+    }catch(error){setErrorMessage(error instanceof Error?error.message:"Display update failed.");await loadHardware(leagueId,venueId);}
+    finally{setDisplayBusy(false);}
+  }
+  async function claimDisplay(event:FormEvent<HTMLFormElement>) {
+    event.preventDefault();if(!pairDisplayBoard)return;
+    setDisplayBusy(true);clearNotices();
+    try {
+      const response=await fetch("/api/display-enrollment/claim",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({pin:displayPin,venueId,physicalBoardId:pairDisplayBoard.id,name:displayName})});
+      const result=await response.json() as {error?:string};
+      if(!response.ok)throw new Error(result.error??"Pairing failed.");
+      setPairDisplayBoard(null);setDisplayPin("");await loadHardware(leagueId,venueId);
+      setStatusMessage("Display paired and assigned.");
+    }catch(error){setErrorMessage(error instanceof Error?error.message:"Display pairing failed.");}
+    finally{setDisplayBusy(false);}
+  }
   async function toggleDevice(device: BoardDeviceSummary) {
     if (venueArchived) return;
     const snapshot = devices;
@@ -740,6 +781,21 @@ export default function VenueHardwarePage() {
                         ))}
                       </select>
                     </label>
+                    <button type="button" disabled={venueArchived} onClick={() => {
+                      setNewDeviceBoardId(board.id);
+                      document.getElementById("register-scorer")?.scrollIntoView({behavior:"smooth",block:"center"});
+                    }} className="mt-2 rounded-lg border border-[var(--color-panel-border)] px-3 py-2 text-sm font-bold">+ Pair new scorer</button>
+                    <label className="mt-4 block">
+                      <span className="mb-1 block text-xs font-bold">Display for this board</span>
+                      <select value={displays.find(d=>d.physicalBoardId===board.id)?.id??""}
+                        disabled={displayBusy||venueArchived} onChange={e=>void setBoardDisplay(board,e.target.value)}
+                        className="w-full rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] px-3 py-2">
+                        <option value="">No display assigned</option>
+                        {displays.map(d=><option key={d.id} value={d.id}>{d.name}{d.physicalBoardId && d.physicalBoardId!==board.id?" — move from another board":""}{d.status==="disabled"?" — disabled":""}</option>)}
+                      </select>
+                    </label>
+                    <button type="button" disabled={venueArchived} onClick={()=>setPairDisplayBoard(board)}
+                      className="mt-2 rounded-lg border border-[var(--color-panel-border)] px-3 py-2 text-sm font-bold">+ Pair new display</button>
                     {scorer && (
                       <div className="mt-2 text-xs text-[var(--color-text-muted)]">
                         Scorer:{" "}
@@ -822,7 +878,7 @@ export default function VenueHardwarePage() {
               {devices.length === 0 && <p className="text-sm text-[var(--color-text-muted)]">No scoring devices registered yet.</p>}
             </div>
 
-            <form onSubmit={registerDevice} className="mt-4 grid gap-2 rounded-xl border border-dashed border-[var(--color-panel-border)] p-4 sm:grid-cols-[1fr_220px_auto]">
+            <form id="register-scorer" onSubmit={registerDevice} className="mt-4 grid gap-2 rounded-xl border border-dashed border-[var(--color-panel-border)] p-4 sm:grid-cols-[1fr_220px_auto]">
               <input disabled={venueArchived} required maxLength={80} value={newDeviceName} onChange={(event) => setNewDeviceName(event.target.value)} placeholder="Spare Scorer" className="rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-3 disabled:opacity-60" />
               <select disabled={venueArchived} value={newDeviceBoardId} onChange={(event) => setNewDeviceBoardId(event.target.value)} className="rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-3 disabled:opacity-60">
                 <option value="">Register as spare</option>
@@ -833,6 +889,25 @@ export default function VenueHardwarePage() {
           </section>
         </>
       )}
+      {pairDisplayBoard && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+        <form onSubmit={claimDisplay} className="w-full max-w-md rounded-2xl border border-[var(--color-panel-border)] bg-[var(--color-panel)] p-6">
+          <h2 className="text-2xl font-black">Pair display — {pairDisplayBoard.name}</h2>
+          <p className="mt-2 text-sm text-[var(--color-text-muted)]">Enter the PIN shown on the Linux display. This venue and board are selected automatically.</p>
+          <label className="mt-4 block text-sm font-bold">Six-digit PIN
+            <input required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={displayPin}
+              onChange={e=>setDisplayPin(e.target.value.replace(/\\D/g,"").slice(0,6))}
+              className="mt-2 w-full rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-3 text-center text-3xl"/>
+          </label>
+          <label className="mt-3 block text-sm font-bold">Display name
+            <input required maxLength={80} value={displayName} onChange={e=>setDisplayName(e.target.value)}
+              className="mt-2 w-full rounded-lg border border-[var(--color-panel-border)] bg-[var(--color-panel-soft)] p-3"/>
+          </label>
+          <div className="mt-5 flex gap-2">
+            <button disabled={displayBusy||displayPin.length!==6} className="rounded-lg bg-[var(--color-primary)] px-4 py-3 font-bold text-white disabled:opacity-50">Pair display</button>
+            <button type="button" onClick={()=>setPairDisplayBoard(null)} className="rounded-lg border border-[var(--color-panel-border)] px-4 py-3">Cancel</button>
+          </div>
+        </form>
+      </div>}
     </main>
   );
 }
