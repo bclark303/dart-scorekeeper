@@ -51,3 +51,30 @@ export async function abandonVenueMatch(input:{venueId:string;userId:string;matc
     return {cancelled:true,gameNightId:match.gameNightId,boardReleased:true};
   });
 }
+
+export async function listActiveBoardAllocations(input:{venueId:string;userId:string}) {
+  await requireVenueAdminForUser(input.venueId,input.userId);
+  return getDatabase().select({
+    slotId:gameNightBoards.id,boardName:gameNightBoards.name,physicalBoardId:gameNightBoards.physicalBoardId,
+    gameNightId:gameNights.id,nightName:gameNights.name,nightStatus:gameNights.status,
+  }).from(gameNightBoards).innerJoin(gameNights,eq(gameNightBoards.gameNightId,gameNights.id))
+   .where(and(eq(gameNights.venueId,input.venueId),eq(gameNights.status,"active")));
+}
+export async function releaseVenueBoardAllocation(input:{venueId:string;userId:string;slotId:string}) {
+  await requireVenueAdminForUser(input.venueId,input.userId);
+  return getDatabase().transaction(async tx=>{
+    const [row]=await tx.select({
+      id:gameNightBoards.id,physicalBoardId:gameNightBoards.physicalBoardId,venueId:gameNights.venueId,
+      nightStatus:gameNights.status,
+    }).from(gameNightBoards).innerJoin(gameNights,eq(gameNightBoards.gameNightId,gameNights.id))
+      .where(eq(gameNightBoards.id,input.slotId)).limit(1);
+    if(!row || row.venueId!==input.venueId)throw new Error("Board allocation not found at this venue.");
+    if(!row.physicalBoardId)return {released:true};
+    if(row.nightStatus!=="active")throw new Error("Only allocations from active Game Nights can be released here.");
+    const active=await tx.select({id:leagueMatchSessions.id}).from(leagueMatchSessions)
+      .where(and(eq(leagueMatchSessions.boardId,row.id),eq(leagueMatchSessions.status,"active"))).limit(1);
+    if(active.length)throw new Error("This board has an active match. End that match first.");
+    await tx.update(gameNightBoards).set({physicalBoardId:null}).where(eq(gameNightBoards.id,row.id));
+    return {released:true};
+  });
+}
