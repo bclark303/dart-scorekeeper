@@ -12,7 +12,7 @@ import type {
   VenueSummary,
 } from "@/lib/league/boardDeviceContracts";
 
-type ManagedDisplay = { id: string; name: string; venueId: string; physicalBoardId: string | null; status: "active" | "disabled"; updatedAt: number };
+type ActiveMatch = { id:string; boardName:string; physicalBoardId:string|null; gameNightId:string; nightName:string; teamA:string; teamB:string; startedAt:number|null; updatedAt:number };\n\ntype ManagedDisplay = { id: string; name: string; venueId: string; physicalBoardId: string | null; status: "active" | "disabled"; updatedAt: number };
 
 type Pairing = {
   deviceId: string;
@@ -60,7 +60,7 @@ export default function VenueHardwarePage() {
   const [availableVenues, setAvailableVenues] = useState<VenueSummary[]>([]);
   const [boards, setBoards] = useState<PhysicalBoardSummary[]>([]);
   const [devices, setDevices] = useState<BoardDeviceSummary[]>([]);
-  const [displays,setDisplays]=useState<ManagedDisplay[]>([]);
+  const [displays,setDisplays]=useState<ManagedDisplay[]>([]);\n  const [activeMatches,setActiveMatches]=useState<ActiveMatch[]>([]);\n  const [endingMatch,setEndingMatch]=useState("");
   const [displayPin,setDisplayPin]=useState("");
   const [displayName,setDisplayName]=useState("OptiPlex Display");
   const [pairDisplayBoard,setPairDisplayBoard]=useState<PhysicalBoardSummary|null>(null);
@@ -152,7 +152,7 @@ export default function VenueHardwarePage() {
       setBoards(nextBoards);
       setDevices(nextDevices);
       const displayResponse=nextVenue ? await fetch(`/api/display-manager/devices?venueId=${encodeURIComponent(nextVenue.id)}`,{cache:"no-store"}) : null;
-      setDisplays(displayResponse?.ok ? ((await displayResponse.json()) as {displays:ManagedDisplay[]}).displays : []);
+      setDisplays(displayResponse?.ok ? ((await displayResponse.json()) as {displays:ManagedDisplay[]}).displays : []);\n      const liveResponse=nextVenue ? await fetch(`/api/leagues/venue-active-matches?venueId=${encodeURIComponent(nextVenue.id)}`,{cache:"no-store"}) : null;\n      setActiveMatches(liveResponse?.ok ? ((await liveResponse.json()) as {matches:ActiveMatch[]}).matches : []);
       setDeviceNames(Object.fromEntries(nextDevices.map((device) => [device.id, device.name])));
       setBoardNames(Object.fromEntries(nextBoards.map((board) => [board.id, board.name])));
       setNewBoardNumber(Math.max(0, ...nextBoards.map((board) => board.boardNumber)) + 1);
@@ -427,6 +427,20 @@ export default function VenueHardwarePage() {
     }catch(error){setErrorMessage(error instanceof Error?error.message:"Display pairing failed.");}
     finally{setDisplayBusy(false);}
   }
+  async function endStaleMatch(match:ActiveMatch) {
+    if(!window.confirm(`Abandon ${match.teamA} vs ${match.teamB} on ${match.boardName}? No winner will be recorded. Scores stay in history and this board will be released from the Game Night.`))return;
+    setEndingMatch(match.id);clearNotices();
+    try{
+      const response=await fetch("/api/leagues/venue-active-matches",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({action:"abandon",venueId,matchId:match.id})});
+      const result=await response.json() as {error?:string};
+      if(!response.ok)throw new Error(result.error??"Could not end match.");
+      await loadHardware(leagueId,venueId);
+      setStatusMessage("Match abandoned and physical board released. Its Game Night board slot must be reassigned before future fixtures use it.");
+    }catch(error){setErrorMessage(error instanceof Error?error.message:"Could not end match.");}
+    finally{setEndingMatch("");}
+  }
+
   async function toggleDevice(device: BoardDeviceSummary) {
     if (venueArchived) return;
     const snapshot = devices;
@@ -720,6 +734,24 @@ export default function VenueHardwarePage() {
           </div>
         )}
       </section>
+
+      {selectedVenue && <section className="mb-6 rounded-2xl border border-[var(--color-panel-border)] p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-xl font-black">Active board matches</h2>
+          <span className="text-sm text-[var(--color-text-muted)]">{activeMatches.length} active · {selectedVenue.name}</span>
+        </div>
+        <p className="mt-2 text-sm text-[var(--color-text-muted)]">Emergency recovery for abandoned matches. Ending a match does not award a winner or delete recorded turns. It also detaches the affected Game Night slot from its physical board.</p>
+        <div className="mt-3 space-y-2">
+          {activeMatches.map(match=><div key={match.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--color-panel-border)] p-3">
+            <div><div className="font-bold">{match.boardName} · {match.teamA} vs {match.teamB}</div>
+              <div className="text-xs text-[var(--color-text-muted)]">{match.nightName} · Last update {new Date(match.updatedAt).toLocaleString()}</div>
+            </div>
+            <button type="button" disabled={Boolean(endingMatch)} onClick={()=>void endStaleMatch(match)}
+              className="rounded-lg border border-red-500/50 px-3 py-2 text-sm font-bold text-red-300 disabled:opacity-50">{endingMatch===match.id?"Ending…":"End & release board"}</button>
+          </div>)}
+          {activeMatches.length===0 && <p className="text-sm text-[var(--color-text-muted)]">No active match sessions at this venue.</p>}
+        </div>
+      </section>}
 
       {!selectedVenue && (
         <section className="rounded-2xl border border-dashed border-[var(--color-panel-border)] p-6 text-center text-sm text-[var(--color-text-muted)]">
