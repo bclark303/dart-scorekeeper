@@ -12,6 +12,7 @@ import type {
   VenueSummary,
 } from "@/lib/league/boardDeviceContracts";
 
+type ActiveAllocation = {slotId:string;boardName:string;physicalBoardId:string|null;gameNightId:string;nightName:string;nightStatus:string};
 type ActiveMatch = { id:string; boardName:string; physicalBoardId:string|null; gameNightId:string; nightName:string; teamA:string; teamB:string; startedAt:number|null; updatedAt:number };
 
 type ManagedDisplay = { id: string; name: string; venueId: string; physicalBoardId: string | null; status: "active" | "disabled"; updatedAt: number };
@@ -64,6 +65,7 @@ export default function VenueHardwarePage() {
   const [devices, setDevices] = useState<BoardDeviceSummary[]>([]);
   const [displays,setDisplays]=useState<ManagedDisplay[]>([]);
   const [activeMatches,setActiveMatches]=useState<ActiveMatch[]>([]);
+  const [activeAllocations,setActiveAllocations]=useState<ActiveAllocation[]>([]);
   const [endingMatch,setEndingMatch]=useState("");
   const [displayPin,setDisplayPin]=useState("");
   const [displayName,setDisplayName]=useState("OptiPlex Display");
@@ -158,7 +160,9 @@ export default function VenueHardwarePage() {
       const displayResponse=nextVenue ? await fetch(`/api/display-manager/devices?venueId=${encodeURIComponent(nextVenue.id)}`,{cache:"no-store"}) : null;
       setDisplays(displayResponse?.ok ? ((await displayResponse.json()) as {displays:ManagedDisplay[]}).displays : []);
       const liveResponse=nextVenue ? await fetch(`/api/leagues/venue-active-matches?venueId=${encodeURIComponent(nextVenue.id)}`,{cache:"no-store"}) : null;
-      setActiveMatches(liveResponse?.ok ? ((await liveResponse.json()) as {matches:ActiveMatch[]}).matches : []);
+      const liveData=liveResponse?.ok ? (await liveResponse.json()) as {matches:ActiveMatch[];allocations:ActiveAllocation[]} : null;
+      setActiveMatches(liveData?.matches??[]);
+      setActiveAllocations(liveData?.allocations??[]);
       setDeviceNames(Object.fromEntries(nextDevices.map((device) => [device.id, device.name])));
       setBoardNames(Object.fromEntries(nextBoards.map((board) => [board.id, board.name])));
       setNewBoardNumber(Math.max(0, ...nextBoards.map((board) => board.boardNumber)) + 1);
@@ -432,6 +436,19 @@ export default function VenueHardwarePage() {
       setStatusMessage("Display paired and assigned.");
     }catch(error){setErrorMessage(error instanceof Error?error.message:"Display pairing failed.");}
     finally{setDisplayBusy(false);}
+  }
+  async function releaseAllocation(item:ActiveAllocation) {
+    if(!window.confirm(`Release ${item.boardName} from ${item.nightName}? The old Game Night stays active but loses this board assignment. No results are created or deleted.`))return;
+    setEndingMatch(item.slotId);clearNotices();
+    try{
+      const response=await fetch("/api/leagues/venue-active-matches",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({action:"release",venueId,slotId:item.slotId})});
+      const result=await response.json() as {error?:string};
+      if(!response.ok)throw new Error(result.error??"Could not release allocation.");
+      await loadHardware(leagueId,venueId);
+      setStatusMessage(`${item.boardName} released from ${item.nightName}. It can now be assigned to another Game Night.`);
+    }catch(error){setErrorMessage(error instanceof Error?error.message:"Could not release board.");}
+    finally{setEndingMatch("");}
   }
   async function endStaleMatch(match:ActiveMatch) {
     if(!window.confirm(`Abandon ${match.teamA} vs ${match.teamB} on ${match.boardName}? No winner will be recorded. Scores stay in history and this board will be released from the Game Night.`))return;
@@ -756,6 +773,16 @@ export default function VenueHardwarePage() {
               className="rounded-lg border border-red-500/50 px-3 py-2 text-sm font-bold text-red-300 disabled:opacity-50">{endingMatch===match.id?"Ending…":"End & release board"}</button>
           </div>)}
           {activeMatches.length===0 && <p className="text-sm text-[var(--color-text-muted)]">No active match sessions at this venue.</p>}
+          <h3 className="pt-3 text-lg font-black">Boards reserved by active Game Nights</h3>
+          <p className="text-sm text-[var(--color-text-muted)]">An old Game Night can reserve a board even if no match is active. Release an unused assignment to unblock other leagues.</p>
+          {activeAllocations.filter(item=>item.physicalBoardId).map(item=><div key={item.slotId} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--color-panel-border)] p-3">
+            <div><div className="font-bold">{item.boardName}</div><div className="text-xs text-[var(--color-text-muted)]">Reserved by {item.nightName}</div></div>
+            <button type="button" disabled={Boolean(endingMatch)||activeMatches.some(match=>match.physicalBoardId===item.physicalBoardId)}
+              onClick={()=>void releaseAllocation(item)} className="rounded-lg border border-amber-500/50 px-3 py-2 text-sm font-bold disabled:opacity-50">
+              {activeMatches.some(match=>match.physicalBoardId===item.physicalBoardId)?"End active match first":endingMatch===item.slotId?"Releasing…":"Release board"}
+            </button>
+          </div>)}
+
         </div>
       </section>}
 
