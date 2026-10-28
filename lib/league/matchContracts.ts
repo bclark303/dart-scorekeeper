@@ -1,4 +1,4 @@
-export type LeagueMatchStatus = "scheduled" | "active" | "completed";
+export type LeagueMatchStatus = "scheduled" | "active" | "completed" | "cancelled";
 export type LeagueMatchFinishRule = "straight" | "double";
 
 export type LeagueMatchMemberSummary = {

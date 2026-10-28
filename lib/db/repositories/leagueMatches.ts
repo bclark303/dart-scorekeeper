@@ -68,7 +68,8 @@ function asStatus(value: string): LeagueMatchStatus {
   if (
     value === "scheduled" ||
     value === "active" ||
-    value === "completed"
+    value === "completed" ||
+    value === "cancelled"
   ) {
     return value;
   }
@@ -347,7 +348,7 @@ async function buildLeagueMatchSummary(
   }
 
   const storedStatus = asStatus(context.session.status);
-  const status: LeagueMatchStatus = state.isComplete
+  const status: LeagueMatchStatus = storedStatus === "cancelled" ? "cancelled" : state.isComplete
     ? "completed"
     : storedStatus === "scheduled"
       ? "scheduled"
@@ -394,9 +395,9 @@ async function buildLeagueMatchSummary(
       darts: dartsByTurn.get(turn.id) ?? [],
       createdAt: turn.createdAt,
     })),
-    canUndo: activeTurns.length > 0,
+    canUndo: storedStatus !== "cancelled" && activeTurns.length > 0,
     startedAt: context.session.startedAt,
-    completedAt: state.isComplete ? context.session.completedAt : null,
+    completedAt: state.isComplete || storedStatus === "cancelled" ? context.session.completedAt : null,
     updatedAt: context.session.updatedAt,
   };
 }
@@ -426,7 +427,7 @@ export async function startLeagueMatchAfterAuthorization(
       "Start the game night before starting a board match.",
     );
   }
-  if (context.session.status === "completed") {
+  if (context.session.status === "completed" || context.session.status === "cancelled") {
     throw new LeagueMatchStateError(
       "This board match is already complete.",
     );
