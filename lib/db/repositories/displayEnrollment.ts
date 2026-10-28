@@ -15,7 +15,7 @@ const equal = (a: string, b: string) => {
   return aa.length === bb.length && timingSafeEqual(aa, bb);
 };
 type Enrollment = { pin: string; verifierHash: string; expiresAt: number; credential?: string; deviceId?: string };
-type Registration = { id: string; venueId: string; physicalBoardId: string; name: string; credentialHash: string; status: "active" | "disabled"; updatedAt: number };
+type Registration = { id: string; venueId: string; physicalBoardId: string | null; name: string; credentialHash: string; status: "active" | "disabled"; updatedAt: number };
 const registrationKey = (id: string) => `display-device:${id}`;
 
 async function load<T>(name: string): Promise<T | null> {
@@ -85,7 +85,7 @@ export async function displayConnection(credential: string) {
   if (!match) throw new Error("Invalid display credential.");
   const device = await load<Registration>(registrationKey(match[1]));
   if (!device || device.status !== "active" || !equal(hash(credential), device.credentialHash)) throw new Error("Display not registered.");
-  const board = await getDatabase().select().from(physicalBoards).where(eq(physicalBoards.id, device.physicalBoardId)).limit(1);
+  if (!device.physicalBoardId) return { display: { id: device.id, name: device.name, boardNumber: null, boardName: null }, assignment: null, match: null };\n  const board = await getDatabase().select().from(physicalBoards).where(eq(physicalBoards.id, device.physicalBoardId)).limit(1);
   if (!board[0] || board[0].venueId !== device.venueId) throw new Error("Display board is unavailable.");
   // Existing assignment resolver accepts a board-bound device summary; this path performs reads only.
   const assignment = await getBoardDeviceAssignment({
@@ -96,4 +96,46 @@ export async function displayConnection(credential: string) {
   const currentMatch = assignment?.matchSessionId ? await getLeagueMatchAfterAuthorization(assignment.matchSessionId) : null;
   return { display: { id: device.id, name: device.name, boardNumber: board[0].boardNumber, boardName: board[0].name },
     assignment, match: currentMatch };
+}
+
+export type ManagedDisplay = {
+  id: string; name: string; venueId: string; physicalBoardId: string | null;
+  status: "active" | "disabled"; updatedAt: number;
+};
+
+export async function listDisplaysForVenue(input: { venueId: string; userId: string }) {
+  await requireVenueAdminForUser(input.venueId, input.userId);
+  const rows = await getDatabase().select({ key: appMetadata.key, value: appMetadata.value }).from(appMetadata);
+  return rows.flatMap((row): ManagedDisplay[] => {
+    if (!row.key.startsWith("display-device:")) return [];
+    try {
+      const device = JSON.parse(row.value) as Registration;
+      return device.venueId === input.venueId ? [{
+        id: device.id, name: device.name, venueId: device.venueId,
+        physicalBoardId: device.physicalBoardId, status: device.status, updatedAt: device.updatedAt,
+      }] : [];
+    } catch { return []; }
+  }).sort((a,b)=>a.name.localeCompare(b.name));
+}
+
+export async function updateDisplayForUser(input: {
+  id: string; userId: string; venueId: string;
+  physicalBoardId?: string | null; status?: "active" | "disabled";
+}) {
+  await requireVenueAdminForUser(input.venueId, input.userId);
+  const current = await load<Registration>(registrationKey(input.id));
+  if (!current || current.venueId !== input.venueId) throw new Error("Display not found at this venue.");
+  let physicalBoardId = current.physicalBoardId;
+  if (input.physicalBoardId !== undefined) {
+    physicalBoardId = input.physicalBoardId;
+    if (physicalBoardId !== null) {
+      const [board] = await getDatabase().select({ id: physicalBoards.id }).from(physicalBoards)
+        .where(and(eq(physicalBoards.id, physicalBoardId), eq(physicalBoards.venueId, input.venueId))).limit(1);
+      if (!board) throw new Error("Board does not belong to this venue.");
+    }
+  }
+  const updated = { ...current, physicalBoardId, status: input.status ?? current.status, updatedAt: Date.now() };
+  await save(registrationKey(input.id), updated);
+  return { id: updated.id, name: updated.name, venueId: updated.venueId,
+    physicalBoardId: updated.physicalBoardId, status: updated.status, updatedAt: updated.updatedAt };
 }
