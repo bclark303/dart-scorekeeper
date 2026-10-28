@@ -738,7 +738,7 @@ export default function VenueHardwarePage() {
       {selectedVenue && <section className="mb-6 rounded-2xl border border-[var(--color-panel-border)] p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-xl font-black">Active board matches</h2>
-          <span className="text-sm text-[var(--color-text-muted)]">{activeMatches.length} active · {selectedVenue.name}</span>
+          <div className="flex items-center gap-3"><span className="text-sm text-[var(--color-text-muted)]">{activeMatches.length} active · {selectedVenue.name}</span><button type="button" onClick={()=>void loadHardware(leagueId,venueId).catch(error=>setErrorMessage(error instanceof Error?error.message:"Refresh failed."))} className="rounded-lg border border-[var(--color-panel-border)] px-3 py-2 text-sm font-bold">Refresh</button></div>
         </div>
         <p className="mt-2 text-sm text-[var(--color-text-muted)]">Emergency recovery for abandoned matches. Ending a match does not award a winner or delete recorded turns. It also detaches the affected Game Night slot from its physical board.</p>
         <div className="mt-3 space-y-2">
