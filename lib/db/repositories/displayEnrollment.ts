@@ -135,8 +135,25 @@ export async function updateDisplayForUser(input: {
       if (!board) throw new Error("Board does not belong to this venue.");
     }
   }
-  const updated = { ...current, physicalBoardId, status: input.status ?? current.status, updatedAt: Date.now() };
-  await save(registrationKey(input.id), updated);
+  const now=Date.now();
+  const updated = { ...current, physicalBoardId, status: input.status ?? current.status, updatedAt: now };
+  await getDatabase().transaction(async (tx) => {
+    if (physicalBoardId) {
+      const rows=await tx.select({key:appMetadata.key,value:appMetadata.value}).from(appMetadata);
+      for(const row of rows) {
+        if(!row.key.startsWith("display-device:") || row.key===registrationKey(input.id))continue;
+        let other:Registration;
+        try{other=JSON.parse(row.value) as Registration;}catch{continue;}
+        if(other.venueId===input.venueId && other.physicalBoardId===physicalBoardId) {
+          await tx.update(appMetadata).set({
+            value:JSON.stringify({...other,physicalBoardId:null,updatedAt:now}),updatedAt:now
+          }).where(eq(appMetadata.key,row.key));
+        }
+      }
+    }
+    await tx.update(appMetadata).set({value:JSON.stringify(updated),updatedAt:now})
+      .where(eq(appMetadata.key,registrationKey(input.id)));
+  });
   return { id: updated.id, name: updated.name, venueId: updated.venueId,
     physicalBoardId: updated.physicalBoardId, status: updated.status, updatedAt: updated.updatedAt };
 }
