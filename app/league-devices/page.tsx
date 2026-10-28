@@ -12,7 +12,9 @@ import type {
   VenueSummary,
 } from "@/lib/league/boardDeviceContracts";
 
-type ManagedDisplay = { id: string; name: string; venueId: string; physicalBoardId: string | null; status: "active" | "disabled"; updatedAt: number };\n\ntype Pairing = {
+type ManagedDisplay = { id: string; name: string; venueId: string; physicalBoardId: string | null; status: "active" | "disabled"; updatedAt: number };
+
+type Pairing = {
   deviceId: string;
   deviceName: string;
   code: string;
@@ -57,7 +59,12 @@ export default function VenueHardwarePage() {
   const [linkedVenues, setLinkedVenues] = useState<VenueSummary[]>([]);
   const [availableVenues, setAvailableVenues] = useState<VenueSummary[]>([]);
   const [boards, setBoards] = useState<PhysicalBoardSummary[]>([]);
-  const [devices, setDevices] = useState<BoardDeviceSummary[]>([]);\n  const [displays,setDisplays]=useState<ManagedDisplay[]>([]);\n  const [displayPin,setDisplayPin]=useState("");\n  const [displayName,setDisplayName]=useState("OptiPlex Display");\n  const [pairDisplayBoard,setPairDisplayBoard]=useState<PhysicalBoardSummary|null>(null);\n  const [displayBusy,setDisplayBusy]=useState(false);
+  const [devices, setDevices] = useState<BoardDeviceSummary[]>([]);
+  const [displays,setDisplays]=useState<ManagedDisplay[]>([]);
+  const [displayPin,setDisplayPin]=useState("");
+  const [displayName,setDisplayName]=useState("OptiPlex Display");
+  const [pairDisplayBoard,setPairDisplayBoard]=useState<PhysicalBoardSummary|null>(null);
+  const [displayBusy,setDisplayBusy]=useState(false);
   const [deviceNames, setDeviceNames] = useState<Record<string, string>>({});
   const [boardNames, setBoardNames] = useState<Record<string, string>>({});
   const [newVenueName, setNewVenueName] = useState("");
@@ -143,7 +150,9 @@ export default function VenueHardwarePage() {
       setVenueId(nextVenue?.id ?? "");
       setVenueNameDraft(nextVenue?.name ?? "");
       setBoards(nextBoards);
-      setDevices(nextDevices);\n      const displayResponse=nextVenue ? await fetch(`/api/display-manager/devices?venueId=${encodeURIComponent(nextVenue.id)}`,{cache:"no-store"}) : null;\n      setDisplays(displayResponse?.ok ? ((await displayResponse.json()) as {displays:ManagedDisplay[]}).displays : []);
+      setDevices(nextDevices);
+      const displayResponse=nextVenue ? await fetch(`/api/display-manager/devices?venueId=${encodeURIComponent(nextVenue.id)}`,{cache:"no-store"}) : null;
+      setDisplays(displayResponse?.ok ? ((await displayResponse.json()) as {displays:ManagedDisplay[]}).displays : []);
       setDeviceNames(Object.fromEntries(nextDevices.map((device) => [device.id, device.name])));
       setBoardNames(Object.fromEntries(nextBoards.map((board) => [board.id, board.name])));
       setNewBoardNumber(Math.max(0, ...nextBoards.map((board) => board.boardNumber)) + 1);
